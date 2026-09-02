@@ -1,0 +1,89 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+
+  "_comment_instructions": "AGENTS.md ya se lee solo por estar en la raiz. Estos archivos se agregan porque son la capa de continuidad: sin ellos el agente no sabe en que tarea va.",
+  "instructions": [
+    "AGENTS.md",
+    "PROJECT_STATE.md",
+    ".engram/RUBRIC.md"
+  ],
+
+  "model": "openrouter/poolside/laguna-m.1:free",
+  "small_model": "groq/llama-3.3-70b-versatile",
+
+  "provider": {
+    "openrouter": {
+      "options": {
+        "apiKey": "{env:OPENROUTER_API_KEY}"
+      }
+    },
+    "groq": {
+      "options": {
+        "apiKey": "{env:GROQ_API_KEY}"
+      }
+    }
+  },
+
+  "permission": {
+    "bash": {
+      "*": "ask",
+      "rm *": "deny",
+      "rmdir *": "deny",
+      "sudo *": "deny",
+      "git push *": "deny",
+      "git reset *": "deny",
+      "git clean *": "deny",
+      "git commit *": "deny",
+      "gh *": "deny",
+      "gcloud *": "deny",
+      "wrangler *": "deny",
+      "psql *": "deny",
+      "goose *": "deny",
+      "docker *": "deny",
+      "npm publish *": "deny",
+      "curl *": "deny",
+      "wget *": "deny",
+      "go test *": "allow",
+      "go build *": "allow",
+      "go vet *": "allow",
+      "gofmt *": "allow",
+      "npm run test*": "allow",
+      "npm run lint*": "allow",
+      "npm run typecheck*": "allow",
+      "npm run build*": "allow",
+      "git status*": "allow",
+      "git diff*": "allow",
+      "git log*": "allow"
+    },
+
+    "_comment_edit": "PERFIL PILOTO (Fase 06): deny por defecto y whitelist minima. Si se usa OpenCode como conductor general y no como piloto medido, esta lista hay que ensancharla a mano -- es una decision del usuario, no del agente.",
+
+    "edit": {
+      "*": "deny",
+
+      "apps/web/src/i18n/*.ts": "allow",
+      "apps/web/src/**/*.stories.tsx": "allow",
+      "apps/api/**/*_test.go": "allow",
+      "apps/api/internal/db/seed/*.sql": "allow",
+      "docs/vault/40-bitacora/*.md": "allow",
+
+      "apps/api/internal/domain/**": "deny",
+      "apps/api/internal/db/migrations/**": "deny",
+      "apps/api/internal/auth/**": "deny",
+      "apps/api/internal/http/middleware/**": "deny",
+      "api/openapi.yaml": "deny",
+      "**/*.gen.go": "deny",
+      "**/*.gen.ts": "deny",
+      "PROJECT_STATE.md": "deny",
+      ".engram/**": "deny",
+      ".claude/**": "deny",
+      "openspec/**": "deny",
+      "docs/vault/20-arquitectura/**": "deny",
+      "docs/vault/30-fases/**": "deny",
+      ".github/**": "deny",
+      "Makefile": "deny",
+      ".golangci.yml": "deny",
+      "opencode.json": "deny"
+    }
+  }
+}

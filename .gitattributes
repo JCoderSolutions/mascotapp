@@ -1,0 +1,17 @@
+# Normalize line endings in the repository to LF regardless of the platform
+# a contributor works on. Without this the result depends on each machine's
+# core.autocrlf setting, and CI gates that compare bytes -- `gofmt -l` and the
+# generated-code drift checks -- fail for reasons unrelated to the change.
+* text=auto eol=lf
+
+# Binary assets must never be transformed.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.avif binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary

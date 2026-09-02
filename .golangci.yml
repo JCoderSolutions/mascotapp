@@ -1,0 +1,26 @@
+version: "2"
+
+# golangci-lint v2 configuration for the MascotApp Go API (apps/api).
+# Kept deliberately small and non-noisy: only linters with a clear,
+# actionable signal are enabled. Findings must be fixed in code, not
+# silenced here — the one exception is gosec on _test.go files, where
+# test helpers routinely trip false positives (e.g. hardcoded test
+# fixtures flagged as hardcoded credentials).
+
+linters:
+  default: none
+  enable:
+    - errcheck
+    - govet
+    - staticcheck
+    - ineffassign
+    - unused
+    - gosec
+    - bodyclose
+    - revive
+    - misspell
+  exclusions:
+    rules:
+      - path: '(.+_test\.go)'
+        linters:
+          - gosec

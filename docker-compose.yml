@@ -1,0 +1,45 @@
+# Local development stack. Stands in for the production managed services:
+#   postgres -> Neon      (same major version, so migrations behave identically)
+#   minio    -> Cloudflare R2 (S3-compatible API, so the same client code works)
+#
+# Start with `make dev`. Data lives in named volumes and survives restarts.
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: mascotapp-postgres
+    environment:
+      POSTGRES_USER: mascotapp
+      POSTGRES_PASSWORD: mascotapp_local_only
+      POSTGRES_DB: mascotapp
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mascotapp -d mascotapp"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    container_name: mascotapp-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: mascotapp
+      MINIO_ROOT_PASSWORD: mascotapp_local_only
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  postgres-data:
+  minio-data:
