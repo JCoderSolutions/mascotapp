@@ -1,0 +1,191 @@
+# AGENTS.md — contrato de trabajo para cualquier agente
+
+Este archivo es el **único punto de entrada portable** del proyecto. Lo leen
+Claude Code, Kiro (raíz del workspace, siempre incluido) y OpenCode (gana sobre
+`CLAUDE.md`). Si estás retomando este repositorio con cualquier herramienta,
+empezá por acá y seguí los enlaces.
+
+**Regla de oro: el repositorio es la verdad operativa.** Nada de lo que
+necesitás para trabajar vive fuera de él.
+
+---
+
+## 1. Qué es MascotApp
+
+Plataforma multi-refugio de adopción animal. API en **Go 1.27** (`chi` · `pgx/v5`
+· `sqlc` · `goose`) y web en **React 19 + Vite + TypeScript strict**.
+
+El requisito duro que define la arquitectura es el **aislamiento multi-tenant
+verificable**: base compartida, discriminador `shelter_id` y **Row Level Security
+de PostgreSQL** como última línea de defensa. La app se conecta con roles
+**no-superusuario** (`app_tenant`, `app_public`, y `app_auth` desde la Fase 02),
+porque RLS no aplica a superusuarios y ese es el error que anula toda la protección.
+
+Contexto completo: [`docs/vault/10-propuesta/analisis-y-plan.md`](docs/vault/10-propuesta/analisis-y-plan.md).
+
+---
+
+## 2. Ritual de inicio de sesión — obligatorio
+
+1. Leer [`PROJECT_STATE.md`](PROJECT_STATE.md). Es el contrato de continuidad:
+   fase actual, tarea actual, qué está bloqueado y cuál es la próxima acción.
+2. Abrir el tablero de la fase en `docs/vault/30-fases/FASE-<current_phase>.md`.
+   Buscar el primer `[~]`; si no hay, el primer `[ ]`.
+3. Leer el change SDD activo en `openspec/changes/<sdd_change>/` — `proposal.md`,
+   `design.md`, `tasks.md` y `specs/`.
+4. Leer la última entrada de `docs/vault/40-bitacora/`.
+5. Consultar el **porqué** de las decisiones ya tomadas en
+   [`docs/vault/20-arquitectura/indice-engram.md`](docs/vault/20-arquitectura/indice-engram.md)
+   y en los ADRs de la misma carpeta.
+6. Confirmar la tarea al usuario en una línea. **Entonces** empezar.
+
+> **Si tu herramienta tiene el MCP de Engram** (Claude Code lo tiene; Kiro y
+> OpenCode no), agregá `mem_context` + `mem_search` sobre la fase actual entre
+> los pasos 1 y 2. **Si no lo tiene, no te falta nada crítico**: el texto
+> completo de cada decisión está versionado en `.engram/queue/*.md` y el índice
+> del paso 5 los enumera todos.
+
+---
+
+## 3. Cómo se corren los tests — leé esto antes de correr nada
+
+```
+make test-api-container    # la suite de Go. La única que funciona en este host.
+make test-web              # vitest
+make lint                  # golangci-lint + eslint + tsc
+```
+
+**`go test` a secas NO CORRE en el host Windows del usuario.** Windows Smart App
+Control bloquea cada binario de test recién linkeado y el comando sale con
+código distinto de cero **sin haber ejecutado un solo test**. No es un test que
+falla: es un binario que nunca arrancó. Smart App Control **no tiene lista de
+exclusiones** y apagarlo es irreversible sin reinstalar Windows, así que no hay
+workaround dentro del repositorio.
+
+`Makefile:96-138` conserva a propósito **tres diagnósticos anteriores que
+estuvieron equivocados**. Costaron tres tareas de workarounds inútiles. Si ves
+un fallo sin líneas `--- FAIL`, leelo, no lo suprimas — y **nunca** agregues
+`|| true` ni reintentos a esos targets.
+
+En CI (Linux) `go test` funciona normal. El problema es solo este host.
+
+---
+
+## 4. Invariantes — no negociables
+
+1. **Como máximo UNA tarea en `[~]`** en todo el tablero. Si encontrás dos, es un
+   error: resolvelo antes de trabajar.
+2. **Ninguna tarea pasa a `[x]`** sin test en verde, lint limpio y
+   `PROJECT_STATE.md` actualizado.
+3. **TDD estricto.** Toda tarea de código empieza con un test que falla. Sin
+   excepción.
+4. **El avance vive en `PROJECT_STATE.md`**, nunca en la memoria semántica.
+   Engram guarda *por qué*, jamás *qué se hizo*.
+5. **Idioma:** los artefactos técnicos van en **inglés** — código,
+   identificadores, columnas, endpoints, tests, mensajes de commit. La
+   documentación del vault va en **español**.
+6. **Una query nunca filtra por `shelter_id`.** Ni en un `WHERE`, ni en un `AND`,
+   ni en un `JOIN`. La política RLS lo hace. Ese es el argumento entero a favor
+   de RLS y romperlo lo anula.
+7. **Un ADR publicado no se edita.** Si la decisión cambia, se escribe un ADR
+   nuevo que supersede al anterior, enlazado en ambos sentidos.
+
+---
+
+## 5. Barreras — qué no tocar
+
+Claude Code hace cumplir esto por configuración en `.claude/settings.json`.
+**Kiro y OpenCode no leen ese archivo**, así que acá va como regla explícita.
+OpenCode además tiene su propio `permission` en `opencode.json`.
+
+**Nunca, sin pedirlo al humano primero:**
+
+- `git push`, `git push --force`, `gh pr merge`, `gh repo delete`
+- `git reset --hard`, `git clean -fd`, `git checkout -- `, `git branch -D`
+- `goose up` / `goose down` / `goose reset`, `psql`, cualquier `DROP TABLE`,
+  `DROP DATABASE` o `TRUNCATE` contra una base real
+- `gcloud`, `wrangler`, `neonctl` — y **jamás** su subcomando `delete`
+- Instalar dependencias (`npm install`, `go get`): es cadena de suministro
+- `sudo`, `curl … | sh`, `docker system prune`, `docker volume rm`
+
+**Nunca leer ni escribir:** `.env`, `.env.local`, `.env.*.local`,
+`.env.production*`, `.env.staging*`, `.env.development`, `secrets/**`.
+`.env.example` sí se puede leer: es plantilla versionada, sin secretos.
+
+**Nunca reescribir las propias barreras:** `.claude/settings.json`,
+`opencode.json`, `.kiro/steering/**`.
+
+**Política de borrado del usuario, textual:** *"puedes borrar elementos dentro
+del mismo folder. Pero no puedes borrar nada fuera de él."* Todo borrado de
+artefactos de build va por `make clean`, cuyas rutas son explícitas y están
+versionadas — es la diferencia entre confiar en un artefacto revisado y confiar
+en el juicio del modelo.
+
+---
+
+## 6. Ritual de cierre de tarea — obligatorio
+
+1. Tests en verde, lint limpio.
+2. Marcar `[x]` en el tablero; mover el `[~]` a la tarea siguiente.
+3. Actualizar `PROJECT_STATE.md`, incluido `next_action`.
+4. Añadir entrada a `docs/vault/40-bitacora/<fecha>.md`.
+5. Evaluar candidatos de memoria contra [`.engram/RUBRIC.md`](.engram/RUBRIC.md)
+   (puntaje 0–5; solo entra ≥ 3) y escribirlos a `.engram/queue/`.
+   **Nada se guarda en Engram sin el sí explícito del usuario.**
+   Después, regenerar el índice: `make engram-index`.
+6. Commit convencional.
+
+### Commits
+
+Conventional commits, en inglés, con el ID de tarea:
+
+```
+feat(auth): T-02-004 tenant resolution middleware
+```
+
+**Sin `Co-Authored-By` y sin ninguna atribución a IA.** Es regla explícita del
+usuario y vale por encima del default de cualquier herramienta.
+
+---
+
+## 7. Mapa del repositorio
+
+| Ruta | Qué es |
+|---|---|
+| `PROJECT_STATE.md` | **Dónde vamos ahora.** Frontmatter machine-readable |
+| `docs/vault/` | Vault de Obsidian. Markdown plano, sin plugins |
+| `docs/vault/30-fases/` | **Tablero de tareas.** Una fase por archivo |
+| `docs/vault/20-arquitectura/` | ADRs inmutables + índice de memoria |
+| `docs/vault/40-bitacora/` | Log diario de los agentes |
+| `openspec/changes/<change>/` | Artefactos SDD de la fase activa |
+| `openspec/specs/` | Specs fusionadas de las fases ya archivadas |
+| `.engram/queue/` | Candidatos de memoria, versionados. Texto completo |
+| `api/openapi.yaml` | **Contrato único** de la API. Genera Go y TS |
+| `apps/api/internal/domain/` | Dominio puro en Go, sin I/O |
+| `apps/api/internal/db/migrations/` | Migraciones `goose`, RLS incluida |
+| `apps/api/internal/db/rlstest/` | Tests A/B de aislamiento por tabla |
+| `apps/web/src/features/` | Screaming architecture por dominio |
+
+**Nunca editar a mano:** `**/*.gen.go`, `**/*.gen.ts`, `apps/api/internal/db/sqlc/`.
+Se regeneran con `make generate`, y CI falla si el diff no coincide.
+
+---
+
+## 8. Metodología
+
+El proyecto avanza por **fases**, y cada fase es exactamente un *change* de
+Spec-Driven Development: `exploration` → `proposal` → `spec` → `design` →
+`tasks` → `apply` → `verify` → `archive`.
+
+- Los artefactos de planificación viven en `openspec/changes/<change>/`.
+- El tablero de `docs/vault/30-fases/` **enlaza** al change; no duplica contenido.
+- **Presupuesto de revisión: 400 líneas por PR.** Cuando una rebanada lo revienta
+  se parte en PRs encadenados (PR *n* se basa en PR *n-1*), nunca se baja el
+  estimado para que entre.
+- **Judgment Day** — revisión ciega dual — va antes del merge de exactamente tres
+  entregables, donde un error no se recupera: políticas RLS (F01), rotación de
+  tokens (F02) y cifrado de PII (F07).
+
+Si tu herramienta no tiene el flujo SDD, **seguí igual `tasks.md` en orden**: es
+una lista de tareas con criterios de aceptación y estimados de líneas. No
+necesita ningún agente especial para ejecutarse.
