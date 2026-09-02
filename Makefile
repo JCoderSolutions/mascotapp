@@ -45,8 +45,15 @@ generate:
 # Projects the Engram memory layer into the vault. Engram is reachable only
 # through Claude Code's MCP server; the repository has to stand on its own for
 # any other agent, so the index is generated rather than hand-maintained.
+#
+# It is a Go program and not a script in some other language because
+# TestDevcontainerInstallsEveryToolTheMakefileInvokes checks that every tool a
+# recipe runs is installed by .devcontainer/postCreate.sh, and it derives that
+# list from `go install` lines only. A `python` recipe passed on the authoring
+# host and failed the guard: correct, because it would fail on a fresh
+# container. Do not "simplify" this back to an interpreter.
 engram-index:
-	python scripts/engram-index.py
+	cd apps/api && go run ../../scripts/engram-index.go
 
 dev:
 	docker compose up -d
