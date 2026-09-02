@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+/* Tailwind v4 is configured here, in CSS, not in a tailwind.config.js.
+   Design tokens declared under @theme become utilities automatically. */
+@theme {
+  --color-brand-50: oklch(0.97 0.02 150);
+  --color-brand-500: oklch(0.62 0.14 150);
+  --color-brand-600: oklch(0.53 0.13 150);
+  --color-brand-700: oklch(0.44 0.11 150);
+}
+
+:root {
+  color-scheme: light dark;
+}
