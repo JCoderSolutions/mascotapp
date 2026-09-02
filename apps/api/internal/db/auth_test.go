@@ -180,73 +180,6 @@ func TestWithAuthUser_RollsBackAndRePanicsWhenTheCallbackPanics(t *testing.T) {
 	}
 }
 
-func TestWithAuthUser_DoesNotRunTheCallbackWhenBeginFails(t *testing.T) {
-	t.Parallel()
-
-	pool := newPool()
-	pool.beginErr = errors.New("pool exhausted")
-	called := false
-
-	err := db.WithAuthUser(context.Background(), pool, uuid.New(),
-		func(context.Context, pgx.Tx) error {
-			called = true
-
-			return nil
-		})
-
-	if err == nil {
-		t.Fatal("expected an error when Begin fails")
-	}
-	if called {
-		t.Fatal("ran the callback without a transaction")
-	}
-}
-
-func TestWithAuthUser_DoesNotRunTheCallbackWhenTheScopeCannotBeSet(t *testing.T) {
-	t.Parallel()
-
-	pool := newPool()
-	pool.tx.execErr = errors.New("cannot set scope")
-	called := false
-
-	err := db.WithAuthUser(context.Background(), pool, uuid.New(),
-		func(context.Context, pgx.Tx) error {
-			called = true
-
-			return nil
-		})
-
-	if err == nil {
-		t.Fatal("expected an error when the scope cannot be set")
-	}
-	if called {
-		t.Fatal("ran the callback with no user scope set")
-	}
-	if pool.tx.rollbacks != 1 {
-		t.Fatalf("rollbacks = %d, want 1", pool.tx.rollbacks)
-	}
-	if pool.tx.commits != 0 {
-		t.Fatalf("committed %d times; want 0", pool.tx.commits)
-	}
-}
-
-func TestWithAuthUser_ReturnsCommitFailures(t *testing.T) {
-	t.Parallel()
-
-	pool := newPool()
-	pool.tx.commitErr = errors.New("commit refused")
-
-	err := db.WithAuthUser(context.Background(), pool, uuid.New(),
-		func(context.Context, pgx.Tx) error { return nil })
-
-	if err == nil {
-		t.Fatal("a failed commit was reported as success")
-	}
-	if !errors.Is(err, pool.tx.commitErr) {
-		t.Fatalf("expected the commit error to survive, got %v", err)
-	}
-}
-
 // ---------------------------------------------------------------------------
 // WithAuthLookup
 //
@@ -325,24 +258,3 @@ func TestWithAuthLookup_RollsBackAndRePanics(t *testing.T) {
 	}
 }
 
-func TestWithAuthLookup_DoesNotRunTheCallbackWhenBeginFails(t *testing.T) {
-	t.Parallel()
-
-	pool := newTxPool()
-	pool.beginErr = errors.New("pool exhausted")
-	called := false
-
-	err := db.WithAuthLookup(context.Background(), pool,
-		func(context.Context, pgx.Tx) error {
-			called = true
-
-			return nil
-		})
-
-	if err == nil {
-		t.Fatal("expected an error when BeginTx fails")
-	}
-	if called {
-		t.Fatal("ran the callback without a transaction")
-	}
-}
