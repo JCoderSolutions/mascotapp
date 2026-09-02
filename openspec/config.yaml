@@ -1,0 +1,58 @@
+schema: spec-driven
+
+context: |
+  Tech stack: Go 1.27 (chi v5, sqlc + pgx/v5, goose, maroto/v2, log/slog) +
+    React 19 / Vite / TypeScript strict (TanStack Router+Query, RHF + Zod,
+    Tailwind v4, shadcn/ui). PostgreSQL (Neon) with Row Level Security.
+    Cloudflare R2 for media. OpenAPI 3.1 as the single API contract.
+  Architecture: Clean / Hexagonal / Screaming Architecture. Pure Go domain with no
+    I/O dependencies. Atomic design + container-presentational on the frontend.
+    Multi-tenant via shelter_id discriminator + Postgres RLS (see ADR-0002).
+    Domain events (application_events, audit_log) are append-only.
+  Testing: strict TDD. `make test-api-container` is the ONLY working Go test path on
+    the dev host (Smart App Control blocks freshly linked test binaries); it runs
+    go test -race inside Linux. Vitest + Testing Library for web, real-Postgres
+    integration tests via Docker (testcontainers, -p 1), Playwright E2E (Phase 11).
+    Mandatory per table with shelter_id: a tenant A / tenant B isolation test.
+  Style: technical artifacts in English (code, identifiers, columns, endpoints,
+    commits, tests). Project documentation in docs/vault/ is in Spanish.
+
+rules:
+  proposal:
+    - Include a rollback plan for risky changes
+    - State which plan phase (FASE-NN) this change implements
+  specs:
+    - Use Given/When/Then for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+    - Any requirement touching tenant data MUST state its RLS expectation
+  design:
+    - Document architecture decisions with rationale and rejected alternatives
+    - Promote durable decisions to docs/vault/20-arquitectura/ADR-NNNN
+  tasks:
+    - Group by phase, use hierarchical numbering
+    - Keep tasks completable in one session
+    - Mirror task ids into docs/vault/30-fases/FASE-NN.md
+  apply:
+    guidelines:
+      - Follow existing code patterns
+      - Never use rm directly; deletion lives in Makefile targets only
+      - shelter_id comes from the JWT claim, never from URL or header
+    tdd: true
+    # `go test` DOES NOT RUN on this Windows host: Smart App Control rejects every
+    # freshly linked test binary, exiting non-zero WITHOUT running a single test.
+    # Identified 2026-08-31 (T-01-020); the earlier "cgo" and "Defender" diagnoses
+    # were both verified FALSE. The container is the only path that produces a real
+    # result, and it runs -race on Linux.
+    test_command: "make test-api-container"
+  verify:
+    # `go test` DOES NOT RUN on this Windows host: Smart App Control rejects every
+    # freshly linked test binary, exiting non-zero WITHOUT running a single test.
+    # Identified 2026-08-31 (T-01-020); the earlier "cgo" and "Defender" diagnoses
+    # were both verified FALSE. The container is the only path that produces a real
+    # result, and it runs -race on Linux.
+    test_command: "make test-api-container"
+    build_command: "cd apps/api && go build ./..."
+    coverage_threshold: 75
+  archive:
+    - Warn before merging destructive deltas
+    - Copy the archive report into docs/vault/40-bitacora/
