@@ -66,7 +66,7 @@ wired last in `T-02-040`) and stays in slice (e) exactly where the design puts i
 
 Migration `00013`. Nothing in this slice depends on anything outside Phase 01's finished schema.
 
-- [ ] **T-02-001** · RED — `WithAuthUser` / `WithAuthLookup` unit tests against a recording `pgx.Tx` stub
+- [x] **T-02-001** · RED — `WithAuthUser` / `WithAuthLookup` unit tests against a recording `pgx.Tx` stub
       - spec: tenant-isolation / *Grants are explicit and default-deny* (scenario: *refresh_tokens is reachable only through the auth role*) — this task proves the Go-side half of that door before the SQL half exists
       - build: `apps/api/internal/db/auth_test.go` — stub records `Begin`/`Exec`/`Commit`/`Rollback`, mirrors the shape T-01-003 built for `WithTenant`
       - tests: `uuid.Nil` → `ErrNoAuthUser` with **no** `Begin` (design: *"an unscoped write would match a policy that is false, silently affecting zero rows"*) · `fn` error → rollback, no commit · `fn` panics → rollback **then** re-panic · the `set_config('app.user_id', $1, true)` call binds the UUID as `$1`, `is_local = true` · `WithAuthLookup` opens a **READ ONLY** transaction with no GUC set at all
@@ -74,16 +74,16 @@ Migration `00013`. Nothing in this slice depends on anything outside Phase 01's 
       - est: 130
       - pilot: blacklisted (§7.2)
       - parallel: T-02-008, T-02-010, T-02-012, T-02-014 (pure Go, no shared files, no migration dependency)
-      - engram: —
+      - engram: `sdd/phase-02-auth-and-multitenancy/apply-progress`
 
-- [ ] **T-02-002** · GREEN — `internal/db/auth.go`: `WithAuthUser`, `WithAuthLookup`, `ErrNoAuthUser`, `NewAuthPool`
+- [x] **T-02-002** · GREEN — `internal/db/auth.go`: `WithAuthUser`, `WithAuthLookup`, `ErrNoAuthUser`, `NewAuthPool`
       - spec: same as T-02-001
       - build: `internal/db/auth.go` — third pool construction (`MinConns = 0`, `MinIdleConns = 0`, `MaxConnIdleTime` below `NeonAutoSuspendAfter`, `maxConns = 4` per process — design's stated cost: instances × 12 total connections against a small Neon compute is the ceiling worth watching)
       - tests: T-02-001 turns green
       - dod: `SELECT set_config('app.user_id', $1, true)` strictly inside `Begin`…`Commit` · **no `SET LOCAL` anywhere** · never set in `AfterConnect`/`BeforeAcquire` · the pool is never handed to `fn` · mutation-tested to the same standard as `WithTenant` (T-01-003/004): `uuid.Nil` check, `is_local` flag, panic re-raise, rollback-on-error, no-SQL-interpolation
       - est: 120
       - pilot: blacklisted (§7.2)
-      - engram: —
+      - engram: `sdd/phase-02-auth-and-multitenancy/apply-progress`
 
 - [ ] **T-02-003** · Migration `00013_auth_role.sql` + `dbtest` third-pool wiring + reachability/isolation proof
       - spec: tenant-isolation / *The connecting role cannot bypass RLS* (scenario: *the same assertion passes for `app_public` and `app_auth`*) · tenant-isolation / *Grants are explicit and default-deny* (scenario: *refresh_tokens is reachable only through the auth role*)
