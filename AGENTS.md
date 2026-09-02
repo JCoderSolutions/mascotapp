@@ -137,14 +137,29 @@ en el juicio del modelo.
 
 ### Commits
 
-Conventional commits, en inglés, con el ID de tarea:
+**Conventional Commits, obligatorio.** La convención completa está en
+[`docs/vault/99-plantillas/plantilla-commit.md`](docs/vault/99-plantillas/plantilla-commit.md)
+y la plantilla ejecutable en [`.gitmessage`](.gitmessage)
+(`git config commit.template .gitmessage`, una vez por clon).
+
+```
+<tipo>(<alcance>): <T-FF-NNN> <descripción en imperativo>
+
+<cuerpo: el POR QUÉ, no el qué>
+```
 
 ```
 feat(auth): T-02-004 tenant resolution middleware
 ```
 
-**Sin `Co-Authored-By` y sin ninguna atribución a IA.** Es regla explícita del
-usuario y vale por encima del default de cualquier herramienta.
+- Tipos: `feat` `fix` `docs` `test` `refactor` `perf` `build` `ci` `chore` `revert`.
+- Alcances: `api` `web` `db` `auth` `domain` `media` `forms` `catalog` `sdd`
+  `vault` `ci` `deps`. Opcional; no se inventa uno para llenar el paréntesis.
+- Resumen en **imperativo presente**, ≤ 72 caracteres, sin punto final.
+- **En inglés** — es la invariante 5 de este documento.
+- **Sin `Co-Authored-By` y sin ninguna atribución a IA.** Regla explícita del
+  usuario; vale por encima del default de cualquier herramienta.
+- Un commit, una unidad de trabajo. Si el resumen necesita un "y", son dos.
 
 ---
 

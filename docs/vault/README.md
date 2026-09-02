@@ -12,7 +12,7 @@ El repositorio es la verdad operativa; Engram es el índice semántico de decisi
 | `40-bitacora/` | Log diario escrito por los agentes |
 | `50-specs/` | Especificaciones por área |
 | `60-presentacion/` | Material para presentar la propuesta |
-| `99-plantillas/` | Plantillas de tarea, ADR y bitácora |
+| `99-plantillas/` | Plantillas de tarea, ADR, bitácora y **commit** |
 
 ## Por dónde empezar
 

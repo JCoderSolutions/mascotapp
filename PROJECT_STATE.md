@@ -45,6 +45,7 @@ next_action: "FASE 02 PLANIFICADA, NO EMPEZADA. El ciclo SDD llego hasta tasks: 
 4. Añadir entrada a `docs/vault/40-bitacora/<fecha>.md`.
 5. Evaluar candidatos de memoria contra `.engram/RUBRIC.md` → escribir a `.engram/queue/` → `make engram-index`.
 6. Commit convencional: `feat(<area>): T-00-005 <descripción en inglés>`.
+   Convención completa: [docs/vault/99-plantillas/plantilla-commit.md](docs/vault/99-plantillas/plantilla-commit.md).
 
 ## Enlaces
 

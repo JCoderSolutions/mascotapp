@@ -1,0 +1,23 @@
+
+
+# ---------------------------------------------------------------------------
+# <type>(<scope>): <T-FF-NNN> <imperative summary, <=72 chars, no full stop>
+#
+# <body: WHY this change, not what. The diff already says what.>
+#
+# <footer: BREAKING CHANGE: ... / Refs: ...>
+# ---------------------------------------------------------------------------
+# type   feat fix docs test refactor perf build ci chore revert
+# scope  api web db auth domain media forms catalog sdd vault ci deps
+#        (optional -- only when it genuinely narrows things down)
+#
+# Rules:
+#   - English. Commit messages are technical artifacts (invariant 4).
+#   - Imperative present: "add", not "added" or "adds".
+#   - Task ID first in the description when the commit moves a board task.
+#   - No Co-Authored-By and no AI attribution of any kind.
+#   - One commit, one unit of work. If the summary needs an "and", split it.
+#   - Breaking change: `type(scope)!:` or a BREAKING CHANGE footer.
+#
+# Full convention: docs/vault/99-plantillas/plantilla-commit.md
+# ---------------------------------------------------------------------------
