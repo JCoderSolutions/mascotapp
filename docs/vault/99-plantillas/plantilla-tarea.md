@@ -1,0 +1,5 @@
+- [ ] **T-NN-NNN** · <título>
+      - spec: [[SPEC-area#seccion]]
+      - tests: `ruta/al/archivo_test.go`
+      - dod: test rojo→verde · lint limpio · cobertura ≥80% · PROJECT_STATE actualizado
+      - engram: <observation_id al cerrar, o "—">

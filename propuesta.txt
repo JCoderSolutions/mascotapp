@@ -1,0 +1,38 @@
+## PROPUESTA ##
+Quiero realizer una app donde duenos de refugios de animals puedan mostrar a los perritos que tienen.  Quiero poder ayudar a esta causa. La app por consecuencia debe tener un apartado donde cada dueno o administradores del refugio puedan mostrar los perritos dispoibles para adopcion. Puedan rellenar formularios dinamicos conm la informacion que ocupen acerca del adoptante. Al ser los formularios dinamicos debe permitir agregar o quitar campos a comveniencia y la distribucion Tambien. Tal vez ocupan dos input en un renglon tal vez. 
+
+Por otro lado Tambien estara la visda de user donde como adoptante podre ver toda la informacion del perro. COndiciones. edad fotos y demas a fin de ser el proceso lo mas transparente posbile. 
+
+Por ser org sin fines de lucro ocupo que tengan una vista donde muestren quienes son, vision, mission, fotos er info sobre ellos y tema de donaciones a quien desee aportar
+
+Al sewr para refugios mi idea es apoyar y quisiera quetodo estuviera desplegado de manera gratuita ya que en primera instancia no quiero cobrar. Posterior por temas de donaciones podria evaluarse alguiqer servicios o desplegar en maquinar locales pero deberia adquirir dichos elementos
+
+
+## ROL ##
+Ocupo que analices la propuesta a profundidad de manera critica. comentes puntos debiles o cosas por mejorar o agregar.
+
+
+## REQUISITOS ##
+Dime que tecnologias puedo usar que sean super ligeras, rapidas y modernas como go por ejemplo
+
+Modelos de bd
+
+tablas y demas
+
+temas de seguridad
+
+como manejar multiples refugios desde una app, cual es la major metodologia para esto
+
+En cuanto a temas de seguridad como manejar conexiones y demas
+
+Como plantear y si es factible la propuesta de formularios dinamicos, reports y doc en general que usen durante el proceso de adopcion
+
+Ocupo una propuesta general de Desarrollo con un plan de fases que mida test, tenga task y spec y todo lo necesario apra que mis agentes puedan trabajar y dividirse las tareas y saber cuando se termino cada cosa
+
+Dentro del plan quiero integrar obsidian para guardar info de manera local y poder tener todo a la mano al momento de presenter la propuesta y ademas tener el registro de lo trabajado
+
+
+## STACK ##
+Estare usando gentle  ai de gentleman programming para orquestar nmejor el trabajo
+Usare emgran como memoria organizacional que me permita trabajar con mis agenstes desde cualqueir lado y ssiempre mi agente tenga context de todo. Debera ser configurado de tal forma que solo se suban los elementos importantes a la memoria. Evalua la major opcion. Un agente evalua al final de cada tarea, al subir un commit, queda todo en una cola para aprobacion manual. Establece la mejor metodologia para ello
+tecnologias de back front y demas seran propuestas por ti segun investigacion previa
