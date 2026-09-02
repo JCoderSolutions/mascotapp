@@ -12,8 +12,8 @@ que el repositorio siga siendo la verdad operativa (regla IA-4 del plan maestro)
 versionado. El `observation_id` es la misma nota dentro de Engram; sirve para
 trazabilidad, no es requisito para leerla.
 
-- Candidatos totales: **75**
-- Aprobados y guardados en Engram: **70**
+- Candidatos totales: **76**
+- Aprobados y guardados en Engram: **71**
 - Pendientes de aprobación explícita del usuario: **5**
 
 ## Pendientes de aprobación
@@ -42,7 +42,7 @@ antes de `mem_save` (§6.6 del plan maestro).
 | `T-01-027` | `…/assignment-bounded-by-membership-key` | 5 | [2026-09-01-una-clave-compuesta-a-memberships-encierra-la-asignacion.md](../../../.engram/queue/2026-09-01-una-clave-compuesta-a-memberships-encierra-la-asignacion.md) | `obs-cb3fdedda1fa5e49` | adoption_applications.assigned_to_user_id no es una referencia a users. Es una clave compuesta a memberships (user_id, shelter_id… |
 | `T-01-034` | `…/verify-inherited-constraints` | 5 | [2026-09-01-una-restriccion-heredada-se-verifica-antes-de-disenar-contra-ella.md](../../../.engram/queue/2026-09-01-una-restriccion-heredada-se-verifica-antes-de-disenar-contra-ella.md) | `obs-ed6c4139b505a445` | D3 decia: *"no dependemos de extensiones de PostgreSQL, porque el free tier de Neon no las garantiza"*. |
 
-### `mascotapp/convention/*` — 35
+### `mascotapp/convention/*` — 36
 
 | Tarea | `topic_key` | Score | Archivo | `observation_id` | Qué dice |
 |---|---|---|---|---|---|
@@ -80,6 +80,7 @@ antes de `mem_save` (§6.6 del plan maestro).
 | `T-01-029` | `…/close-a-set-when-the-domain-branches` | 4 | [2026-09-01-un-conjunto-se-cierra-cuando-el-dominio-ramifica.md](../../../.engram/queue/2026-09-01-un-conjunto-se-cierra-cuando-el-dominio-ramifica.md) | `obs-e0fefde5e839d79a` | 00010 creo dos columnas de conjunto y les dio tratamientos opuestos, en la misma migracion. El criterio no es la costumbre; es un… |
 | `T-01-033` | `…/a-substring-is-not-an-assertion` | 5 | [2026-09-01-un-substring-en-un-archivo-no-es-una-asercion.md](../../../.engram/queue/2026-09-01-un-substring-en-un-archivo-no-es-una-asercion.md) | `obs-e4c1ca6f36c7b65f` | strings.Contains(archivo, "algo") responde *"la palabra aparece"*, no *"el archivo hace eso"*. Y un comentario satisface la prime… |
 | `T-01-033` | `…/queries-never-filter-by-shelter-id` | 5 | [2026-09-01-una-query-no-filtra-por-shelter-id.md](../../../.engram/queue/2026-09-01-una-query-no-filtra-por-shelter-id.md) | `obs-c94143b56078801e` | Regla dura para todo internal/db/query/*.sql: ninguna lectura lleva shelter_id en un WHERE, en un AND ni en una condicion de JOIN. |
+| `handoff multi-agente` | `…/commit-messages` | 3 | [2026-09-02-convencion-de-commits.md](../../../.engram/queue/2026-09-02-convencion-de-commits.md) | `obs-62d33d3023d8afae` | Los commits de MascotApp siguen Conventional Commits, y la convencion esta escrita en dos lugares ejecutables, no en la memoria d… |
 | `phase-01-domain-and-data (design D7, revertida por el usuario)` | `…/case-insensitive-email` | 4 | [2026-08-29-citext-vs-lower-index.md](../../../.engram/queue/2026-08-29-citext-vs-lower-index.md) | `obs-1ee4f1b598f5b471` | users.email es citext, no text + índice único sobre lower(email). |
 
 ### `mascotapp/domain/*` — 4
