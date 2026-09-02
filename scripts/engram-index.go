@@ -170,11 +170,19 @@ func summarize(body string) string {
 }
 
 func render(entries []entry) string {
-	var saved, pending []entry
+	// Three states, not two. A candidate with no observation_id is NOT
+	// automatically awaiting approval: the curation pass marks rejected ones
+	// with `disposition`, and two of them carry root causes later proven false.
+	// Listing those as "pending" invites a cold session to save known-wrong
+	// explanations into the very index it will trust afterwards.
+	var saved, pending, discarded []entry
 	for _, e := range entries {
-		if e.fields["observation_id"] != "" {
+		switch {
+		case e.fields["observation_id"] != "":
 			saved = append(saved, e)
-		} else {
+		case e.fields["disposition"] != "":
+			discarded = append(discarded, e)
+		default:
 			pending = append(pending, e)
 		}
 	}
@@ -192,7 +200,8 @@ func render(entries []entry) string {
 	fmt.Fprint(&b, "trazabilidad, no es requisito para leerla.\n\n")
 	fmt.Fprintf(&b, "- Candidatos totales: **%d**\n", len(entries))
 	fmt.Fprintf(&b, "- Aprobados y guardados en Engram: **%d**\n", len(saved))
-	fmt.Fprintf(&b, "- Pendientes de aprobación explícita del usuario: **%d**\n\n", len(pending))
+	fmt.Fprintf(&b, "- Pendientes de aprobación explícita del usuario: **%d**\n", len(pending))
+	fmt.Fprintf(&b, "- Descartados por el pase de curaduría: **%d**\n\n", len(discarded))
 
 	if len(pending) > 0 {
 		fmt.Fprint(&b, "## Pendientes de aprobación\n\n")
@@ -205,6 +214,30 @@ func render(entries []entry) string {
 		for _, e := range pending {
 			fmt.Fprintf(&b, "| `%s` | %s | %s | [%s](../../../.engram/queue/%s) | %s |\n",
 				e.get("task"), e.get("type"), e.get("score"), e.file, e.file, e.summary)
+		}
+		fmt.Fprint(&b, "\n")
+	}
+
+	if len(discarded) > 0 {
+		fmt.Fprint(&b, "## Descartados — NO guardar\n\n")
+		fmt.Fprint(&b, "El pase de curaduría los rechazó. **No tienen `observation_id` porque fueron\n")
+		fmt.Fprint(&b, "descartados, no porque esperen aprobación.** Guardarlos metería en Engram\n")
+		fmt.Fprint(&b, "exactamente lo que la columna de abajo explica que está mal.\n\n")
+		fmt.Fprint(&b, "| Tarea | Archivo | Por qué se descartó | Reemplazado por |\n")
+		fmt.Fprint(&b, "|---|---|---|---|\n")
+
+		sort.Slice(discarded, func(i, j int) bool { return discarded[i].file < discarded[j].file })
+		for _, e := range discarded {
+			replacement := e.fields["superseded_by"]
+			// The frontmatter keeps a trailing `# ...` note on that line.
+			if hash := strings.Index(replacement, "#"); hash >= 0 {
+				replacement = strings.TrimSpace(replacement[:hash])
+			}
+			if replacement == "" {
+				replacement = "—"
+			}
+			fmt.Fprintf(&b, "| `%s` | [%s](../../../.engram/queue/%s) | %s | `%s` |\n",
+				e.get("task"), e.file, e.file, e.get("disposition"), replacement)
 		}
 		fmt.Fprint(&b, "\n")
 	}

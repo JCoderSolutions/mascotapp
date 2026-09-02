@@ -12,22 +12,21 @@ que el repositorio siga siendo la verdad operativa (regla IA-4 del plan maestro)
 versionado. El `observation_id` es la misma nota dentro de Engram; sirve para
 trazabilidad, no es requisito para leerla.
 
-- Candidatos totales: **76**
-- Aprobados y guardados en Engram: **71**
-- Pendientes de aprobación explícita del usuario: **5**
+- Candidatos totales: **78**
+- Aprobados y guardados en Engram: **76**
+- Pendientes de aprobación explícita del usuario: **0**
+- Descartados por el pase de curaduría: **2**
 
-## Pendientes de aprobación
+## Descartados — NO guardar
 
-Nada de esto está en Engram todavía. Requiere el sí explícito del usuario
-antes de `mem_save` (§6.6 del plan maestro).
+El pase de curaduría los rechazó. **No tienen `observation_id` porque fueron
+descartados, no porque esperen aprobación.** Guardarlos metería en Engram
+exactamente lo que la columna de abajo explica que está mal.
 
-| Tarea | Tipo | Score | Archivo | Qué dice |
-|---|---|---|---|---|
-| `T-01-002 (spike testcontainers)` | constraint | 4 | [2026-08-29-windows-appcontrol-blocks-go-test-binaries.md](../../../.engram/queue/2026-08-29-windows-appcontrol-blocks-go-test-binaries.md) | En este host Windows, Application Control bloquea los binarios de test de Go recién linkeados bajo %LOCALAPPDATA%\Temp. |
-| `T-01-015` | constraint | 3 | [2026-08-30-defender-no-application-control.md](../../../.engram/queue/2026-08-30-defender-no-application-control.md) | Durante tres tareas el síntoma fue: |
-| `fase-02 planning` | convention | 3 | [2026-09-02-un-agente-que-falla-al-reportar-no-fallo-al-escribir.md](../../../.engram/queue/2026-09-02-un-agente-que-falla-al-reportar-no-fallo-al-escribir.md) | sdd-design se cayo por limite de sesion de proveedor. Su ultimo texto era *"Now I have the full picture. Writing the design."*, y… |
-| `fase-02 planning` | convention | 4 | [2026-09-02-un-numero-anunciado-se-recomputa.md](../../../.engram/queue/2026-09-02-un-numero-anunciado-se-recomputa.md) | Un agente cerro la cadena de entrega de la Fase 02 con 23 PRs, 4.875 lineas, ninguno sobre 400. Los tres numeros eran del mismo r… |
-| `fase-02 planning` | convention | 5 | [2026-09-02-un-requisito-que-el-verificador-no-puede-leer.md](../../../.engram/queue/2026-09-02-un-requisito-que-el-verificador-no-puede-leer.md) | El diseno de la Fase 02 prohibe que un tenant escriba shelters.storage_bytes_used — el contador contra el que se chequea la cuota… |
+| Tarea | Archivo | Por qué se descartó | Reemplazado por |
+|---|---|---|---|
+| `T-01-002 (spike testcontainers)` | [2026-08-29-windows-appcontrol-blocks-go-test-binaries.md](../../../.engram/queue/2026-08-29-windows-appcontrol-blocks-go-test-binaries.md) | descartado -- su causa raiz se probo FALSA y el que la corrige ya esta guardado | `2026-08-31-smart-app-control-no-es-defender.md` |
+| `T-01-015` | [2026-08-30-defender-no-application-control.md](../../../.engram/queue/2026-08-30-defender-no-application-control.md) | descartado -- su causa raiz se probo FALSA y el que la corrige ya esta guardado | `2026-08-31-smart-app-control-no-es-defender.md` |
 
 ## Guardadas
 
@@ -42,10 +41,12 @@ antes de `mem_save` (§6.6 del plan maestro).
 | `T-01-027` | `…/assignment-bounded-by-membership-key` | 5 | [2026-09-01-una-clave-compuesta-a-memberships-encierra-la-asignacion.md](../../../.engram/queue/2026-09-01-una-clave-compuesta-a-memberships-encierra-la-asignacion.md) | `obs-cb3fdedda1fa5e49` | adoption_applications.assigned_to_user_id no es una referencia a users. Es una clave compuesta a memberships (user_id, shelter_id… |
 | `T-01-034` | `…/verify-inherited-constraints` | 5 | [2026-09-01-una-restriccion-heredada-se-verifica-antes-de-disenar-contra-ella.md](../../../.engram/queue/2026-09-01-una-restriccion-heredada-se-verifica-antes-de-disenar-contra-ella.md) | `obs-ed6c4139b505a445` | D3 decia: *"no dependemos de extensiones de PostgreSQL, porque el free tier de Neon no las garantiza"*. |
 
-### `mascotapp/convention/*` — 36
+### `mascotapp/convention/*` — 40
 
 | Tarea | `topic_key` | Score | Archivo | `observation_id` | Qué dice |
 |---|---|---|---|---|---|
+| `PR-02-01 (T-02-001/002)` | `…/exit-code-through-a-pipe` | 3 | [2026-09-02-un-pipe-se-come-el-codigo-de-salida.md](../../../.engram/queue/2026-09-02-un-pipe-se-come-el-codigo-de-salida.md) | `obs-e5c386557333aa6a` | make test-api-container 2>&1 / tail -60 reporto exit code 0 mientras la salida contenia make: * [Makefile:184: test-api-container… |
+| `PR-02-01 (T-02-001/002)` | `…/makefile-tool-provenance` | 4 | [2026-09-02-un-target-que-corre-en-tu-maquina-no-es-un-target.md](../../../.engram/queue/2026-09-02-un-target-que-corre-en-tu-maquina-no-es-un-target.md) | `obs-011873b42b4352bd` | TestDevcontainerInstallsEveryToolTheMakefileInvokes (apps/api/internal/db/wiring_test.go) exige que toda herramienta que invoca u… |
 | `T-00-022` | `…/mutation-testing-finds-vacuous-coverage` | 4 | [2026-08-29-mutation-testing-vacuous-coverage.md](../../../.engram/queue/2026-08-29-mutation-testing-vacuous-coverage.md) | `obs-7472df2f86aeaeb4` | En MascotApp, un test en verde no cuenta como prueba hasta que se muta la implementación y el test falla. No es ceremonia: ya atr… |
 | `T-01-002 (spike testcontainers)` | `…/go-get-subpackages` | 3 | [2026-08-29-go-get-no-resuelve-subpaquetes.md](../../../.engram/queue/2026-08-29-go-get-no-resuelve-subpaquetes.md) | `obs-79c957e4c6787855` | go get sobre la raíz de un módulo NO resuelve las dependencias de sus subpaquetes. |
 | `T-01-005 / T-01-006 (incidente de truncado)` | `…/hybrid-store-is-recovery` | 4 | [2026-08-29-store-hibrido-salvo-el-artefacto.md](../../../.engram/queue/2026-08-29-store-hibrido-salvo-el-artefacto.md) | `obs-90f889e7090661ac` | El store híbrido de SDD no es papeleo. Es la copia de recuperación. |
@@ -80,6 +81,8 @@ antes de `mem_save` (§6.6 del plan maestro).
 | `T-01-029` | `…/close-a-set-when-the-domain-branches` | 4 | [2026-09-01-un-conjunto-se-cierra-cuando-el-dominio-ramifica.md](../../../.engram/queue/2026-09-01-un-conjunto-se-cierra-cuando-el-dominio-ramifica.md) | `obs-e0fefde5e839d79a` | 00010 creo dos columnas de conjunto y les dio tratamientos opuestos, en la misma migracion. El criterio no es la costumbre; es un… |
 | `T-01-033` | `…/a-substring-is-not-an-assertion` | 5 | [2026-09-01-un-substring-en-un-archivo-no-es-una-asercion.md](../../../.engram/queue/2026-09-01-un-substring-en-un-archivo-no-es-una-asercion.md) | `obs-e4c1ca6f36c7b65f` | strings.Contains(archivo, "algo") responde *"la palabra aparece"*, no *"el archivo hace eso"*. Y un comentario satisface la prime… |
 | `T-01-033` | `…/queries-never-filter-by-shelter-id` | 5 | [2026-09-01-una-query-no-filtra-por-shelter-id.md](../../../.engram/queue/2026-09-01-una-query-no-filtra-por-shelter-id.md) | `obs-c94143b56078801e` | Regla dura para todo internal/db/query/*.sql: ninguna lectura lleva shelter_id en un WHERE, en un AND ni en una condicion de JOIN. |
+| `fase-02 planning` | `…/recompute-announced-numbers` | 4 | [2026-09-02-un-numero-anunciado-se-recomputa.md](../../../.engram/queue/2026-09-02-un-numero-anunciado-se-recomputa.md) | `obs-99a194c5559106b8` | Un agente cerro la cadena de entrega de la Fase 02 con 23 PRs, 4.875 lineas, ninguno sobre 400. Los tres numeros eran del mismo r… |
+| `fase-02 planning` | `…/spec-must-carry-the-property` | 5 | [2026-09-02-un-requisito-que-el-verificador-no-puede-leer.md](../../../.engram/queue/2026-09-02-un-requisito-que-el-verificador-no-puede-leer.md) | `obs-51c9db2915bb5533` | El diseno de la Fase 02 prohibe que un tenant escriba shelters.storage_bytes_used — el contador contra el que se chequea la cuota… |
 | `handoff multi-agente` | `…/commit-messages` | 3 | [2026-09-02-convencion-de-commits.md](../../../.engram/queue/2026-09-02-convencion-de-commits.md) | `obs-62d33d3023d8afae` | Los commits de MascotApp siguen Conventional Commits, y la convencion esta escrita en dos lugares ejecutables, no en la memoria d… |
 | `phase-01-domain-and-data (design D7, revertida por el usuario)` | `…/case-insensitive-email` | 4 | [2026-08-29-citext-vs-lower-index.md](../../../.engram/queue/2026-08-29-citext-vs-lower-index.md) | `obs-1ee4f1b598f5b471` | users.email es citext, no text + índice único sobre lower(email). |
 
@@ -92,7 +95,7 @@ antes de `mem_save` (§6.6 del plan maestro).
 | `T-01-022` | `…/shelter-verification` | 5 | [2026-08-31-lt2-no-lo-hace-cumplir-la-base.md](../../../.engram/queue/2026-08-31-lt2-no-lo-hace-cumplir-la-base.md) | `obs-85415c0b8700bec6` | §1.1 del plan pone pending_verification como requisito duro de MVP: *"un refugio no puede publicar hasta ser verificado manualmen… |
 | `T-01-024` | `…/historical-readability-from-the-renderer` | 5 | [2026-09-01-la-legibilidad-historica-se-afirma-desde-el-renderer.md](../../../.engram/queue/2026-09-01-la-legibilidad-historica-se-afirma-desde-el-renderer.md) | `obs-069b75a9882b4f07` | §4.4 regla 1 dice que una respuesta enviada siempre se renderiza contra la version con la que se lleno. Hay dos formas de "probar… |
 
-### `mascotapp/ops/*` — 6
+### `mascotapp/ops/*` — 7
 
 | Tarea | `topic_key` | Score | Archivo | `observation_id` | Qué dice |
 |---|---|---|---|---|---|
@@ -102,6 +105,7 @@ antes de `mem_save` (§6.6 del plan maestro).
 | `T-01-013` | `…/testcontainers-windows-provider-race` | 4 | [2026-08-30-el-flake-de-testcontainers-en-windows.md](../../../.engram/queue/2026-08-30-el-flake-de-testcontainers-en-windows.md) | `obs-df8668122e55b55d` | Síntoma: un paquete entero falla a 0.00s, todos sus tests con el mismo mensaje: |
 | `T-01-020` | `…/windows-appcontrol-go-tests` | 5 | [2026-08-31-smart-app-control-no-es-defender.md](../../../.engram/queue/2026-08-31-smart-app-control-no-es-defender.md) | `obs-09d0eb05887b634f` | El sintoma nunca cambio: |
 | `T-01-032` | `…/bigserial-needs-a-sequence-grant` | 5 | [2026-09-01-bigserial-necesita-un-grant-que-no-es-sobre-una-tabla.md](../../../.engram/queue/2026-09-01-bigserial-necesita-un-grant-que-no-es-sobre-una-tabla.md) | `obs-64400c1e36f5e3ab` | bigserial no es un tipo. Es bigint + una SECUENCIA + un DEFAULT nextval(...). Un grant de tabla no dice nada sobre esa secuencia. |
+| `fase-02 planning` | `…/failed-report-is-not-lost-work` | 3 | [2026-09-02-un-agente-que-falla-al-reportar-no-fallo-al-escribir.md](../../../.engram/queue/2026-09-02-un-agente-que-falla-al-reportar-no-fallo-al-escribir.md) | `obs-216cdb370cd7e725` | sdd-design se cayo por limite de sesion de proveedor. Su ultimo texto era *"Now I have the full picture. Writing the design."*, y… |
 
 ### `mascotapp/security/*` — 19
 

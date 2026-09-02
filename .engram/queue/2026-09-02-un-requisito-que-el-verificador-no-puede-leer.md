@@ -3,6 +3,8 @@ type: convention
 score: 5
 topic_key: mascotapp/convention/spec-must-carry-the-property
 task: fase-02 planning
+approved: 2026-09-02 (aprobacion explicita del usuario)
+observation_id: obs-51c9db2915bb5533
 rationale: "El diseno protegia shelters.storage_bytes_used con un argumento correcto; el spec no lo nombraba, asi que sdd-verify nunca lo iba a chequear. La propiedad existia en el documento equivocado."
 ---
 

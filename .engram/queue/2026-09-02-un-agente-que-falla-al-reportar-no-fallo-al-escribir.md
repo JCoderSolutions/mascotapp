@@ -3,6 +3,8 @@ type: convention
 score: 3
 topic_key: mascotapp/ops/failed-report-is-not-lost-work
 task: fase-02 planning
+approved: 2026-09-02 (aprobacion explicita del usuario)
+observation_id: obs-216cdb370cd7e725
 rationale: "sdd-design se cayo por limite de sesion y se reporto como 'no escribio design.md'. Habia escrito 604 lineas completas. Se perdio una sesion de trabajo por no mirar el filesystem."
 ---
 

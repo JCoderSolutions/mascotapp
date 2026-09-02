@@ -3,6 +3,8 @@ type: convention
 score: 4
 topic_key: mascotapp/convention/recompute-announced-numbers
 task: fase-02 planning
+approved: 2026-09-02 (aprobacion explicita del usuario)
+observation_id: obs-99a194c5559106b8
 rationale: "Un agente reporto 23 PRs sumando 4.875 con 'todos <=400'. Recomputando contra los est: reales, uno daba 410 y el total 4.890. El presupuesto era justo lo que el usuario acababa de decidir."
 ---
 
