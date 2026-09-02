@@ -1,0 +1,13 @@
+# oapi-codegen config. Generated output is committed so CI can prove the
+# contract and the code have not drifted (`make generate` then a diff check).
+package: api
+output: internal/api/openapi.gen.go
+generate:
+  models: true
+  chi-server: true
+  strict-server: true
+  # embedded-spec is deliberately OFF: it pulls kin-openapi, a heavy dependency,
+  # only to serve the spec at runtime. Smaller binary = faster Cloud Run cold
+  # start (ADR-0003). Turn it on when request validation middleware is needed.
+output-options:
+  skip-prune: true

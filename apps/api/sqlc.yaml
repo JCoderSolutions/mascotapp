@@ -1,0 +1,41 @@
+# sqlc — generates type-safe Go from the SQL in internal/db/query.
+#
+# Co-located with the module, mirroring internal/api/config.yaml: both are
+# generator contracts for apps/api, and both are verified by a CI diff check so
+# the code under review is the code that runs.
+#
+# The generated package is committed (design D2). Reviewing a schema change means
+# reviewing the query code it produces, and code that only exists on a build
+# machine is code nobody read.
+version: "2"
+
+sql:
+  - engine: "postgresql"
+
+    # The SAME directory goose applies and //go:embed ships. sqlc reads goose's
+    # up migrations and ignores the down ones, so a separate schema.sql would be
+    # a second source of truth that drifts in silence.
+    schema: "internal/db/migrations"
+
+    queries: "internal/db/query"
+
+    gen:
+      go:
+        package: "sqlcgen"
+        out: "internal/db/sqlcgen"
+
+        # WithTenant hands every query a pgx.Tx, because the tenant scope
+        # (`SELECT set_config('app.shelter_id', ...)`) lives on that transaction
+        # and nowhere else. database/sql output would not compile against it.
+        sql_package: "pgx/v5"
+
+        # Emits Querier, so a handler can depend on an interface it is able to
+        # substitute in a test rather than on a concrete struct.
+        emit_interface: true
+
+        overrides:
+          # Every primary key in this schema is a uuid and WithTenant already
+          # takes a uuid.UUID. Without this, generated code speaks pgtype.UUID
+          # and every call site converts.
+          - db_type: "uuid"
+            go_type: "github.com/google/uuid.UUID"

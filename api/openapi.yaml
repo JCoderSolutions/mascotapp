@@ -1,0 +1,111 @@
+openapi: 3.1.0
+
+info:
+  title: MascotApp API
+  version: 0.1.0
+  description: |
+    Adoption platform for animal shelters.
+
+    This document is the SINGLE SOURCE OF TRUTH for the HTTP contract. The Go
+    server types and the TypeScript client types are both generated from it —
+    never hand-edit either side. Run `make generate` after changing this file.
+
+    Only endpoints that actually exist are documented here. Endpoints are added
+    in the phase that implements them, not ahead of it.
+
+servers:
+  - url: http://localhost:8080
+    description: Local development
+  - url: https://api.mascotapp.example
+    description: Production (placeholder until the domain is registered)
+
+tags:
+  - name: health
+    description: Liveness and readiness probes
+
+paths:
+  /healthz:
+    get:
+      tags: [health]
+      summary: Liveness probe
+      description: |
+        Reports that the process is alive. Never touches external systems, so it
+        stays cheap and cannot be brought down by a dependency outage.
+
+        This is the ONLY endpoint a keep-alive cron may target: hitting /readyz
+        instead would wake the database and burn Neon CU-hours (see ADR-0003).
+      operationId: getLiveness
+      security: []
+      responses:
+        "200":
+          description: The process is alive.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LivenessStatus"
+
+  /readyz:
+    get:
+      tags: [health]
+      summary: Readiness probe
+      description: |
+        Runs every registered dependency check. Returns 503 with the names of
+        the failing checks so an operator can tell WHICH dependency is down
+        without reading logs.
+      operationId: getReadiness
+      security: []
+      responses:
+        "200":
+          description: Every dependency check passed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadinessStatus"
+        "503":
+          description: At least one dependency check failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadinessFailure"
+
+components:
+  schemas:
+    LivenessStatus:
+      type: object
+      required: [status]
+      additionalProperties: false
+      properties:
+        status:
+          type: string
+          enum: [ok]
+      examples:
+        - status: ok
+
+    ReadinessStatus:
+      type: object
+      required: [status]
+      additionalProperties: false
+      properties:
+        status:
+          type: string
+          enum: [ready]
+      examples:
+        - status: ready
+
+    ReadinessFailure:
+      type: object
+      required: [status, failed]
+      additionalProperties: false
+      properties:
+        status:
+          type: string
+          enum: ["not ready"]
+        failed:
+          type: array
+          description: Names of the dependency checks that failed.
+          items:
+            type: string
+          minItems: 1
+      examples:
+        - status: not ready
+          failed: [postgres]
