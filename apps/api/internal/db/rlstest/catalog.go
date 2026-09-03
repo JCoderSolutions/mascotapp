@@ -94,12 +94,14 @@ var Schema = Classification{
 	},
 
 	// The single declared exception to the "at least one policy" rule.
-	// `refresh_tokens` is default-deny for this phase: RLS enabled with no
-	// policy denies every non-owner role outright, which is stricter than any
-	// policy that could be written before Phase 02 chooses its access path.
-	NoPolicy: []string{
-		"refresh_tokens",
-	},
+	//
+	// EMPTY as of T-02-004: `refresh_tokens` left this set the day migration
+	// 00013 gave it a real policy (`auth_own_sessions`, P2-D2). The exemption
+	// was always meant to self-expire the moment Phase 02 chose its access
+	// path — see the comment TestQueries_ExerciseEveryDeclaredTable carries at
+	// `query_test.go:95`, which derives its own exemption from this list and
+	// therefore now demands a query for `refresh_tokens` where none existed.
+	NoPolicy: []string{},
 
 	// Declared tables whose migration has not landed yet, each with the task
 	// that creates it. A protection assertion over a table that does not exist
@@ -117,6 +119,28 @@ var Schema = Classification{
 		// T-01-032. The ledger is now EMPTY: every declared table exists and
 		// every protection assertion runs against a real relation.
 	},
+
+	// A table whose RLS predates the migration that gives it its own first
+	// policy, keyed to the goose version number of that migration. This is
+	// NOT the same gap Pending covers: Pending is for a table that does not
+	// exist yet, and CheckProtection (unversioned, HEAD-only) never consults
+	// this map at all. PolicyLandsAt exists for CheckProtectionAt, which the
+	// stepwise rollback walk (migrate_roundtrip_test.go) uses to inspect the
+	// schema at every INTERMEDIATE version between the migrations, not only
+	// at HEAD.
+	//
+	// refresh_tokens is the one entry: RLS has been ON and FORCED on it since
+	// 00002, but T-02-004 is what removes it from NoPolicy, because 00013 is
+	// what gives it a real policy (auth_own_sessions, P2-D2). Versions 00002
+	// through 00012 are real, applied states the stepwise walk passes
+	// through, and at every one of them refresh_tokens legitimately carries
+	// zero policies — not because a rollback broke something, but because
+	// migration 00013 has not run yet. Without this entry the walk would read
+	// that gap as a broken rollback instead of the ordinary, un-arrived-at
+	// state it is.
+	PolicyLandsAt: map[string]int64{
+		"refresh_tokens": 13,
+	},
 }
 
 // Classification declares every relation the schema is allowed to contain and
@@ -129,6 +153,7 @@ type Classification struct {
 	Infrastructure []string
 	NoPolicy       []string
 	Pending        map[string]string
+	PolicyLandsAt  map[string]int64
 }
 
 var (
@@ -233,6 +258,18 @@ func (c Classification) Validate() error {
 		}
 	}
 
+	for _, name := range sortedInt64Keys(c.PolicyLandsAt) {
+		if !c.IsModelTable(name) {
+			problems = append(problems, fmt.Sprintf(
+				"%q is in PolicyLandsAt but is not a declared model table", name))
+		}
+		if contains(c.NoPolicy, name) {
+			problems = append(problems, fmt.Sprintf(
+				"%q is declared both permanently policy-free (NoPolicy) and as gaining a "+
+					"policy at a later version (PolicyLandsAt), which is a contradiction", name))
+		}
+	}
+
 	for _, dup := range duplicates(c.TenantChildren) {
 		problems = append(problems, fmt.Sprintf(
 			"%q is listed twice in TenantChildren", dup))
@@ -334,6 +371,29 @@ type TableProtection struct {
 // so a suite that ran as the owner would prove nothing, and a production role
 // that happened to own a table would silently be exempt.
 func (c Classification) CheckProtection(t TableProtection) error {
+	return c.checkProtection(t, contains(c.NoPolicy, t.Name))
+}
+
+// CheckProtectionAt is CheckProtection with one further allowance: a table
+// entered in PolicyLandsAt is not held to "must carry a policy" at any
+// version STRICTLY BEFORE the one recorded there. It exists for the stepwise
+// rollback walk (migrate_roundtrip_test.go), which inspects the schema at
+// every intermediate version, not only at HEAD — CheckProtection has no
+// notion of "at a version" and does not consult PolicyLandsAt at all, so the
+// full-schema meta-test still demands a policy unconditionally.
+func (c Classification) CheckProtectionAt(t TableProtection, at int64) error {
+	exempt := contains(c.NoPolicy, t.Name)
+	if landsAt, tracked := c.PolicyLandsAt[t.Name]; tracked && at < landsAt {
+		exempt = true
+	}
+
+	return c.checkProtection(t, exempt)
+}
+
+// checkProtection is the shared rule CheckProtection and CheckProtectionAt
+// both run. policyExempt is the one thing that differs between them: whether
+// a zero policy count is acceptable for this table at this point in time.
+func (c Classification) checkProtection(t TableProtection, policyExempt bool) error {
 	if contains(c.Infrastructure, t.Name) {
 		return nil
 	}
@@ -350,7 +410,7 @@ func (c Classification) CheckProtection(t TableProtection) error {
 		problems = append(problems, fmt.Errorf(
 			"%w: %q — the owner bypasses its policies", ErrRLSNotForced, t.Name))
 	}
-	if t.PolicyCount == 0 && !contains(c.NoPolicy, t.Name) {
+	if t.PolicyCount == 0 && !policyExempt {
 		problems = append(problems, fmt.Errorf(
 			"%w: %q is not a declared default-deny table, so no policy means no access "+
 				"rather than isolation", ErrNoPolicy, t.Name))
@@ -431,6 +491,16 @@ func duplicates(set []string) []string {
 }
 
 func sortedKeys(m map[string]string) []string {
+	keys := make([]string, 0, len(m))
+	for key := range m {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	return keys
+}
+
+func sortedInt64Keys(m map[string]int64) []string {
 	keys := make([]string, 0, len(m))
 	for key := range m {
 		keys = append(keys, key)

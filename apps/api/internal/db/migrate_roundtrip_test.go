@@ -129,7 +129,12 @@ func checkCatalogAt(ctx context.Context, pool *pgxpool.Pool, at int64) (int, err
 
 	model := 0
 	for _, table := range tables {
-		if err := rlstest.Schema.CheckProtection(table); err != nil {
+		// CheckProtectionAt, not CheckProtection: a table like refresh_tokens
+		// can legitimately have RLS on with zero policies at an intermediate
+		// version, if its first policy belongs to a migration later than `at`
+		// (rlstest.Schema.PolicyLandsAt). That is a real, applied historical
+		// state the walk passes through, not a rollback bug.
+		if err := rlstest.Schema.CheckProtectionAt(table, at); err != nil {
 			problems = append(problems, fmt.Errorf(
 				"at version %d a table is left unprotected by a rollback: %w", at, err))
 		}

@@ -51,6 +51,18 @@ type Querier interface {
 	GetLatestPublishedVersion(ctx context.Context, templateID uuid.UUID) (FormTemplateVersion, error)
 	GetMedia(ctx context.Context, id uuid.UUID) (Medium, error)
 	GetPet(ctx context.Context, id uuid.UUID) (Pet, error)
+	// The auth door's own queries: everything reachable only through app_auth
+	// (P2-D1..P2-D3, migration 00013). Handlers built later in this phase call
+	// these inside db.WithAuthUser / db.WithAuthLookup, never inside WithTenant.
+	//
+	// Same rule as every other file here: NOT ONE of these filters by
+	// shelter_id. app_auth cannot even set app.shelter_id -- there is no claim
+	// yet at this door -- so a query that tried would just be wrong, not merely
+	// redundant with the policy.
+	// The rotation lookup (design's rotate flow): parse the cookie's user_id
+	// prefix, WithAuthUser(userID), then find the presented token by its hash
+	// inside that scope. token_hash is UNIQUE, so :one is correct.
+	GetRefreshTokenByHash(ctx context.Context, tokenHash []byte) (RefreshToken, error)
 	// Dynamic forms: templates, immutable versions, and recorded answers.
 	// `key` is unique PER SHELTER, so under RLS this resolves to exactly one row
 	// without naming the shelter.
@@ -64,6 +76,10 @@ type Querier interface {
 	// `email` is `citext`, so this finds a differently-cased address without the
 	// call site remembering to normalise (D7).
 	GetUserByEmail(ctx context.Context, email string) (User, error)
+	// Only the columns app_auth's SELECT grant carries (P2-D3, 00013). SELECT *
+	// would name full_name and phone, which app_auth cannot read at all, and the
+	// statement would fail 42501 before a row ever came back.
+	GetUserCredentialsByEmail(ctx context.Context, email string) (GetUserCredentialsByEmailRow, error)
 	// The renderer's path, and the reason historical answers stay readable: it
 	// resolves the version the submission was FILLED WITH, never the latest one.
 	GetVersionForSubmission(ctx context.Context, id uuid.UUID) (FormTemplateVersion, error)
@@ -81,6 +97,11 @@ type Querier interface {
 	// `breeds` carries no `shelter_id` at all, so `species_id` is a domain filter
 	// rather than a tenant one.
 	ListBreedsForSpecies(ctx context.Context, speciesID uuid.UUID) ([]Breed, error)
+	// Login needs to know which shelters a user belongs to in order to mint a
+	// shelter-exchange claim later -- nothing else. Column- and row-scoped to the
+	// caller (auth_own_memberships, P2-D3): app_auth cannot read another user's
+	// membership row at all, so no predicate here could leak past the policy.
+	ListOwnMemberships(ctx context.Context, userID uuid.UUID) ([]ListOwnMembershipsRow, error)
 	// The shelter dashboard read, ordered to match the §4.6 index
 	// (shelter_id, status, published_at DESC) so the plan can walk it.
 	ListPetsByStatus(ctx context.Context, status string) ([]Pet, error)
@@ -101,6 +122,10 @@ type Querier interface {
 	RecordSubmission(ctx context.Context, arg RecordSubmissionParams) (FormSubmission, error)
 	// Uploaded files. The bytes live in R2 (§5.5); this is the record of them.
 	RecordUpload(ctx context.Context, arg RecordUploadParams) (Medium, error)
+	// Reuse detection revokes the whole family in one statement (§5.2): every
+	// token sharing family_id, not just the one presented. execrows so a caller
+	// can tell "revoked N tokens" apart from "the family was already revoked".
+	RevokeRefreshTokenFamily(ctx context.Context, familyID uuid.UUID) (int64, error)
 	// Containment, which is what the GIN index on `answers` serves. `answers::text
 	// LIKE` would read the same and use no index at all (§4.6).
 	SearchSubmissions(ctx context.Context, answers []byte) ([]FormSubmission, error)
