@@ -3,6 +3,8 @@ type: constraint
 score: 4
 topic_key: mascotapp/ops/gentle-ai-pinned-until-phase-02-closes
 task: T-02-005
+status: guardado
+observation_id: obs-7b890b7ace39e1e4
 rationale: "Una herramienta de orquestación que va tres majors atrás genera presión constante para actualizar, y cada sesión nueva ve `gentle-ai update` reportando 2.5.0 sin saber por qué nadie lo subió. Sin la razón escrita, alguien la sube a mitad de la cadena de PRs y descubre después si el store del runtime sobrevivió. La decisión importa menos que el criterio: no se cambia de major una herramienta que lleva estado de la fase en curso."
 ---
 

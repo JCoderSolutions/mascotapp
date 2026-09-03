@@ -13,18 +13,9 @@ versionado. El `observation_id` es la misma nota dentro de Engram; sirve para
 trazabilidad, no es requisito para leerla.
 
 - Candidatos totales: **83**
-- Aprobados y guardados en Engram: **80**
-- Pendientes de aprobación explícita del usuario: **1**
+- Aprobados y guardados en Engram: **81**
+- Pendientes de aprobación explícita del usuario: **0**
 - Descartados por el pase de curaduría: **2**
-
-## Pendientes de aprobación
-
-Nada de esto está en Engram todavía. Requiere el sí explícito del usuario
-antes de `mem_save` (§6.6 del plan maestro).
-
-| Tarea | Tipo | Score | Archivo | Qué dice |
-|---|---|---|---|---|
-| `T-02-005` | constraint | 4 | [2026-09-03-gentle-ai-pinned-to-1-49-0.md](../../../.engram/queue/2026-09-03-gentle-ai-pinned-to-1-49-0.md) | Decisión del usuario, 2026-09-03. gentle-ai update reporta latest: 2.5.0 — no se sube. |
 
 ## Descartados — NO guardar
 
@@ -107,7 +98,7 @@ exactamente lo que la columna de abajo explica que está mal.
 | `T-01-022` | `…/shelter-verification` | 5 | [2026-08-31-lt2-no-lo-hace-cumplir-la-base.md](../../../.engram/queue/2026-08-31-lt2-no-lo-hace-cumplir-la-base.md) | `obs-85415c0b8700bec6` | §1.1 del plan pone pending_verification como requisito duro de MVP: *"un refugio no puede publicar hasta ser verificado manualmen… |
 | `T-01-024` | `…/historical-readability-from-the-renderer` | 5 | [2026-09-01-la-legibilidad-historica-se-afirma-desde-el-renderer.md](../../../.engram/queue/2026-09-01-la-legibilidad-historica-se-afirma-desde-el-renderer.md) | `obs-069b75a9882b4f07` | §4.4 regla 1 dice que una respuesta enviada siempre se renderiza contra la version con la que se lleno. Hay dos formas de "probar… |
 
-### `mascotapp/ops/*` — 7
+### `mascotapp/ops/*` — 8
 
 | Tarea | `topic_key` | Score | Archivo | `observation_id` | Qué dice |
 |---|---|---|---|---|---|
@@ -117,6 +108,7 @@ exactamente lo que la columna de abajo explica que está mal.
 | `T-01-013` | `…/testcontainers-windows-provider-race` | 4 | [2026-08-30-el-flake-de-testcontainers-en-windows.md](../../../.engram/queue/2026-08-30-el-flake-de-testcontainers-en-windows.md) | `obs-df8668122e55b55d` | Síntoma: un paquete entero falla a 0.00s, todos sus tests con el mismo mensaje: |
 | `T-01-020` | `…/windows-appcontrol-go-tests` | 5 | [2026-08-31-smart-app-control-no-es-defender.md](../../../.engram/queue/2026-08-31-smart-app-control-no-es-defender.md) | `obs-09d0eb05887b634f` | El sintoma nunca cambio: |
 | `T-01-032` | `…/bigserial-needs-a-sequence-grant` | 5 | [2026-09-01-bigserial-necesita-un-grant-que-no-es-sobre-una-tabla.md](../../../.engram/queue/2026-09-01-bigserial-necesita-un-grant-que-no-es-sobre-una-tabla.md) | `obs-64400c1e36f5e3ab` | bigserial no es un tipo. Es bigint + una SECUENCIA + un DEFAULT nextval(...). Un grant de tabla no dice nada sobre esa secuencia. |
+| `T-02-005` | `…/gentle-ai-pinned-until-phase-02-closes` | 4 | [2026-09-03-gentle-ai-pinned-to-1-49-0.md](../../../.engram/queue/2026-09-03-gentle-ai-pinned-to-1-49-0.md) | `obs-7b890b7ace39e1e4` | Decisión del usuario, 2026-09-03. gentle-ai update reporta latest: 2.5.0 — no se sube. |
 | `fase-02 planning` | `…/failed-report-is-not-lost-work` | 3 | [2026-09-02-un-agente-que-falla-al-reportar-no-fallo-al-escribir.md](../../../.engram/queue/2026-09-02-un-agente-que-falla-al-reportar-no-fallo-al-escribir.md) | `obs-216cdb370cd7e725` | sdd-design se cayo por limite de sesion de proveedor. Su ultimo texto era *"Now I have the full picture. Writing the design."*, y… |
 
 ### `mascotapp/security/*` — 20
