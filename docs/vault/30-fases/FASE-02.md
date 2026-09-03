@@ -165,7 +165,7 @@ Columna **PR**: en qué PR de la cadena entra. Columna **est**: líneas autorada
 |---|---|---|---|
 | `[x]` `T-02-001` | RED — `WithAuthUser` / `WithAuthLookup` unit tests against a recording `pgx.Tx` stub | PR 1 | 130 |
 | `[x]` `T-02-002` | GREEN — `internal/db/auth.go`: `WithAuthUser`, `WithAuthLookup`, `ErrNoAuthUser`, `NewAuthPool` | PR 1 | 120 |
-| `[ ]` `T-02-003` | Migration `00013_auth_role.sql` + `dbtest` third-pool wiring + reachability/isolation proof | PR 2 | 260 |
+| `[x]` `T-02-003` | Migration `00013_auth_role.sql` + `dbtest` third-pool wiring + reachability/isolation proof | PR 2 | ~~260~~ **579** ⚠ |
 | `[ ]` `T-02-004` | Catalog classification + `query/auth.sql` + `TestPolicies_DoNotCrossGUCs` | PR 3 | 150 |
 | `[ ]` `T-02-005` | Pin the PostgreSQL column-privilege semantics slice (b) depends on | PR 5 | 55 |
 | `[ ]` `T-02-006` | Migration `00015_column_grants.sql` — B1 on `shelters` and `memberships` | PR 5 | 215 |

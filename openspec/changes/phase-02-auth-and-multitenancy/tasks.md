@@ -85,7 +85,7 @@ Migration `00013`. Nothing in this slice depends on anything outside Phase 01's 
       - pilot: blacklisted (§7.2)
       - engram: `sdd/phase-02-auth-and-multitenancy/apply-progress`
 
-- [ ] **T-02-003** · Migration `00013_auth_role.sql` + `dbtest` third-pool wiring + reachability/isolation proof
+- [x] **T-02-003** · Migration `00013_auth_role.sql` + `dbtest` third-pool wiring + reachability/isolation proof
       - spec: tenant-isolation / *The connecting role cannot bypass RLS* (scenario: *the same assertion passes for `app_public` and `app_auth`*) · tenant-isolation / *Grants are explicit and default-deny* (scenario: *refresh_tokens is reachable only through the auth role*)
       - RED first: extend `dbtest/roles.go`'s role guard to expect `app_auth` — fails, the role does not exist yet, so bootstrap fails at harness setup · write the reachability integration tests against raw SQL (no `sqlc` query file yet — that is `T-02-004`): `app_auth` can read/write `refresh_tokens`, `users` (credential columns only), `memberships` (own rows only) · `app_tenant` **and** `app_public` still get `42501` on all of it, read and write · a user scoped to A under `app_auth` cannot see B's `refresh_tokens` rows (A/B shape, keyed on `user_id`) — all fail today because `00013` and the third pool do not exist
       - build: `internal/db/migrations/00013_auth_role.sql` — `app_auth` role (`NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS NOINHERIT LOGIN`, guarded on `pg_roles` exactly like `00001`, P2-D1) · policies + grants on `refresh_tokens` (P2-D2: `auth_own_sessions`, `user_id = app.user_id`), `users` (P2-D3: `auth_lookup_users` `USING(true)` + column grant on credential columns only, `auth_own_user`, `auth_register_user`), `memberships` (P2-D3: `auth_own_memberships`, `user_id = app.user_id`) · `Down` revokes grants and drops policies but **does not drop the role** (same asymmetry as `00001`, stated in Migration/Rollout) · `apps/api/internal/db/dbtest/container.go` + `roles.go` — `AuthPool`, `app_auth` password bootstrap via `db.SetRolePassword` (never `.env.example`), role guard extended over the third pool
@@ -603,6 +603,20 @@ zero matching files): decided by a hard constraint the chain runs into, not by w
 prose files the content. `T-02-016` does not depend on anything else in slice (c) — its recovery-code
 scenarios exercise the table directly, not the crypto primitives — so nothing else moves with it.
 
+**`size:exception` accepted for `PR-02-02`, 2026-09-02.** The task estimated 260 authored
+lines and the work measured **579**: a 120-line migration, a 379-line reachability and A/B
+suite, and 80 lines of harness and inventory. The estimate was wrong, not the work — each of
+the six behavioural cases maps to one spec scenario and none is padding.
+
+The one honest cut is `auth_door_test.go`'s split by subject: `refresh_tokens` (P2-D2) in the
+first three tests, `users`/`memberships` (P2-D3) in the last three. It lands at **407 / 172** —
+still 7 lines over on the first half, so reaching 399 would require trimming to fit, which is
+the move this document refuses everywhere else. And it pays for those 7 lines by separating a
+security change from its behavioural proof for the length of one PR.
+
+The user chose the exception over that trade. It applies to `PR-02-02` and to nothing else;
+every other row in the table below is unchanged and still at or under 400.
+
 **The three non-negotiable constraints, applied:**
 
 1. **`T-02-007`'s trigger + pinned-test swap is one commit.** `T-02-007` is now its own PR,
@@ -634,7 +648,7 @@ labels move, no task's content or dependency changed.
 | PR | Title | Tasks | `est:` | Depends on |
 |---|---|---|---|---|
 | `PR-02-01` | `WithAuthUser`/`WithAuthLookup` — RED+GREEN | T-02-001, T-02-002 | 250 | — (base branch) |
-| `PR-02-02` | Migration `00013_auth_role` + `dbtest` third pool + reachability proof | T-02-003 | 260 | `PR-02-01` |
+| `PR-02-02` | Migration `00013_auth_role` + `dbtest` third pool + reachability proof | T-02-003 | ~~260~~ **579** `size:exception` | `PR-02-01` |
 | `PR-02-03` | Catalog classification + `query/auth.sql` + `TestPolicies_DoNotCrossGUCs` | T-02-004 | 150 | `PR-02-02` |
 | `PR-02-04` | Migration `00014_totp_recovery_codes` — pulled forward, see the numbering note above | T-02-016 | 160 | `PR-02-03` |
 | `PR-02-05` | Column-privilege semantics pin + migration `00015_column_grants` (B1) + the stale-comment fix | T-02-005, T-02-006 | 270 | `PR-02-04` (migration ordering only — no functional dependency) |
