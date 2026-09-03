@@ -200,7 +200,7 @@ table. **No task in this file modifies it.**
       - pilot: blacklisted (§7.2)
       - engram: —
 
-- [ ] **T-02-007** · Migration `00016_assignee_active_membership.sql` — the one pinned test move, same commit
+- [x] **T-02-007** · Migration `00016_assignee_active_membership.sql` — the one pinned test move, same commit
       - spec: (design P2-D7; no dedicated spec requirement — the assignee active-membership check is inherited scope from FASE-01's carried-forward item, not a new capability requirement)
       - **RED first, same commit as the trigger — not two commits.** Write the inverse of
         `TestAssignment_DoesNotYetRequireAnActiveMembership`: assigning `assigned_to_user_id` to an
@@ -754,7 +754,7 @@ labels move, no task's content or dependency changed.
 | `PR-02-03` | Catalog classification + `query/auth.sql` + `TestPolicies_DoNotCrossGUCs` | T-02-004 | 150 | `PR-02-02` |
 | `PR-02-04` | Migration `00014_totp_recovery_codes` — pulled forward, see the numbering note above | T-02-016 | ~~160~~ **280** | `PR-02-03` |
 | `PR-02-05` | Column-privilege semantics pin + migration `00015_column_grants` (B1) + the stale-comment fix | T-02-005, T-02-006 | ~~270~~ **836** `size:exception` | `PR-02-04` (migration ordering only — no functional dependency) |
-| `PR-02-06` | Migration `00016_assignee_active_membership` + the one pinned-test move | T-02-007 | 140 | `PR-02-05` (migration ordering only — no functional dependency) |
+| `PR-02-06` | Migration `00016_assignee_active_membership` + the one pinned-test move | T-02-007 | ~~140~~ **291** (fits) | `PR-02-05` (migration ordering only — no functional dependency) |
 | `PR-02-07` | `password.go` — RED+GREEN | T-02-008, T-02-009 | 160 | — (pure Go, parallel-eligible from `PR-02-01` on) |
 | `PR-02-08` | TOTP secret lifecycle — `envelope.go` + `totp.go`, RED+GREEN | T-02-010, T-02-011, T-02-012, T-02-013 | 390 | — (pure Go, parallel-eligible) |
 | `PR-02-09` | `token.go` (JWT) — RED+GREEN | T-02-014, T-02-015 | 220 | — (pure Go, parallel-eligible) |

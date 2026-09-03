@@ -12,9 +12,9 @@ que el repositorio siga siendo la verdad operativa (regla IA-4 del plan maestro)
 versionado. El `observation_id` es la misma nota dentro de Engram; sirve para
 trazabilidad, no es requisito para leerla.
 
-- Candidatos totales: **84**
+- Candidatos totales: **85**
 - Aprobados y guardados en Engram: **81**
-- Pendientes de aprobación explícita del usuario: **1**
+- Pendientes de aprobación explícita del usuario: **2**
 - Descartados por el pase de curaduría: **2**
 
 ## Pendientes de aprobación
@@ -25,6 +25,7 @@ antes de `mem_save` (§6.6 del plan maestro).
 | Tarea | Tipo | Score | Archivo | Qué dice |
 |---|---|---|---|---|
 | `T-02-006` | architecture | 5 | [2026-09-03-ab-probe-must-touch-a-writable-column.md](../../../.engram/queue/2026-09-03-ab-probe-must-touch-a-writable-column.md) | El runner A/B de este proyecto prueba que el tenant B no alcanza la fila del tenant A con un no-op: |
+| `T-02-007` | bug | 4 | [2026-09-03-when-guard-kills-the-feature-not-just-the-edge-case.md](../../../.engram/queue/2026-09-03-when-guard-kills-the-feature-not-just-the-edge-case.md) | 00016_assignee_active_membership instala un trigger que exige que el asignado de una solicitud de adopción tenga una membresía ac… |
 
 ## Descartados — NO guardar
 
