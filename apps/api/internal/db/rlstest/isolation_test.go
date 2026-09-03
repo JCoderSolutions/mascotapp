@@ -1006,6 +1006,10 @@ func TestTenancyPolicies_ApplyToTheRightRoleAndCommand(t *testing.T) {
 		{"form_templates", "tenant_isolation", "*", "app_tenant"},
 		{"media", "public_catalog", "r", "app_public"},
 		{"media", "tenant_isolation", "*", "app_tenant"},
+		// Phase 02 (00013, P2-D3): the auth door reads which shelters a user
+		// belongs to in order to mint a claim, scoped to its own rows, and
+		// never writes here. "auth_" sorts before "tenant_" under COLLATE "C".
+		{"memberships", "auth_own_memberships", "r", "app_auth"},
 		{"memberships", "tenant_isolation", "*", "app_tenant"},
 		{"pet_health_records", "tenant_isolation", "*", "app_tenant"},
 		{"pet_media", "public_catalog", "r", "app_public"},
@@ -1019,6 +1023,11 @@ func TestTenancyPolicies_ApplyToTheRightRoleAndCommand(t *testing.T) {
 		{"pet_status_history", "tenant_read", "r", "app_tenant"},
 		{"pets", "public_catalog", "r", "app_public"},
 		{"pets", "tenant_isolation", "*", "app_tenant"},
+		// refresh_tokens gained its policy in Phase 02 (00013, P2-D2): the auth
+		// role reads and writes it, scoped by app.user_id, and app_tenant /
+		// app_public still hold no grant on it at all — see the privilege
+		// inventory below.
+		{"refresh_tokens", "auth_own_sessions", "*", "app_auth"},
 		{"shelters", "tenant_isolation", "*", "app_tenant"},
 		{"species", "reference_readable", "r", "app_public,app_tenant"},
 		// TWO permissive policies on users, and they OR together: one names
@@ -1026,9 +1035,15 @@ func TestTenancyPolicies_ApplyToTheRightRoleAndCommand(t *testing.T) {
 		// Kept separate on purpose -- a single policy with an OR inside it is one
 		// edit away from widening both paths at once (D6).
 		{"users", "applicant_visible_users", "r", "app_tenant"},
+		// Phase 02 (00013, P2-D3) adds app_auth's three policies on users: a
+		// USING(true) read narrowed by column grant (the lookup predicate
+		// genuinely cannot be written), a self-scoped UPDATE, and an open
+		// INSERT for registration. "auth_" sorts before "member_" under
+		// COLLATE "C", so these three land between the two app_tenant rows.
+		{"users", "auth_lookup_users", "r", "app_auth"},
+		{"users", "auth_own_user", "w", "app_auth"},
+		{"users", "auth_register_user", "a", "app_auth"},
 		{"users", "member_visible_users", "r", "app_tenant"},
-		// refresh_tokens is absent on purpose: RLS enabled with NO policy is
-		// what denies every non-owner role outright.
 	}
 
 	rows, err := env.OwnerPool.Query(ctx, `
@@ -1097,7 +1112,33 @@ func TestTenancyPolicies_ApplyToTheRightRoleAndCommand(t *testing.T) {
 		{"app_tenant", "users", "UPDATE", false, "same"},
 		{"app_tenant", "users", "DELETE", false, "same"},
 		{"app_tenant", "refresh_tokens", "SELECT", false,
-			"refresh_tokens is default-deny: no policy AND no grant"},
+			"refresh_tokens is reachable only through app_auth (P2-D1); app_tenant holds no " +
+				"grant on it at all"},
+		{"app_public", "refresh_tokens", "SELECT", false, "same door, same reason"},
+		{"app_auth", "refresh_tokens", "SELECT", true, ""},
+		{"app_auth", "refresh_tokens", "INSERT", true, ""},
+		{"app_auth", "refresh_tokens", "UPDATE", true, ""},
+		{"app_auth", "refresh_tokens", "DELETE", true, ""},
+		{"app_auth", "users", "SELECT", false,
+			"VERIFIED live on PG 17: a column grant is NOT a table privilege, so " +
+				"has_table_privilege is false here BY DESIGN. Expecting false is the " +
+				"stronger assertion -- it goes red if anyone widens the credential grant " +
+				"to the whole table. The columns are asserted precisely in auth_door_test.go"},
+		{"app_auth", "users", "INSERT", false,
+			"column grant on (id, email, password_hash, full_name, phone); same reason"},
+		{"app_auth", "users", "UPDATE", false,
+			"column grant on password_hash, totp_secret_enc, email_verified_at, " +
+				"last_login_at, updated_at; same reason"},
+		{"app_auth", "users", "DELETE", false, "no account-deletion path exists in this phase"},
+		{"app_auth", "memberships", "SELECT", false,
+			"column grant on (id, user_id, shelter_id, role, status); the row scope is " +
+				"auth_own_memberships and is asserted in auth_door_test.go"},
+		{"app_auth", "memberships", "INSERT", false,
+			"app_auth never writes memberships; the founder's membership insert runs under " +
+				"app_tenant inside registration's second transaction (P2-D6)"},
+		{"app_auth", "shelters", "SELECT", false,
+			"app_auth never gets a policy on shelters; shelter rows are read under tenant " +
+				"scope once the claim exists (P2-D3)"},
 		{"app_tenant", "media", "SELECT", true, ""},
 		{"app_tenant", "media", "INSERT", true, ""},
 		{"app_tenant", "media", "UPDATE", true, ""},

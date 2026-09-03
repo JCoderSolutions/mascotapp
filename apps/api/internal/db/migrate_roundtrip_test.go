@@ -35,6 +35,7 @@ import (
 type downState struct {
 	TenantRole bool
 	PublicRole bool
+	AuthRole   bool
 	Citext     bool
 }
 
@@ -57,6 +58,7 @@ func checkDownState(state downState, at int64) error {
 	}{
 		{"app_tenant", state.TenantRole},
 		{"app_public", state.PublicRole},
+		{"app_auth", state.AuthRole},
 	} {
 		if !role.present {
 			problems = append(problems, fmt.Errorf(
@@ -83,8 +85,9 @@ func readDownState(ctx context.Context, pool *pgxpool.Pool) (downState, error) {
 	err := pool.QueryRow(ctx, `
 		SELECT EXISTS (SELECT 1 FROM pg_roles     WHERE rolname = 'app_tenant'),
 		       EXISTS (SELECT 1 FROM pg_roles     WHERE rolname = 'app_public'),
+		       EXISTS (SELECT 1 FROM pg_roles     WHERE rolname = 'app_auth'),
 		       EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'citext')`,
-	).Scan(&state.TenantRole, &state.PublicRole, &state.Citext)
+	).Scan(&state.TenantRole, &state.PublicRole, &state.AuthRole, &state.Citext)
 	if err != nil {
 		return downState{}, fmt.Errorf("reading the post-rollback state: %w", err)
 	}
@@ -426,25 +429,32 @@ func TestCheckDownState(t *testing.T) {
 	}{
 		{
 			name:  "everything survived",
-			state: downState{TenantRole: true, PublicRole: true, Citext: true},
+			state: downState{TenantRole: true, PublicRole: true, AuthRole: true, Citext: true},
 		},
 		{
 			name:    "app_tenant was dropped",
-			state:   downState{PublicRole: true, Citext: true},
+			state:   downState{PublicRole: true, AuthRole: true, Citext: true},
 			wantErr: errRoleDropped,
 			wants:   "app_tenant",
 			why:     "the role the whole isolation model connects as",
 		},
 		{
 			name:    "app_public was dropped",
-			state:   downState{TenantRole: true, Citext: true},
+			state:   downState{TenantRole: true, AuthRole: true, Citext: true},
 			wantErr: errRoleDropped,
 			wants:   "app_public",
 			why:     "the public catalog would have no role to read as",
 		},
 		{
+			name:    "app_auth was dropped",
+			state:   downState{TenantRole: true, PublicRole: true, Citext: true},
+			wantErr: errRoleDropped,
+			wants:   "app_auth",
+			why:     "the auth door (P2-D1) would have no role to read or write through",
+		},
+		{
 			name:    "citext was dropped",
-			state:   downState{TenantRole: true, PublicRole: true},
+			state:   downState{TenantRole: true, PublicRole: true, AuthRole: true},
 			wantErr: errCitextDropped,
 			wants:   "CASCADEs",
 			why:     "dropping it takes users.email with it, so the rollback is not one",

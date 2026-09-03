@@ -93,6 +93,7 @@ func TestPostgres_ProvidesPoolsForBothApplicationRoles(t *testing.T) {
 	for want, pool := range map[string]dbtest.Querier{
 		"app_tenant": env.TenantPool,
 		"app_public": env.PublicPool,
+		"app_auth":   env.AuthPool,
 	} {
 		t.Run(want, func(t *testing.T) {
 			if pool == nil {
@@ -138,6 +139,7 @@ func TestGuard_AcceptsTheApplicationRoles(t *testing.T) {
 	for label, pool := range map[string]dbtest.Querier{
 		"app_tenant": env.TenantPool,
 		"app_public": env.PublicPool,
+		"app_auth":   env.AuthPool,
 	} {
 		t.Run(label, func(t *testing.T) {
 			caps, err := dbtest.ReadRoleCapabilities(ctx, pool)
@@ -167,7 +169,7 @@ func TestPostgres_GuardsEveryApplicationPoolDuringSetup(t *testing.T) {
 	env := dbtest.Postgres(t)
 
 	guarded := env.GuardedRoles()
-	for _, role := range []string{"app_tenant", "app_public"} {
+	for _, role := range []string{"app_tenant", "app_public", "app_auth"} {
 		caps, ok := guarded[role]
 		if !ok {
 			t.Errorf("the harness handed out a %s pool without guarding it. Every A/B "+
