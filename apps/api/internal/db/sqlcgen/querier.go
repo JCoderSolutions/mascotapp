@@ -32,6 +32,9 @@ type Querier interface {
 	// The catalog core and its three children.
 	CreatePet(ctx context.Context, arg CreatePetParams) (Pet, error)
 	CreateTemplate(ctx context.Context, arg CreateTemplateParams) (FormTemplate, error)
+	// Regeneration starts by clearing the previous set, all ten in one
+	// statement, in the same transaction as the ten inserts above.
+	DeleteRecoveryCodesForUser(ctx context.Context, userID uuid.UUID) (int64, error)
 	// A note IS editable, unlike an event. That contrast is the design of 00010.
 	EditApplicationNote(ctx context.Context, arg EditApplicationNoteParams) (int64, error)
 	// Contracts, receipts and certificates.
@@ -51,6 +54,9 @@ type Querier interface {
 	GetLatestPublishedVersion(ctx context.Context, templateID uuid.UUID) (FormTemplateVersion, error)
 	GetMedia(ctx context.Context, id uuid.UUID) (Medium, error)
 	GetPet(ctx context.Context, id uuid.UUID) (Pet, error)
+	// The redemption lookup: parse the submitted code, hash it, find the row.
+	// code_hash is UNIQUE, so :one is correct.
+	GetRecoveryCodeByHash(ctx context.Context, codeHash []byte) (TotpRecoveryCode, error)
 	// The auth door's own queries: everything reachable only through app_auth
 	// (P2-D1..P2-D3, migration 00013). Handlers built later in this phase call
 	// these inside db.WithAuthUser / db.WithAuthLookup, never inside WithTenant.
@@ -83,6 +89,12 @@ type Querier interface {
 	// The renderer's path, and the reason historical answers stay readable: it
 	// resolves the version the submission was FILLED WITH, never the latest one.
 	GetVersionForSubmission(ctx context.Context, id uuid.UUID) (FormTemplateVersion, error)
+	// totp_recovery_codes (P2-D8, migration 00014). The regeneration flow
+	// (T-02-017/018) issues DeleteRecoveryCodesForUser once and InsertRecoveryCode
+	// ten times inside one WithAuthUser transaction; SELECT/DELETE carry a table
+	// grant, INSERT the same, and UPDATE is column-scoped to used_at only -- code_hash
+	// and created_at are never rewritten once a row exists.
+	InsertRecoveryCode(ctx context.Context, arg InsertRecoveryCodeParams) error
 	// Supplying `shelter_id` is not filtering by it: the column is NOT NULL and
 	// `WITH CHECK` is what verifies the value.
 	InviteMember(ctx context.Context, arg InviteMemberParams) error
@@ -122,6 +134,11 @@ type Querier interface {
 	RecordSubmission(ctx context.Context, arg RecordSubmissionParams) (FormSubmission, error)
 	// Uploaded files. The bytes live in R2 (§5.5); this is the record of them.
 	RecordUpload(ctx context.Context, arg RecordUploadParams) (Medium, error)
+	// Single-use redemption: only a row with used_at still null is matched, so a
+	// repeated or concurrent redemption of the same code affects zero rows --
+	// the same "qualified write, zero rows means refused" shape
+	// RevokeRefreshTokenFamily above uses for its own idempotency question.
+	RedeemRecoveryCode(ctx context.Context, codeHash []byte) (int64, error)
 	// Reuse detection revokes the whole family in one statement (§5.2): every
 	// token sharing family_id, not just the one presented. execrows so a caller
 	// can tell "revoked N tokens" apart from "the family was already revoked".

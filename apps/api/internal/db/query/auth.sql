@@ -34,3 +34,31 @@ FROM users WHERE email = $1;
 -- caller (auth_own_memberships, P2-D3): app_auth cannot read another user's
 -- membership row at all, so no predicate here could leak past the policy.
 SELECT id, user_id, shelter_id, role, status FROM memberships WHERE user_id = $1;
+
+-- totp_recovery_codes (P2-D8, migration 00014). The regeneration flow
+-- (T-02-017/018) issues DeleteRecoveryCodesForUser once and InsertRecoveryCode
+-- ten times inside one WithAuthUser transaction; SELECT/DELETE carry a table
+-- grant, INSERT the same, and UPDATE is column-scoped to used_at only -- code_hash
+-- and created_at are never rewritten once a row exists.
+
+-- name: InsertRecoveryCode :exec
+INSERT INTO totp_recovery_codes (id, user_id, code_hash) VALUES ($1, $2, $3);
+
+-- name: DeleteRecoveryCodesForUser :execrows
+-- Regeneration starts by clearing the previous set, all ten in one
+-- statement, in the same transaction as the ten inserts above.
+DELETE FROM totp_recovery_codes WHERE user_id = $1;
+
+-- name: GetRecoveryCodeByHash :one
+-- The redemption lookup: parse the submitted code, hash it, find the row.
+-- code_hash is UNIQUE, so :one is correct.
+SELECT * FROM totp_recovery_codes WHERE code_hash = $1;
+
+-- name: RedeemRecoveryCode :execrows
+-- Single-use redemption: only a row with used_at still null is matched, so a
+-- repeated or concurrent redemption of the same code affects zero rows --
+-- the same "qualified write, zero rows means refused" shape
+-- RevokeRefreshTokenFamily above uses for its own idempotency question.
+UPDATE totp_recovery_codes
+SET used_at = now()
+WHERE code_hash = $1 AND used_at IS NULL;

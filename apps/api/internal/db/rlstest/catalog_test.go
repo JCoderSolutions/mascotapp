@@ -35,9 +35,9 @@ func TestSchema_MatchesTheDeclaredCounts(t *testing.T) {
 		{"tenant tables", len(rlstest.Schema.Tenant), 15},
 		{"tenant child tables", len(rlstest.Schema.TenantChildren), 9},
 		{"append-only tables", len(rlstest.Schema.AppendOnly), 2},
-		{"non-tenant model tables", len(rlstest.Schema.NonTenantModel), 4},
+		{"non-tenant model tables", len(rlstest.Schema.NonTenantModel), 5},
 		{"infrastructure exemptions", len(rlstest.Schema.Infrastructure), 1},
-		{"model tables", len(rlstest.Schema.ModelTables()), 19},
+		{"model tables", len(rlstest.Schema.ModelTables()), 20},
 	} {
 		if tc.got != tc.want {
 			t.Errorf("%s: got %d, want %d", tc.what, tc.got, tc.want)

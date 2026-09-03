@@ -1030,6 +1030,11 @@ func TestTenancyPolicies_ApplyToTheRightRoleAndCommand(t *testing.T) {
 		{"refresh_tokens", "auth_own_sessions", "*", "app_auth"},
 		{"shelters", "tenant_isolation", "*", "app_tenant"},
 		{"species", "reference_readable", "r", "app_public,app_tenant"},
+		// totp_recovery_codes lands in Phase 02 (00014, P2-D8): single-use
+		// account recovery, scoped to its own rows through the same door as
+		// refresh_tokens and memberships above. "totp_" sorts after "species"
+		// and before "users" under COLLATE "C".
+		{"totp_recovery_codes", "auth_own_recovery_codes", "*", "app_auth"},
 		// TWO permissive policies on users, and they OR together: one names
 		// membership as a reason to be visible, the other names having applied.
 		// Kept separate on purpose -- a single policy with an OR inside it is one
@@ -1139,6 +1144,17 @@ func TestTenancyPolicies_ApplyToTheRightRoleAndCommand(t *testing.T) {
 		{"app_auth", "shelters", "SELECT", false,
 			"app_auth never gets a policy on shelters; shelter rows are read under tenant " +
 				"scope once the claim exists (P2-D3)"},
+		{"app_tenant", "totp_recovery_codes", "SELECT", false,
+			"totp_recovery_codes is reachable only through app_auth (P2-D8); app_tenant " +
+				"holds no grant on it at all"},
+		{"app_public", "totp_recovery_codes", "SELECT", false, "same door, same reason"},
+		{"app_auth", "totp_recovery_codes", "SELECT", true, ""},
+		{"app_auth", "totp_recovery_codes", "INSERT", true, ""},
+		{"app_auth", "totp_recovery_codes", "DELETE", true, ""},
+		{"app_auth", "totp_recovery_codes", "UPDATE", false,
+			"column grant on used_at only (P2-D8); a column grant is NOT a table " +
+				"privilege, so this is the stronger assertion -- it goes red if the grant " +
+				"is ever widened to the whole table"},
 		{"app_tenant", "media", "SELECT", true, ""},
 		{"app_tenant", "media", "INSERT", true, ""},
 		{"app_tenant", "media", "UPDATE", true, ""},

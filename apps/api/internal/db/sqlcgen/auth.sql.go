@@ -12,6 +12,39 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const deleteRecoveryCodesForUser = `-- name: DeleteRecoveryCodesForUser :execrows
+DELETE FROM totp_recovery_codes WHERE user_id = $1
+`
+
+// Regeneration starts by clearing the previous set, all ten in one
+// statement, in the same transaction as the ten inserts above.
+func (q *Queries) DeleteRecoveryCodesForUser(ctx context.Context, userID uuid.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteRecoveryCodesForUser, userID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const getRecoveryCodeByHash = `-- name: GetRecoveryCodeByHash :one
+SELECT id, user_id, code_hash, used_at, created_at FROM totp_recovery_codes WHERE code_hash = $1
+`
+
+// The redemption lookup: parse the submitted code, hash it, find the row.
+// code_hash is UNIQUE, so :one is correct.
+func (q *Queries) GetRecoveryCodeByHash(ctx context.Context, codeHash []byte) (TotpRecoveryCode, error) {
+	row := q.db.QueryRow(ctx, getRecoveryCodeByHash, codeHash)
+	var i TotpRecoveryCode
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.CodeHash,
+		&i.UsedAt,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const getRefreshTokenByHash = `-- name: GetRefreshTokenByHash :one
 
 SELECT id, user_id, token_hash, family_id, expires_at, revoked_at, replaced_by, user_agent, ip_hash, created_at FROM refresh_tokens WHERE token_hash = $1
@@ -79,6 +112,27 @@ func (q *Queries) GetUserCredentialsByEmail(ctx context.Context, email string) (
 	return i, err
 }
 
+const insertRecoveryCode = `-- name: InsertRecoveryCode :exec
+
+INSERT INTO totp_recovery_codes (id, user_id, code_hash) VALUES ($1, $2, $3)
+`
+
+type InsertRecoveryCodeParams struct {
+	ID       uuid.UUID
+	UserID   uuid.UUID
+	CodeHash []byte
+}
+
+// totp_recovery_codes (P2-D8, migration 00014). The regeneration flow
+// (T-02-017/018) issues DeleteRecoveryCodesForUser once and InsertRecoveryCode
+// ten times inside one WithAuthUser transaction; SELECT/DELETE carry a table
+// grant, INSERT the same, and UPDATE is column-scoped to used_at only -- code_hash
+// and created_at are never rewritten once a row exists.
+func (q *Queries) InsertRecoveryCode(ctx context.Context, arg InsertRecoveryCodeParams) error {
+	_, err := q.db.Exec(ctx, insertRecoveryCode, arg.ID, arg.UserID, arg.CodeHash)
+	return err
+}
+
 const listOwnMemberships = `-- name: ListOwnMemberships :many
 SELECT id, user_id, shelter_id, role, status FROM memberships WHERE user_id = $1
 `
@@ -119,6 +173,24 @@ func (q *Queries) ListOwnMemberships(ctx context.Context, userID uuid.UUID) ([]L
 		return nil, err
 	}
 	return items, nil
+}
+
+const redeemRecoveryCode = `-- name: RedeemRecoveryCode :execrows
+UPDATE totp_recovery_codes
+SET used_at = now()
+WHERE code_hash = $1 AND used_at IS NULL
+`
+
+// Single-use redemption: only a row with used_at still null is matched, so a
+// repeated or concurrent redemption of the same code affects zero rows --
+// the same "qualified write, zero rows means refused" shape
+// RevokeRefreshTokenFamily above uses for its own idempotency question.
+func (q *Queries) RedeemRecoveryCode(ctx context.Context, codeHash []byte) (int64, error) {
+	result, err := q.db.Exec(ctx, redeemRecoveryCode, codeHash)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const revokeRefreshTokenFamily = `-- name: RevokeRefreshTokenFamily :execrows

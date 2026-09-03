@@ -256,6 +256,14 @@ type Species struct {
 	Name string
 }
 
+type TotpRecoveryCode struct {
+	ID        uuid.UUID
+	UserID    uuid.UUID
+	CodeHash  []byte
+	UsedAt    pgtype.Timestamptz
+	CreatedAt pgtype.Timestamptz
+}
+
 type User struct {
 	ID              uuid.UUID
 	Email           string

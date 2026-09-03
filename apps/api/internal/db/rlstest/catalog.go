@@ -65,12 +65,14 @@ var Schema = Classification{
 
 	// Model tables whose rows do not belong to exactly one shelter: `users` and
 	// `refresh_tokens` span shelters, `species` and `breeds` are global
-	// reference data. They still carry RLS — see NoPolicy and the doc on
+	// reference data, and `totp_recovery_codes` belongs to a user rather than
+	// a shelter (T-02-016). They still carry RLS — see NoPolicy and the doc on
 	// CheckProtection.
 	NonTenantModel: []string{
 		"breeds",
 		"refresh_tokens",
 		"species",
+		"totp_recovery_codes",
 		"users",
 	},
 
