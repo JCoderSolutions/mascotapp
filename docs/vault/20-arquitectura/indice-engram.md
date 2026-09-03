@@ -12,9 +12,9 @@ que el repositorio siga siendo la verdad operativa (regla IA-4 del plan maestro)
 versionado. El `observation_id` es la misma nota dentro de Engram; sirve para
 trazabilidad, no es requisito para leerla.
 
-- Candidatos totales: **79**
+- Candidatos totales: **80**
 - Aprobados y guardados en Engram: **76**
-- Pendientes de aprobación explícita del usuario: **1**
+- Pendientes de aprobación explícita del usuario: **2**
 - Descartados por el pase de curaduría: **2**
 
 ## Pendientes de aprobación
@@ -25,6 +25,7 @@ antes de `mem_save` (§6.6 del plan maestro).
 | Tarea | Tipo | Score | Archivo | Qué dice |
 |---|---|---|---|---|
 | `T-02-003` | constraint | 4 | [2026-09-02-has-table-privilege-no-ve-columnas.md](../../../.engram/queue/2026-09-02-has-table-privilege-no-ve-columnas.md) | Verificado en vivo contra PostgreSQL 17, no asumido: |
+| `T-02-004` | architecture | 4 | [2026-09-02-policylandsat-version-aware-catalog-exemption.md](../../../.engram/queue/2026-09-02-policylandsat-version-aware-catalog-exemption.md) | Sacar una tabla de NoPolicy puede romper un test que la tarea que la escribio no menciona, si esa tabla existio (con RLS, sin pol… |
 
 ## Descartados — NO guardar
 

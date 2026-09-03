@@ -95,7 +95,7 @@ Migration `00013`. Nothing in this slice depends on anything outside Phase 01's 
       - pilot: blacklisted (§7.2)
       - engram: —
 
-- [ ] **T-02-004** · Catalog classification + `query/auth.sql` + `TestPolicies_DoNotCrossGUCs`
+- [x] **T-02-004** · Catalog classification + `query/auth.sql` + `TestPolicies_DoNotCrossGUCs`
       - spec: tenant-isolation / *Tenant table set* (scenarios: *rejects an unclassified table*, *rejects an unprotected table*) · authorization-rbac / *Tenant scope derives only from the verified token claim* (the GUC-separation half, design P2-D1)
       - RED first: `rlstest/catalog.go` — `refresh_tokens` leaves `NoPolicy` (it has a real policy now). This alone fails `TestQueries_ExerciseEveryDeclaredTable` (`internal/db/query_test.go:74`), which derives its query requirement from the catalog and now demands a query for `refresh_tokens` where none exists — **the exemption self-expires, exactly as designed**. Counts do **not** move in this task: `refresh_tokens` was already one of Phase 01's 4 non-tenant model tables; only its `NoPolicy` flag changes. `TestSchema_MatchesTheDeclaredCounts` (`rlstest/catalog_test.go:27`) must stay pinned at 4 non-tenant / 19 model here — if it moves in this task, that is a defect, not a feature
       - build: `apps/api/internal/db/query/auth.sql` — sqlc inputs for `refresh_tokens` (the rotation lookup by `token_hash`, the family-revocation `UPDATE`) and auth-scoped `users`/`memberships` reads · `make generate` · new meta-test `TestPolicies_DoNotCrossGUCs` (P2-D1) — scans `pg_policy` via `pg_get_expr`, fails if any policy applying to `app_tenant` mentions `app.user_id`, or any policy applying to `app_auth` mentions `app.shelter_id`
@@ -103,7 +103,36 @@ Migration `00013`. Nothing in this slice depends on anything outside Phase 01's 
       - dod: `make generate` clean diff · RED→GREEN · lint clean · coverage held · spec/state updated · conventional commit
       - est: 150
       - pilot: blacklisted (§7.2)
-      - engram: —
+      - engram: `sdd/phase-02-auth-and-multitenancy/apply-progress`
+
+      **Closed 2026-09-02, PR-02-03.** One deviation the task description did not
+      anticipate. Removing `refresh_tokens` from `NoPolicy` breaks a SECOND test
+      besides `TestQueries_ExerciseEveryDeclaredTable`:
+      `TestMigrations_EveryStepDownLeavesAConsistentSchema` (the stepwise rollback
+      walk) inspects the schema at every INTERMEDIATE migration version, and at
+      versions 00002–00012, `refresh_tokens` legitimately carries RLS with zero
+      policies — 00013 is what gives it `auth_own_sessions`, and the walk passes
+      through every version before that one is applied. `CheckProtection` is a
+      single, unversioned rule, so once `refresh_tokens` left `NoPolicy` the walk
+      read that real, applied history as a broken rollback. Fixed with a new
+      `Classification.PolicyLandsAt map[string]int64` (mirrors `Pending`'s shape,
+      for a different gap: `Pending` is "table does not exist yet", this is
+      "table exists, real policy lands at a later migration") plus a
+      `CheckProtectionAt(t, at)` the walk calls instead of the unversioned
+      `CheckProtection` — which keeps HEAD's check exactly as strict as the task
+      asked for. `apps/api/internal/db/rlstest/catalog.go`,
+      `apps/api/internal/db/migrate_roundtrip_test.go`. All named tests confirmed
+      green with `-run -v`:
+      `TestQueries_ExerciseEveryDeclaredTable`,
+      `TestSchema_MatchesTheDeclaredCounts` (still 4 non-tenant / 19 model),
+      `TestCatalog_EveryRelationIsClassifiedAndProtected` (19/19 verified),
+      `TestMigrations_EveryStepDownLeavesAConsistentSchema`,
+      `TestPolicies_DoNotCrossGUCs`, `TestPolicyRow_Mentions` (4 sub-cases).
+      `query/auth.sql` adds `GetRefreshTokenByHash`, `RevokeRefreshTokenFamily`,
+      `GetUserCredentialsByEmail`, `ListOwnMemberships` — `make generate` clean
+      diff, only the expected `sqlcgen/auth.sql.go` + `querier.go`.
+      `golangci-lint run ./...`: 0 new issues (one pre-existing gosec finding in
+      `dbtest/container.go`, untouched by this task).
 
 ---
 
