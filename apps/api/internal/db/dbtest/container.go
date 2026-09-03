@@ -57,12 +57,14 @@ const (
 	// mismatch should fail loudly rather than silently connect as someone else.
 	tenantRole = "app_tenant"
 	publicRole = "app_public"
+	authRole   = "app_auth"
 
 	// Test-only credentials for a throwaway container. Passwords are never in
 	// the migration set (D8), so the harness sets them the same way production
 	// does, through db.SetRolePassword.
 	tenantPass = "tenant-test-password"
 	publicPass = "public-test-password"
+	authPass   = "auth-test-password"
 )
 
 // ErrEscapeHatchInCI is returned by GuardEscapeHatch when the Docker escape
@@ -94,6 +96,11 @@ type Env struct {
 
 	// PublicPool connects as app_public, read-only, for the public catalog.
 	PublicPool *pgxpool.Pool
+
+	// AuthPool connects as app_auth, the identity door added in Phase 02. It is
+	// a THIRD pool rather than a second GUC on TenantPool: app.user_id and
+	// app.shelter_id must never be live on one connection (P2-D1).
+	AuthPool *pgxpool.Pool
 
 	// ShelterA and ShelterB are the two tenants every A/B assertion is written
 	// against. They are generated per harness rather than fixed so a test can
@@ -298,6 +305,7 @@ func newEnv(ctx context.Context) (*Env, func(), error) {
 	}{
 		{tenantRole, tenantPass, func(p *pgxpool.Pool) { env.TenantPool = p }},
 		{publicRole, publicPass, func(p *pgxpool.Pool) { env.PublicPool = p }},
+		{authRole, authPass, func(p *pgxpool.Pool) { env.AuthPool = p }},
 	} {
 		appPool, err := openAppPool(ctx, env, spec.role, spec.password)
 		if err != nil {
@@ -350,6 +358,7 @@ func migrate(ctx context.Context, env *Env) error {
 	for role, password := range map[string]string{
 		tenantRole: tenantPass,
 		publicRole: publicPass,
+		authRole:   authPass,
 	} {
 		if err := db.SetRolePassword(ctx, handle, role, password); err != nil {
 			return fmt.Errorf("setting the password for %s: %w", role, err)
