@@ -222,34 +222,41 @@ func TestAnAssignedMembership_CannotBeDeleted(t *testing.T) {
 	}
 }
 
-// A characterization test, and the inconsistency it records is real: a shelter
-// can assign a case to a member it CANNOT READ.
+// The rule `00016_assignee_active_membership` installs, and the test that
+// REPLACED the characterization test pinning its absence.
 //
-// The composite key to `memberships (user_id, shelter_id)` checks that the pair
-// EXISTS. It cannot check `status`, and that is a property of PostgreSQL rather
-// than an oversight — verified on 17 rather than assumed: a foreign key must
-// reference a NON-PARTIAL unique constraint, so a
-// `UNIQUE (user_id, shelter_id) WHERE status = 'active'` index cannot be the
-// referenced key at all ("there is no unique constraint matching given keys").
-//
-// Meanwhile `member_visible_users` DOES filter on `status = 'active'` — it was
-// given that filter in T-01-016 after Judgment Day found that any membership row
-// granted read access to a user's PII. So the two layers disagree by
-// construction:
+// Until T-02-007 this file carried `TestAssignment_DoesNotYetRequireAnActiveMembership`,
+// which recorded that a shelter could assign a case to a member it CANNOT READ.
+// Two layers disagreed by construction:
 //
 //	assignable = the membership row exists
 //	readable   = the membership row exists AND is active
 //
-// A case assigned to a revoked or never-accepted member sits in a queue owned by
-// somebody whose name that shelter can no longer render. It is NOT a tenant leak
-// — everyone involved belongs to this shelter — so the database's answer is
-// incomplete rather than wrong. Closing it needs a trigger or the domain layer,
-// and the assignment rules live with RBAC in Phase 02.
+// The composite foreign key to `memberships (user_id, shelter_id)` checks that
+// the pair EXISTS and cannot check `status` — a property of PostgreSQL rather
+// than an oversight, verified on 17: a foreign key must reference a NON-PARTIAL
+// unique constraint, so `UNIQUE (user_id, shelter_id) WHERE status = 'active'`
+// cannot be the referenced key at all. Meanwhile `member_visible_users` DOES
+// filter on `status = 'active'`, given that filter in T-01-016 after Judgment
+// Day found that any membership row granted read access to a user's PII.
 //
-// This goes red the day somebody narrows it, and says what to do.
-func TestAssignment_DoesNotYetRequireAnActiveMembership(t *testing.T) {
+// A case assigned to a revoked or never-accepted member sat in a queue owned by
+// somebody whose name that shelter could no longer render.
+//
+// P2-D7 closes it with a `BEFORE INSERT OR UPDATE OF assigned_to_user_id` row
+// trigger. A trigger and not a policy, for ADR-0010's reason: a trigger is NOT
+// bypassed by a `BYPASSRLS` role. The subquery runs as the invoking role, so
+// under `app_tenant` it is filtered by `memberships`' own tenant policy — the
+// correct scope, not a limitation.
+//
+// The old test and this one changed hands in ONE commit, with the migration.
+// Landing them apart would leave the suite red between two commits with no code
+// change to explain why.
+func TestAssignment_RequiresAnActiveMembership(t *testing.T) {
 	env := dbtest.Postgres(t)
 	ctx := context.Background()
+
+	const sqlstateCheckViolation = "23514"
 
 	shelter := freshTenant(t, env)
 	applicant := uuid.New()
@@ -257,48 +264,132 @@ func TestAssignment_DoesNotYetRequireAnActiveMembership(t *testing.T) {
 		t.Fatalf("seeding the applicant: %v", err)
 	}
 
-	for _, status := range []string{"invited", "revoked"} {
-		t.Run(status, func(t *testing.T) {
-			staff := uuid.New()
-			if err := seedMemberUser(ctx, env.OwnerPool, staff); err != nil {
-				t.Fatalf("seeding the staff user: %v", err)
-			}
-			if err := seedMembershipWithStatus(
-				ctx, env.OwnerPool, staff, shelter, status); err != nil {
-				t.Fatalf("seeding the %s membership: %v", status, err)
-			}
+	// assign returns the error of assigning `application` to `staff`, or nil.
+	assign := func(application, staff uuid.UUID) error {
+		return db.WithTenant(ctx, env.TenantPool, shelter,
+			func(ctx context.Context, tx pgx.Tx) error {
+				tag, err := tx.Exec(ctx,
+					`UPDATE adoption_applications SET assigned_to_user_id = $2 WHERE id = $1`,
+					application, staff)
+				if err != nil {
+					return err
+				}
+				if tag.RowsAffected() != 1 {
+					t.Errorf("assigning touched %d rows rather than 1. A statement that "+
+						"reached no row looks exactly like a refusal here", tag.RowsAffected())
+				}
 
-			// The half that is already right: this person is NOT readable. It is
-			// also what makes the assignment below an inconsistency rather than
-			// merely a permissive rule.
+				return nil
+			})
+	}
+
+	// staffWithStatus seeds a fresh user holding one membership in this shelter.
+	staffWithStatus := func(t *testing.T, status string) uuid.UUID {
+		t.Helper()
+
+		staff := uuid.New()
+		if err := seedMemberUser(ctx, env.OwnerPool, staff); err != nil {
+			t.Fatalf("seeding the staff user: %v", err)
+		}
+		if err := seedMembershipWithStatus(ctx, env.OwnerPool, staff, shelter, status); err != nil {
+			t.Fatalf("seeding the %s membership: %v", status, err)
+		}
+
+		return staff
+	}
+
+	for _, status := range []string{"invited", "revoked"} {
+		t.Run("update_to_a_"+status+"_member_is_refused", func(t *testing.T) {
+			staff := staffWithStatus(t, status)
+
+			// The half that was already right, kept from the test this replaces:
+			// this person is not readable. It is what made the old behaviour an
+			// inconsistency rather than merely a permissive rule.
 			if userVisible(t, env, shelter, staff) {
 				t.Fatalf("a %s member is visible, which contradicts member_visible_users' "+
 					"`m.status = 'active'` (T-01-016)", status)
 			}
 
-			application := seedApplication(
-				t, env, shelter, seedPet(t, env, shelter), applicant)
+			application := seedApplication(t, env, shelter, seedPet(t, env, shelter), applicant)
 
-			err := db.WithTenant(ctx, env.TenantPool, shelter,
-				func(ctx context.Context, tx pgx.Tx) error {
-					tag, err := tx.Exec(ctx,
-						`UPDATE adoption_applications SET assigned_to_user_id = $2
-						 WHERE id = $1`, application, staff)
-					if err != nil {
-						return err
-					}
-					if tag.RowsAffected() != 1 {
-						t.Errorf("assigning touched %d rows rather than 1", tag.RowsAffected())
-					}
-
-					return nil
-				})
-			if err != nil {
-				t.Errorf("GOOD NEWS, AND THIS TEST IS NOW WRONG: assigning a case to a %s "+
-					"member was refused (%v). Something now requires an ACTIVE membership — "+
-					"a trigger, or the domain layer of Phase 02's RBAC. Delete this "+
-					"characterization test and assert the new rule instead", status, err)
+			err := assign(application, staff)
+			if err == nil {
+				t.Fatalf("a case was assigned to a %s member. It lands in a queue owned by "+
+					"somebody this shelter cannot even render the name of", status)
+			}
+			if code := sqlstateOf(t, err, "assigning to a "+status+" member"); code !=
+				sqlstateCheckViolation {
+				t.Errorf("the assignment was refused with %s rather than the trigger's %s, "+
+					"so what refused it is unproven -- a foreign key or a policy would "+
+					"refuse a DIFFERENT set of assignees than this rule does",
+					code, sqlstateCheckViolation)
 			}
 		})
 	}
+
+	// Anti-vacuity. Without it every case above is satisfied by a trigger that
+	// refuses EVERY assignment, which would break the feature rather than narrow
+	// it -- and would look identical from the refusals alone.
+	t.Run("update_to_an_active_member_succeeds", func(t *testing.T) {
+		staff := staffWithStatus(t, "active")
+		application := seedApplication(t, env, shelter, seedPet(t, env, shelter), applicant)
+
+		if err := assign(application, staff); err != nil {
+			t.Fatalf("assigning to an ACTIVE member was refused: %v. The trigger did not "+
+				"narrow the rule, it broke it -- no case can be assigned to anyone", err)
+		}
+	})
+
+	// The trigger fires on INSERT too, and that arm needs its own case: an
+	// application can be created already assigned, so a trigger covering only
+	// UPDATE would leave the same hole reachable through a different statement.
+	t.Run("insert_already_assigned_to_a_revoked_member_is_refused", func(t *testing.T) {
+		staff := staffWithStatus(t, "revoked")
+		pet := seedPet(t, env, shelter)
+
+		err := db.WithTenant(ctx, env.TenantPool, shelter,
+			func(ctx context.Context, tx pgx.Tx) error {
+				_, err := tx.Exec(ctx,
+					`INSERT INTO adoption_applications
+					     (id, shelter_id, pet_id, applicant_user_id, assigned_to_user_id)
+					 VALUES ($1, $2, $3, $4, $5)`,
+					uuid.New(), shelter, pet, applicant, staff)
+
+				return err
+			})
+		if err == nil {
+			t.Fatal("an application was CREATED already assigned to a revoked member. The " +
+				"trigger covers UPDATE but not INSERT, so the rule is reachable around it")
+		}
+		if code := sqlstateOf(t, err, "inserting an already-assigned application"); code !=
+			sqlstateCheckViolation {
+			t.Errorf("the insert was refused with %s rather than the trigger's %s",
+				code, sqlstateCheckViolation)
+		}
+	})
+
+	// The `WHEN (NEW.assigned_to_user_id IS NOT NULL)` guard, asserted rather
+	// than assumed. Unassigning is how a case goes back to the queue; a trigger
+	// without the guard raises on the NULL because no membership row matches it,
+	// and the feature would be dead with no test saying so.
+	t.Run("unassigning_is_still_allowed", func(t *testing.T) {
+		staff := staffWithStatus(t, "active")
+		application := seedApplication(t, env, shelter, seedPet(t, env, shelter), applicant)
+
+		if err := assign(application, staff); err != nil {
+			t.Fatalf("assigning to an active member: %v", err)
+		}
+
+		if err := db.WithTenant(ctx, env.TenantPool, shelter,
+			func(ctx context.Context, tx pgx.Tx) error {
+				_, err := tx.Exec(ctx,
+					`UPDATE adoption_applications SET assigned_to_user_id = NULL WHERE id = $1`,
+					application)
+
+				return err
+			}); err != nil {
+			t.Fatalf("unassigning was refused: %v. The trigger's WHEN guard is missing, so "+
+				"it fires on a NULL assignee and no case can ever return to the queue", err)
+		}
+	})
 }
