@@ -638,6 +638,12 @@ func sheltersCase() dbtest.TenantTable {
 	return dbtest.TenantTable{
 		Name:         "shelters",
 		TenantColumn: "id",
+		// Since 00015 (P2-D4) `id` is INSERT-only and DELETE is gone. The probe
+		// self-assigns a column the tenant may actually write, so the POLICY is
+		// what refuses the cross-tenant reach rather than a privilege that would
+		// have refused any tenant, including the right one.
+		TouchColumn:   "display_name",
+		NoDeleteGrant: true,
 		// Because tenant A's row IS shelter A, this case can only work if it is
 		// the one that creates it — and the container is shared, so any earlier
 		// test that seeds env.ShelterA takes that away. What comes back then is
@@ -691,6 +697,11 @@ func sheltersCase() dbtest.TenantTable {
 func membershipsCase(memberUser uuid.UUID) dbtest.TenantTable {
 	return dbtest.TenantTable{
 		Name: "memberships",
+		// Same as shelters: 00015 (P2-D5) makes `shelter_id` INSERT-only and
+		// revokes DELETE. `status` is granted for UPDATE and is what a real
+		// revocation writes, so the probe rides the path the product uses.
+		TouchColumn:   "status",
+		NoDeleteGrant: true,
 		Fixture: func(ctx context.Context, env *dbtest.Env) error {
 			// Both shelters, not just A: the case has to pass when it is run
 			// alone with -run, and then the shelters case above never ran.
@@ -1108,9 +1119,38 @@ func TestTenancyPolicies_ApplyToTheRightRoleAndCommand(t *testing.T) {
 		want                   bool
 		why                    string
 	}{
-		{"app_tenant", "shelters", "SELECT", true, ""},
-		{"app_tenant", "shelters", "INSERT", true, ""},
-		{"app_tenant", "memberships", "DELETE", true, ""},
+		// Phase 02 (00015, P2-D4/P2-D5): B1. Both tables went from table-wide
+		// SELECT/INSERT/UPDATE/DELETE to a table-level SELECT plus column-scoped
+		// INSERT and UPDATE, with DELETE revoked outright.
+		//
+		// READ THE `false`s BELOW BEFORE "FIXING" ONE. A column grant is NOT a
+		// table privilege -- verified live on PG 17 -- so `has_table_privilege`
+		// answers false for a role that can perfectly well write the columns it
+		// was granted. Expecting false is the STRONGER assertion: it goes red
+		// the day somebody widens a grant back to the whole table, which is
+		// exactly the regression B1 exists to prevent. The columns themselves
+		// are asserted in column_grants_test.go.
+		{"app_tenant", "shelters", "SELECT", true,
+			"table-level on purpose: the tenant policy already narrows it to one row"},
+		{"app_tenant", "shelters", "INSERT", false,
+			"column grant (P2-D4). It omits status, verified_at, verified_by, " +
+				"storage_quota_bytes and storage_bytes_used; each has a DEFAULT, so " +
+				"registration inserts a row without holding a privilege on any of them"},
+		{"app_tenant", "shelters", "UPDATE", false,
+			"column grant (P2-D4), and it also omits slug -- a shelter is named once, at " +
+				"registration, because a slug change breaks every published URL"},
+		{"app_tenant", "shelters", "DELETE", false,
+			"revoked outright: deleting a shelter is destructive with no endpoint behind " +
+				"it, and archival is a status change that is not writable either"},
+		{"app_tenant", "memberships", "SELECT", true, "table-level, same reason as shelters"},
+		{"app_tenant", "memberships", "INSERT", false,
+			"column grant (P2-D5). It still carries `role` -- the residual P2-D5 names and " +
+				"TestMembershipInsert_CanStillMintAnOwner pins"},
+		{"app_tenant", "memberships", "UPDATE", false,
+			"column grant on (status, accepted_at, updated_at). Dropping `role` IS the B1 " +
+				"finding closed: a promotion now requires a migration"},
+		{"app_tenant", "memberships", "DELETE", false,
+			"revoked outright: revocation is status = 'revoked', which keeps the trail"},
 		{"app_tenant", "users", "SELECT", true, ""},
 		{"app_tenant", "users", "INSERT", false,
 			"no tenant creates a user in this phase; Phase 02's registration flow owns that"},

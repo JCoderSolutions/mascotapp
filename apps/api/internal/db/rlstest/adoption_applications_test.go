@@ -331,10 +331,26 @@ func TestApplicationAssignment_CannotLeaveTheShelter(t *testing.T) {
 // simply say `submitted`. There is no state at this layer that the attacker does
 // not also control.
 //
-// The real fix is column-level grants, which is Judgment Day's finding B1, which
-// the user deferred to Phase 02/03 because which columns a tenant may write
-// depends on endpoints Phase 03 has not written. This test is the marker on that
-// debt: when B1 is paid, this goes red and says what to do.
+// CORRECTED 2026-09-03, T-02-006. This comment used to say the real fix was
+// column-level grants — Judgment Day's finding B1 — and that "when B1 is paid,
+// this goes red". **B1 has now been paid, in `00015_column_grants`, and this
+// test did not go red.** It was never going to.
+//
+// The claim confused two different holes because both trace back to B1. This
+// test's mechanism is an `app_tenant` INSERT into `adoption_applications` naming
+// an arbitrary `applicant_user_id`; `00015` narrows `shelters` and `memberships`
+// and never touches `adoption_applications`, so it cannot reach this path.
+// P2-D6 established that before the migration was written.
+//
+// The marker is still real; it just belongs to Phase 05, not here. Closing it
+// needs `REVOKE INSERT (applicant_user_id)` on `adoption_applications` — and
+// that column is the path an ADOPTER uses to apply, an endpoint that does not
+// exist yet. Revoking it today would break the feature before building it.
+//
+// Left uncorrected, this comment told its next reader one of two false things:
+// that `00015` is incomplete, or that `00015` should be widened to reach
+// `adoption_applications` chasing a red that was never coming. Either one
+// trades a real security boundary for a misreading.
 func TestApplicantPolicy_IsAsWideAsWritingAnApplication(t *testing.T) {
 	env := dbtest.Postgres(t)
 	ctx := context.Background()
@@ -360,9 +376,11 @@ func TestApplicantPolicy_IsAsWideAsWritingAnApplication(t *testing.T) {
 
 	if !userVisible(t, env, shelter, outsider) {
 		t.Error("GOOD NEWS, AND THIS TEST IS NOW WRONG: a shelter can no longer read a user " +
-			"by inserting an application naming them. Something narrowed the write path — " +
-			"column-level grants (Judgment Day finding B1), a trigger, or a policy " +
-			"predicate. Delete this characterization test and assert the new rule instead")
+			"by inserting an application naming them. Something narrowed the write path on " +
+			"adoption_applications — most likely REVOKE INSERT (applicant_user_id), which " +
+			"is Phase 05's work and the only thing that closes this. It is NOT 00015: " +
+			"those column grants are on shelters and memberships and never reach this " +
+			"table. Delete this characterization test and assert the new rule instead")
 	}
 }
 

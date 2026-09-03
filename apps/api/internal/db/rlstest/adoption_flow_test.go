@@ -148,22 +148,48 @@ func TestAnAssignedMembership_CannotBeDeleted(t *testing.T) {
 		}
 	}
 
+	// Since 00015 (P2-D5) app_tenant holds NO DELETE grant on memberships, so
+	// running this probe as the tenant now gets 42501 before the foreign key is
+	// ever consulted — a privilege answering for a constraint, which would make
+	// this test green while asserting nothing about ON DELETE RESTRICT.
+	//
+	// The constraint still matters and still has to be proven: it is what stops
+	// the deletion whenever a role DOES hold the privilege — an operator today,
+	// and app_tenant again the day a migration widens the grant back. So the
+	// probe moved to the owner, the role that still has it, and now measures the
+	// constraint instead of the grant. The stronger claim about the tenant is
+	// asserted separately, below.
 	deleteMembership := func(user uuid.UUID) error {
-		return db.WithTenant(ctx, env.TenantPool, shelter,
-			func(ctx context.Context, tx pgx.Tx) error {
-				tag, err := tx.Exec(ctx,
-					`DELETE FROM memberships WHERE user_id = $1 AND shelter_id = $2`,
-					user, shelter)
-				if err != nil {
-					return err
-				}
-				if tag.RowsAffected() != 1 {
-					t.Errorf("deleting the membership affected %d rows rather than 1",
-						tag.RowsAffected())
-				}
+		tag, err := env.OwnerPool.Exec(ctx,
+			`DELETE FROM memberships WHERE user_id = $1 AND shelter_id = $2`, user, shelter)
+		if err != nil {
+			return err
+		}
+		if tag.RowsAffected() != 1 {
+			t.Errorf("deleting the membership affected %d rows rather than 1",
+				tag.RowsAffected())
+		}
 
-				return nil
-			})
+		return nil
+	}
+
+	// Defence in depth, and the outer layer is newer than this test: whatever
+	// the foreign key decides, app_tenant cannot reach a DELETE on memberships
+	// at all. If this ever stops being true, 00015's grant has been widened and
+	// the constraint below is once again the ONLY thing in the way.
+	if err := db.WithTenant(ctx, env.TenantPool, shelter,
+		func(ctx context.Context, tx pgx.Tx) error {
+			_, err := tx.Exec(ctx,
+				`DELETE FROM memberships WHERE user_id = $1 AND shelter_id = $2`, spare, shelter)
+
+			return err
+		}); err == nil {
+		t.Error("app_tenant deleted a membership. 00015 revokes DELETE on memberships " +
+			"(P2-D5) because revocation is status = 'revoked', which keeps the trail")
+	} else if code := sqlstateOf(t, err, "app_tenant deleting a membership"); code !=
+		sqlstateInsufficientPrivilege {
+		t.Errorf("app_tenant's DELETE was refused with %s rather than the missing grant "+
+			"(%s), so what refused it is unproven", code, sqlstateInsufficientPrivilege)
 	}
 
 	// Anti-vacuity: a membership nothing references deletes cleanly.

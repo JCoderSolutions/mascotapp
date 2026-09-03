@@ -102,6 +102,39 @@ type TenantTable struct {
 	// route and the wrong one: an append-only table whose grants were quietly
 	// restored would then pass by not being looked at.
 	AppendOnly bool
+
+	// TouchColumn is the column the no-op UPDATE probe self-assigns. It
+	// defaults to the tenant column, which is what every case used until
+	// `00015_column_grants`.
+	//
+	// Why it had to become configurable, found at T-02-006. The probe writes
+	// `SET <col> = <col>` purely to see whether the POLICY lets the statement
+	// reach another tenant's row. That only measures the policy while the role
+	// actually HOLDS the privilege on that column: once `00015` narrowed
+	// `shelters` and `memberships` to column grants, `shelters.id` and
+	// `memberships.shelter_id` stopped being updatable and the probe came back
+	// 42501 — a privilege refusal standing in for a policy that was never
+	// consulted.
+	//
+	// Granting UPDATE on those columns to fix it would be absurd: an updatable
+	// `shelters.id` re-tenants a shelter and an updatable
+	// `memberships.shelter_id` moves a member into somebody else's. The probe is
+	// what had to move, onto a column the tenant is genuinely allowed to write,
+	// so the grant steps aside and the policy answers.
+	//
+	// That makes the probe STRICTLY STRONGER than before: it can no longer be
+	// satisfied by a privilege refusal that proves nothing about isolation.
+	TouchColumn string
+
+	// NoDeleteGrant marks a table app_tenant may update but never delete from.
+	//
+	// It is the narrow half of AppendOnly, and it exists because `00015` created
+	// a state the flag could not describe: `shelters` and `memberships` are
+	// updatable through a column grant and have DELETE revoked outright. Marking
+	// them AppendOnly would have been wrong in the direction that matters — it
+	// would stop the UPDATE probe from ever exercising the policy on the two
+	// core tenancy tables, which is precisely the isolation §10 calls blocking.
+	NoDeleteGrant bool
 }
 
 // tenantColumn is TenantColumn with its default applied.
@@ -111,6 +144,22 @@ func (tt TenantTable) tenantColumn() string {
 	}
 
 	return tt.TenantColumn
+}
+
+// touchColumn is TouchColumn with its default applied.
+func (tt TenantTable) touchColumn() string {
+	if tt.TouchColumn == "" {
+		return tt.tenantColumn()
+	}
+
+	return tt.TouchColumn
+}
+
+// deleteIsRefused reports whether a DELETE by app_tenant must come back 42501
+// rather than reach zero rows. AppendOnly implies it; NoDeleteGrant is the case
+// where UPDATE survives and only DELETE is gone.
+func (tt TenantTable) deleteIsRefused() bool {
+	return tt.AppendOnly || tt.NoDeleteGrant
 }
 
 // Check runs the ADR-0002 completion rule against one table and reports what
@@ -190,15 +239,18 @@ func (tt TenantTable) checkTenantBIsBlind(ctx context.Context, env *Env, key Row
 			}
 
 			// A no-op assignment: the point is whether the policy lets the
-			// statement reach the row at all, not what it would write.
-			if err := tt.probeWrite(ctx, tx, "WRITE",
+			// statement reach the row at all, not what it would write. The
+			// column has to be one app_tenant may actually write, or a
+			// privilege refusal answers before the policy is ever consulted —
+			// see TouchColumn.
+			if err := tt.probeWrite(ctx, tx, "WRITE", tt.AppendOnly,
 				fmt.Sprintf(`UPDATE %s SET %s = %s WHERE %s`,
-					tt.Name, tt.tenantColumn(), tt.tenantColumn(), predicate),
+					tt.Name, tt.touchColumn(), tt.touchColumn(), predicate),
 				args); err != nil {
 				return err
 			}
 
-			return tt.probeWrite(ctx, tx, "DELETE",
+			return tt.probeWrite(ctx, tx, "DELETE", tt.deleteIsRefused(),
 				fmt.Sprintf(`DELETE FROM %s WHERE %s`, tt.Name, predicate), args)
 		})
 }
@@ -211,10 +263,13 @@ func (tt TenantTable) checkTenantBIsBlind(ctx context.Context, env *Env, key Row
 // it and the row. On an append-only table it is expected to be REFUSED outright,
 // because the grant itself was never given — so a zero-row success there would
 // mean the grant came back and only the policy is holding the line.
+// `refused` is passed per probe rather than read from AppendOnly, because since
+// `00015_column_grants` a table can expect a zero-row UPDATE and a refused
+// DELETE at the same time.
 func (tt TenantTable) probeWrite(
-	ctx context.Context, tx pgx.Tx, verb, statement string, args []any,
+	ctx context.Context, tx pgx.Tx, verb string, refused bool, statement string, args []any,
 ) error {
-	if tt.AppendOnly {
+	if refused {
 		// A refused statement ABORTS its transaction: every command after it
 		// comes back 25P02 ("current transaction is aborted") no matter what it
 		// is. On an ordinary table the probes succeed and never notice, but here
@@ -314,15 +369,16 @@ func (tt TenantTable) checkTenantBCannotWipeTheTable(ctx context.Context, env *E
 
 			tag, err := tx.Exec(ctx, fmt.Sprintf(`DELETE FROM %s`, tt.Name))
 
-			// On an append-only table the wipe must be refused outright, not
-			// merely reach nothing. Tenant B deleting only its OWN rows is
+			// Where DELETE was never granted the wipe must be refused outright,
+			// not merely reach nothing. Tenant B deleting only its OWN rows is
 			// allowed everywhere else in this suite; here it is exactly the
 			// thing append-only exists to forbid, so a zero-row success would
 			// be the failure, not the pass.
-			if tt.AppendOnly {
+			if tt.deleteIsRefused() {
 				if err == nil {
 					return fmt.Errorf("%s: an unqualified DELETE by tenant B was ACCEPTED "+
-						"(%d rows) on an append-only table", tt.Name, tag.RowsAffected())
+						"(%d rows) on a table app_tenant holds no DELETE grant on",
+						tt.Name, tag.RowsAffected())
 				}
 
 				var pgErr *pgconn.PgError
@@ -347,7 +403,7 @@ func (tt TenantTable) checkTenantBCannotWipeTheTable(ctx context.Context, env *E
 		return err
 	}
 
-	if tt.AppendOnly {
+	if tt.deleteIsRefused() {
 		return nil
 	}
 
