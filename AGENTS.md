@@ -125,6 +125,21 @@ OpenCode además tiene su propio `permission` en `opencode.json`.
 **Nunca reescribir las propias barreras:** `.claude/settings.json`,
 `opencode.json`, `.kiro/steering/**`.
 
+**`gentle-ai` está fijado en `1.49.0` hasta que cierre la Fase 02.** Decisión del
+usuario del 2026-09-03. `gentle-ai update` va a reportar `latest: 2.5.0` — **no
+lo subas**, ni con `gentle-ai upgrade`, ni con el instalador publicado (`irm … |
+iex`, que además es curl-a-shell y cae en la lista de arriba). El motivo no es
+conservadurismo: el store del runtime SDD vive bajo `.git/gentle-ai/sdd-runtime/**v1**/`
+con la historia de esta fase, y un binario 2.x puede no leerla. Cambiar de major
+a mitad de una cadena de 24 PRs es mover el piso mientras se camina.
+
+Lo que 1.49.0 **no** tiene, verificado ejecutándolo: el comando `review`
+(todo el contrato RDD de `review-integration/v2`) y `sdd-attempt`. Nada de eso
+bloquea el trabajo — RDD está apagado y es decisión del usuario. Lo que el flujo
+sí usa, `sdd-status` y `sdd-continue`, funciona. Si algún día hace falta RDD,
+**primero se sube de versión y se verifica el store, y recién después se
+enciende** — en ese orden.
+
 **Política de borrado del usuario, textual:** *"puedes borrar elementos dentro
 del mismo folder. Pero no puedes borrar nada fuera de él."* Todo borrado de
 artefactos de build va por `make clean`, cuyas rutas son explícitas y están
