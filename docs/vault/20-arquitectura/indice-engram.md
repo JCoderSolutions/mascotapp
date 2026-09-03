@@ -13,21 +13,9 @@ versionado. El `observation_id` es la misma nota dentro de Engram; sirve para
 trazabilidad, no es requisito para leerla.
 
 - Candidatos totales: **82**
-- Aprobados y guardados en Engram: **76**
-- Pendientes de aprobación explícita del usuario: **4**
+- Aprobados y guardados en Engram: **80**
+- Pendientes de aprobación explícita del usuario: **0**
 - Descartados por el pase de curaduría: **2**
-
-## Pendientes de aprobación
-
-Nada de esto está en Engram todavía. Requiere el sí explícito del usuario
-antes de `mem_save` (§6.6 del plan maestro).
-
-| Tarea | Tipo | Score | Archivo | Qué dice |
-|---|---|---|---|---|
-| `T-02-003` | constraint | 4 | [2026-09-02-has-table-privilege-no-ve-columnas.md](../../../.engram/queue/2026-09-02-has-table-privilege-no-ve-columnas.md) | Verificado en vivo contra PostgreSQL 17, no asumido: |
-| `T-02-004` | architecture | 5 | [2026-09-02-policylandsat-version-aware-catalog-exemption.md](../../../.engram/queue/2026-09-02-policylandsat-version-aware-catalog-exemption.md) | Sacar una tabla de NoPolicy puede romper un test que la tarea que la escribio no menciona, si esa tabla existio (con RLS, sin pol… |
-| `T-02-016` | convention | 3 | [2026-09-02-totp-recovery-codes-third-pinned-inventory.md](../../../.engram/queue/2026-09-02-totp-recovery-codes-third-pinned-inventory.md) | rlstest/catalog.go's meta-test (TestCatalog_EveryRelationIsClassifiedAndProtected) only asserts that a table has RLS, is FORCEd… |
-| `T-02-005` | convention | 4 | [2026-09-03-tool-absence-must-fail-loudly.md](../../../.engram/queue/2026-09-03-tool-absence-must-fail-loudly.md) | On 2026-09-02 gentle-ai vanished from the development host in the middle of a session. The SDD settle that needed it ran inside a… |
 
 ## Descartados — NO guardar
 
@@ -42,7 +30,7 @@ exactamente lo que la columna de abajo explica que está mal.
 
 ## Guardadas
 
-### `mascotapp/arch/*` — 6
+### `mascotapp/arch/*` — 7
 
 | Tarea | `topic_key` | Score | Archivo | `observation_id` | Qué dice |
 |---|---|---|---|---|---|
@@ -52,8 +40,9 @@ exactamente lo que la columna de abajo explica que está mal.
 | `T-01-027` | `…/cascade-direction-follows-the-child` | 5 | [2026-09-01-la-direccion-de-la-cascada-la-decide-quien-es-el-hijo.md](../../../.engram/queue/2026-09-01-la-direccion-de-la-cascada-la-decide-quien-es-el-hijo.md) | `obs-5711866a288ae91b` | Este esquema puso ON DELETE RESTRICT en cada referencia compuesta, y por buenas razones cada vez: el hijo era la historia y el pa… |
 | `T-01-027` | `…/assignment-bounded-by-membership-key` | 5 | [2026-09-01-una-clave-compuesta-a-memberships-encierra-la-asignacion.md](../../../.engram/queue/2026-09-01-una-clave-compuesta-a-memberships-encierra-la-asignacion.md) | `obs-cb3fdedda1fa5e49` | adoption_applications.assigned_to_user_id no es una referencia a users. Es una clave compuesta a memberships (user_id, shelter_id… |
 | `T-01-034` | `…/verify-inherited-constraints` | 5 | [2026-09-01-una-restriccion-heredada-se-verifica-antes-de-disenar-contra-ella.md](../../../.engram/queue/2026-09-01-una-restriccion-heredada-se-verifica-antes-de-disenar-contra-ella.md) | `obs-ed6c4139b505a445` | D3 decia: *"no dependemos de extensiones de PostgreSQL, porque el free tier de Neon no las garantiza"*. |
+| `T-02-004` | `…/policy-lands-at-version-aware-exemption` | 5 | [2026-09-02-policylandsat-version-aware-catalog-exemption.md](../../../.engram/queue/2026-09-02-policylandsat-version-aware-catalog-exemption.md) | `obs-d88a3730b74fb389` | Sacar una tabla de NoPolicy puede romper un test que la tarea que la escribio no menciona, si esa tabla existio (con RLS, sin pol… |
 
-### `mascotapp/convention/*` — 40
+### `mascotapp/convention/*` — 42
 
 | Tarea | `topic_key` | Score | Archivo | `observation_id` | Qué dice |
 |---|---|---|---|---|---|
@@ -93,6 +82,8 @@ exactamente lo que la columna de abajo explica que está mal.
 | `T-01-029` | `…/close-a-set-when-the-domain-branches` | 4 | [2026-09-01-un-conjunto-se-cierra-cuando-el-dominio-ramifica.md](../../../.engram/queue/2026-09-01-un-conjunto-se-cierra-cuando-el-dominio-ramifica.md) | `obs-e0fefde5e839d79a` | 00010 creo dos columnas de conjunto y les dio tratamientos opuestos, en la misma migracion. El criterio no es la costumbre; es un… |
 | `T-01-033` | `…/a-substring-is-not-an-assertion` | 5 | [2026-09-01-un-substring-en-un-archivo-no-es-una-asercion.md](../../../.engram/queue/2026-09-01-un-substring-en-un-archivo-no-es-una-asercion.md) | `obs-e4c1ca6f36c7b65f` | strings.Contains(archivo, "algo") responde *"la palabra aparece"*, no *"el archivo hace eso"*. Y un comentario satisface la prime… |
 | `T-01-033` | `…/queries-never-filter-by-shelter-id` | 5 | [2026-09-01-una-query-no-filtra-por-shelter-id.md](../../../.engram/queue/2026-09-01-una-query-no-filtra-por-shelter-id.md) | `obs-c94143b56078801e` | Regla dura para todo internal/db/query/*.sql: ninguna lectura lleva shelter_id en un WHERE, en un AND ni en una condicion de JOIN. |
+| `T-02-005` | `…/tool-absence-must-fail-at-session-start` | 4 | [2026-09-03-tool-absence-must-fail-loudly.md](../../../.engram/queue/2026-09-03-tool-absence-must-fail-loudly.md) | `obs-e03b5d9cf88abd24` | On 2026-09-02 gentle-ai vanished from the development host in the middle of a session. The SDD settle that needed it ran inside a… |
+| `T-02-016` | `…/every-rls-migration-extends-two-pinned-inventories` | 3 | [2026-09-02-totp-recovery-codes-third-pinned-inventory.md](../../../.engram/queue/2026-09-02-totp-recovery-codes-third-pinned-inventory.md) | `obs-a46dedb3f04d9188` | rlstest/catalog.go's meta-test (TestCatalog_EveryRelationIsClassifiedAndProtected) only asserts that a table has RLS, is FORCEd… |
 | `fase-02 planning` | `…/recompute-announced-numbers` | 4 | [2026-09-02-un-numero-anunciado-se-recomputa.md](../../../.engram/queue/2026-09-02-un-numero-anunciado-se-recomputa.md) | `obs-99a194c5559106b8` | Un agente cerro la cadena de entrega de la Fase 02 con 23 PRs, 4.875 lineas, ninguno sobre 400. Los tres numeros eran del mismo r… |
 | `fase-02 planning` | `…/spec-must-carry-the-property` | 5 | [2026-09-02-un-requisito-que-el-verificador-no-puede-leer.md](../../../.engram/queue/2026-09-02-un-requisito-que-el-verificador-no-puede-leer.md) | `obs-51c9db2915bb5533` | El diseno de la Fase 02 prohibe que un tenant escriba shelters.storage_bytes_used — el contador contra el que se chequea la cuota… |
 | `handoff multi-agente` | `…/commit-messages` | 3 | [2026-09-02-convencion-de-commits.md](../../../.engram/queue/2026-09-02-convencion-de-commits.md) | `obs-62d33d3023d8afae` | Los commits de MascotApp siguen Conventional Commits, y la convencion esta escrita en dos lugares ejecutables, no en la memoria d… |
@@ -119,7 +110,7 @@ exactamente lo que la columna de abajo explica que está mal.
 | `T-01-032` | `…/bigserial-needs-a-sequence-grant` | 5 | [2026-09-01-bigserial-necesita-un-grant-que-no-es-sobre-una-tabla.md](../../../.engram/queue/2026-09-01-bigserial-necesita-un-grant-que-no-es-sobre-una-tabla.md) | `obs-64400c1e36f5e3ab` | bigserial no es un tipo. Es bigint + una SECUENCIA + un DEFAULT nextval(...). Un grant de tabla no dice nada sobre esa secuencia. |
 | `fase-02 planning` | `…/failed-report-is-not-lost-work` | 3 | [2026-09-02-un-agente-que-falla-al-reportar-no-fallo-al-escribir.md](../../../.engram/queue/2026-09-02-un-agente-que-falla-al-reportar-no-fallo-al-escribir.md) | `obs-216cdb370cd7e725` | sdd-design se cayo por limite de sesion de proveedor. Su ultimo texto era *"Now I have the full picture. Writing the design."*, y… |
 
-### `mascotapp/security/*` — 19
+### `mascotapp/security/*` — 20
 
 | Tarea | `topic_key` | Score | Archivo | `observation_id` | Qué dice |
 |---|---|---|---|---|---|
@@ -140,6 +131,7 @@ exactamente lo que la columna de abajo explica que está mal.
 | `T-01-025` | `…/truncate-cascade-bypasses-the-fk` | 4 | [2026-09-01-una-fk-nueva-cambia-quien-contesta-a-truncate.md](../../../.engram/queue/2026-09-01-una-fk-nueva-cambia-quien-contesta-a-truncate.md) | `obs-ee57985f8321d331` | TRUNCATE es la unica escritura que ninguna politica row-level puede ver, y por eso form_template_versions lleva un trigger BEFORE… |
 | `T-01-028` | `…/derived-visibility-must-expire` | 5 | [2026-09-01-la-visibilidad-derivada-tiene-que-terminar-cuando-termina-su-causa.md](../../../.engram/queue/2026-09-01-la-visibilidad-derivada-tiene-que-terminar-cuando-termina-su-causa.md) | `obs-3b6ad00b3b71abae` | users es visible por dos motivos, cada uno con su policy permisiva: |
 | `T-01-028` | `…/fk-cannot-reference-partial-unique` | 4 | [2026-09-01-una-fk-no-referencia-un-indice-unico-parcial.md](../../../.engram/queue/2026-09-01-una-fk-no-referencia-un-indice-unico-parcial.md) | `obs-28d2d22bf005152e` | Verificado en PostgreSQL 17, no supuesto: |
+| `T-02-003` | `…/column-grants-are-not-table-privileges` | 4 | [2026-09-02-has-table-privilege-no-ve-columnas.md](../../../.engram/queue/2026-09-02-has-table-privilege-no-ve-columnas.md) | `obs-eb0d04da21d94427` | Verificado en vivo contra PostgreSQL 17, no asumido: |
 | `phase-01-domain-and-data (sdd-design, D5)` | `…/fk-checks-bypass-rls` | 5 | [2026-08-29-fk-checks-bypass-rls.md](../../../.engram/queue/2026-08-29-fk-checks-bypass-rls.md) | `obs-f97019216916c800` | Las comprobaciones de integridad referencial de PostgreSQL se saltan RLS. Siempre. |
 | `phase-01-domain-and-data (sdd-propose)` | `…/neon-rls-bypass` | 5 | [2026-08-29-neon-bypassrls-defeats-policies.md](../../../.engram/queue/2026-08-29-neon-bypassrls-defeats-policies.md) | `obs-ff9448b3c1505e50` | En Neon, crear el rol de aplicación desde la consola, el CLI o la API desactiva todas las políticas RLS, en silencio. |
 

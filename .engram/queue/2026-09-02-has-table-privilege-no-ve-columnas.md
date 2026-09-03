@@ -3,6 +3,8 @@ type: constraint
 score: 4
 topic_key: mascotapp/security/column-grants-are-not-table-privileges
 task: T-02-003
+status: guardado
+observation_id: obs-eb0d04da21d94427
 rationale: "Toda la Fase 02 se apoya en grants por columna. Un test que los verifica con has_table_privilege reporta 'sin permiso' sobre un grant que funciona, y el diagnostico obvio -- ensanchar el grant a la tabla -- destruye exactamente la proteccion que se estaba construyendo."
 ---
 

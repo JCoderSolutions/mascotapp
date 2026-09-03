@@ -3,6 +3,8 @@ type: architecture
 score: 5
 topic_key: mascotapp/arch/policy-lands-at-version-aware-exemption
 task: T-02-004
+status: guardado
+observation_id: obs-d88a3730b74fb389
 rationale: "El catalogo (rlstest/catalog.go) tiene mas de un consumidor -- el meta-test de HEAD y el walk stepwise de rollback -- y una unica lista de excepciones (NoPolicy) no puede describir correctamente a los dos a la vez el dia que una tabla gana su politica en una migracion posterior a su creacion. El patron que lo resuelve es transferible a cualquier declaracion de esquema con mas de un lector con horizontes temporales distintos."
 ---
 

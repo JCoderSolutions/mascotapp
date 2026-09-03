@@ -3,6 +3,8 @@ type: convention
 score: 3
 topic_key: mascotapp/convention/every-rls-migration-extends-two-pinned-inventories
 task: T-02-016
+status: guardado
+observation_id: obs-a46dedb3f04d9188
 rationale: "TestTenancyPolicies_ApplyToTheRightRoleAndCommand's own doc comment already states this rule for the policy table and the privilege table it carries, but the doc comment is easy to miss because the catalog meta-test (TestCatalog_EveryRelationIsClassifiedAndProtected) passes without it -- the catalog counts policies, it does not see who they are for. A migration author following only the catalog's green signal ships a table that silently escapes the one test that would catch a policy pointed at the wrong role."
 ---
 

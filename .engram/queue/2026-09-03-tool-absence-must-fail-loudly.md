@@ -3,6 +3,8 @@ type: convention
 score: 4
 topic_key: mascotapp/convention/tool-absence-must-fail-at-session-start
 task: T-02-005
+status: guardado
+observation_id: obs-e03b5d9cf88abd24
 rationale: "A tool that disappears mid-session is not the expensive part -- the expensive part is that its absence was reported to nobody. The `command not found` went to stderr inside a pipeline whose last command exited 0, so the session kept going and recorded work that had not happened. Any future session that runs a dependency inside a pipe reproduces this exactly, and the damage is not a failed step but a FALSE RECORD of a successful one."
 ---
 
