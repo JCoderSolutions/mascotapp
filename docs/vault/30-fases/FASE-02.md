@@ -178,7 +178,7 @@ Columna **PR**: en qué PR de la cadena entra. Columna **est**: líneas autorada
 | `[ ]` `T-02-013` | GREEN — `totp.go` | PR 8 | 90 |
 | `[ ]` `T-02-014` | RED — `token.go` (JWT) unit tests | PR 9 | 120 |
 | `[ ]` `T-02-015` | GREEN — `token.go` | PR 9 | 100 |
-| `[ ]` `T-02-016` | Migration `00014_totp_recovery_codes.sql` + catalog/query + recovery-code scenarios | PR 4 | 160 |
+| `[x]` `T-02-016` | Migration `00014_totp_recovery_codes.sql` + catalog/query + recovery-code scenarios | PR 4 | ~~160~~ **280** |
 | `[ ]` `T-02-017` | RED — `recovery.go` tests | PR 10 | 100 |
 | `[ ]` `T-02-018` | GREEN — `recovery.go` | PR 10 | 90 |
 | `[ ]` `T-02-019` | RED — `session.go` (refresh rotation + reuse detection) tests | PR 11 | 170 |

@@ -302,7 +302,7 @@ handlers themselves, then the contract and its codegen.
       - pilot: blacklisted (§7.2)
       - engram: —
 
-- [ ] **T-02-016** · Migration `00014_totp_recovery_codes.sql` + catalog/query + recovery-code scenarios
+- [x] **T-02-016** · Migration `00014_totp_recovery_codes.sql` + catalog/query + recovery-code scenarios
       - spec: data-model-core / *TOTP recovery codes provide single-use account recovery, non-tenant scoped* (both scenarios) · tenant-isolation / *Tenant table set* (the count-bump scenarios)
       - RED first: `rlstest/catalog.go` — `totp_recovery_codes` **joins** `NonTenantModel`. This is the task that moves `TestSchema_MatchesTheDeclaredCounts` (`catalog_test.go:27`) from 4→5 non-tenant / 19→20 model **in this same task**, alongside the table's own creation — moving the counts separately from the table would leave the suite red between commits with nothing to explain it, per the ordering constraint. `TestQueries_ExerciseEveryDeclaredTable` demands a query for it too · write the two data-model-core scenarios as integration tests against the not-yet-existing table (fails: relation does not exist): stored rows hold no plaintext code, only a hash; a used code's second redemption is rejected
       - build: `internal/db/migrations/00014_totp_recovery_codes.sql` — table (`id`, `user_id → users(id) ON DELETE CASCADE`, `code_hash bytea UNIQUE`, `used_at`, `created_at`), RLS `ENABLE + FORCE`, policy `TO app_auth USING/WITH CHECK (user_id = app.user_id)`, grants `SELECT, INSERT, DELETE` + `UPDATE (used_at)` only (P2-D8) · `query/auth.sql` additions for the ten-codes-per-regeneration read/write shape
@@ -310,7 +310,45 @@ handlers themselves, then the contract and its codegen.
       - dod: RED→GREEN · lint clean · coverage held · spec/state updated · conventional commit
       - est: 160
       - pilot: blacklisted (§7.2)
-      - engram: —
+      - engram: `sdd/phase-02-auth-and-multitenancy/apply-progress`
+
+      **Closed 2026-09-02, PR-02-04.** RED confirmed against the real
+      container before the migration existed: `TestCatalog_EveryRelationIsClassifiedAndProtected`
+      failed with `"totp_recovery_codes" is declared and is not listed as
+      pending, but does not exist`, and both new scenario tests failed with
+      `relation "totp_recovery_codes" does not exist` (SQLSTATE `42P01`).
+      Migration `00014_totp_recovery_codes.sql` creates the table with
+      `ENABLE`/`FORCE` RLS and the `auth_own_recovery_codes` policy in the
+      SAME migration as the table — no `PolicyLandsAt` entry needed, exactly
+      as the task called for. `query/auth.sql` gained
+      `InsertRecoveryCode`/`DeleteRecoveryCodesForUser`/`GetRecoveryCodeByHash`/`RedeemRecoveryCode`,
+      matching the grant shape (`SELECT, INSERT, DELETE` + `UPDATE (used_at)`
+      only). One deviation the task text did not anticipate: a THIRD pinned
+      test, `TestTenancyPolicies_ApplyToTheRightRoleAndCommand`
+      (`isolation_test.go`), hardcodes the full cross-schema policy and
+      privilege inventory and had to gain rows for `totp_recovery_codes`
+      (one policy row, six privilege rows) — the same "every migration adds
+      its rows to both tables below" convention `refresh_tokens` followed in
+      `00013`. `apps/api/internal/db/rlstest/catalog.go`,
+      `apps/api/internal/db/rlstest/catalog_test.go` (4→5 non-tenant, 19→20
+      model), `apps/api/internal/db/rlstest/isolation_test.go`,
+      `apps/api/internal/db/rlstest/totp_recovery_codes_test.go` (new). All
+      named tests confirmed green with `-run -v`:
+      `TestCatalog_EveryRelationIsClassifiedAndProtected` ("verified 20 of 20
+      declared model tables"), `TestSchema_MatchesTheDeclaredCounts`,
+      `TestTenancyPolicies_ApplyToTheRightRoleAndCommand`,
+      `TestTOTPRecoveryCodes_StoredHashedNotPlaintext`,
+      `TestTOTPRecoveryCodes_RedemptionIsSingleUse`. Full
+      `make test-api-container` green (`internal/db`, `internal/db/dbtest`,
+      `internal/db/rlstest`, `internal/httpapi` all `ok`), including
+      `TestMigrations_EveryStepDownLeavesAConsistentSchema` ("walked 14
+      migration(s); inspected 170 model table(s)"). `make generate` clean
+      diff (`sqlcgen/auth.sql.go`, `sqlcgen/models.go`, `sqlcgen/querier.go`
+      only). `golangci-lint run ./...`: 0 new issues (the one pre-existing
+      gosec G101 in `dbtest/container.go`, untouched by this task). Measured
+      280 authored lines against the 160 estimate — still well inside
+      `PR-02-04`'s share of the 400-line PR budget, no `size:exception`
+      needed.
 
 - [ ] **T-02-017** · RED — `recovery.go` tests
       - spec: data-model-core / *TOTP recovery codes provide single-use account recovery, non-tenant scoped*
@@ -679,7 +717,7 @@ labels move, no task's content or dependency changed.
 | `PR-02-01` | `WithAuthUser`/`WithAuthLookup` — RED+GREEN | T-02-001, T-02-002 | 250 | — (base branch) |
 | `PR-02-02` | Migration `00013_auth_role` + `dbtest` third pool + reachability proof | T-02-003 | ~~260~~ **579** `size:exception` | `PR-02-01` |
 | `PR-02-03` | Catalog classification + `query/auth.sql` + `TestPolicies_DoNotCrossGUCs` | T-02-004 | 150 | `PR-02-02` |
-| `PR-02-04` | Migration `00014_totp_recovery_codes` — pulled forward, see the numbering note above | T-02-016 | 160 | `PR-02-03` |
+| `PR-02-04` | Migration `00014_totp_recovery_codes` — pulled forward, see the numbering note above | T-02-016 | ~~160~~ **280** | `PR-02-03` |
 | `PR-02-05` | Column-privilege semantics pin + migration `00015_column_grants` (B1) + the stale-comment fix | T-02-005, T-02-006 | 270 | `PR-02-04` (migration ordering only — no functional dependency) |
 | `PR-02-06` | Migration `00016_assignee_active_membership` + the one pinned-test move | T-02-007 | 140 | `PR-02-05` (migration ordering only — no functional dependency) |
 | `PR-02-07` | `password.go` — RED+GREEN | T-02-008, T-02-009 | 160 | — (pure Go, parallel-eligible from `PR-02-01` on) |
