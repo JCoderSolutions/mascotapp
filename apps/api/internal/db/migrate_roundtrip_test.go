@@ -146,6 +146,46 @@ func checkCatalogAt(ctx context.Context, pool *pgxpool.Pool, at int64) (int, err
 	return model, errors.Join(problems...)
 }
 
+// checkPolicyLandsAtIsHonest binds rlstest.Schema.PolicyLandsAt to the schema
+// the walk is actually looking at.
+//
+// PolicyLandsAt is an exemption, and an exemption nobody checks against
+// reality drifts silently in the permissive direction -- the exact failure the
+// catalog exists to prevent, and the reason its other lists are derived rather
+// than hand-written.
+//
+// A version declared too LOW is already caught, by CheckProtectionAt demanding
+// a policy that has not landed yet. Too HIGH is the dangerous direction and is
+// caught only here: the exemption would cover versions at which the policy
+// already exists, silencing the walk over real, checkable states.
+//
+// This lives in the WALK and not in checkCatalogAt on purpose. checkCatalogAt
+// takes `at` as a caller-supplied label and is called by unit tests against a
+// fully migrated database, where "version 1" describes nothing about the schema
+// in front of it. Only here has the database really been rolled back to `at`,
+// so only here does comparing the two mean anything.
+func checkPolicyLandsAtIsHonest(ctx context.Context, pool *pgxpool.Pool, at int64) error {
+	tables, err := rlstest.ReadTables(ctx, pool)
+	if err != nil {
+		return fmt.Errorf("reading the catalog at version %d: %w", at, err)
+	}
+
+	var problems []error
+	for _, table := range tables {
+		landsAt, tracked := rlstest.Schema.PolicyLandsAt[table.Name]
+		if !tracked || at >= landsAt || table.PolicyCount == 0 {
+			continue
+		}
+		problems = append(problems, fmt.Errorf(
+			"at version %d %q already carries %d policy/policies, but PolicyLandsAt "+
+				"declares its first one lands at %d. The declaration is too high, so the "+
+				"exemption is covering versions this walk should be checking",
+			at, table.Name, table.PolicyCount, landsAt))
+	}
+
+	return errors.Join(problems...)
+}
+
 // appliedVersions reads what goose actually recorded, which is not the same
 // question as what the embedded set contains.
 func appliedVersions(t *testing.T, pool *pgxpool.Pool) []int64 {
@@ -296,8 +336,11 @@ func TestMigrations_EveryStepDownLeavesAConsistentSchema(t *testing.T) {
 
 		model, err := checkCatalogAt(ctx, env.OwnerPool, at)
 		checkedTables += model
+		if err != nil {
+			return err
+		}
 
-		return err
+		return checkPolicyLandsAtIsHonest(ctx, env.OwnerPool, at)
 	}
 
 	versions := embeddedVersions(t)
