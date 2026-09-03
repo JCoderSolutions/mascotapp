@@ -1,6 +1,6 @@
 ---
 type: architecture
-score: 4
+score: 5
 topic_key: mascotapp/arch/policy-lands-at-version-aware-exemption
 task: T-02-004
 rationale: "El catalogo (rlstest/catalog.go) tiene mas de un consumidor -- el meta-test de HEAD y el walk stepwise de rollback -- y una unica lista de excepciones (NoPolicy) no puede describir correctamente a los dos a la vez el dia que una tabla gana su politica en una migracion posterior a su creacion. El patron que lo resuelve es transferible a cualquier declaracion de esquema con mas de un lector con horizontes temporales distintos."
@@ -51,3 +51,38 @@ dimension de tiempo explicita (esto), o bien consumidores separados con reglas s
 lo primero es mas barato cuando la mayoria de la logica se comparte y solo una condicion de
 borde cambia. Antes de sacar algo de una excepcion existente, preguntar: **¿todos los
 consumidores de esta declaracion asumen el mismo punto en el tiempo?**
+
+---
+
+## Addendum del gatekeeping: una exencion que nadie chequea deriva sola
+
+El mecanismo aterrizo sin nada que atara el **numero** a la realidad. `Validate()` probaba
+que la entrada nombra una tabla declarada y que no se contradice con `NoPolicy`; ninguna de
+las dos cosas dice que la policy realmente aterrice en la 13.
+
+- Un numero declarado **de menos** ya lo atrapaba `CheckProtectionAt`, exigiendo una policy
+  que todavia no llego.
+- Un numero declarado **de mas** no lo atrapaba nadie, y es la direccion peligrosa: la
+  exencion tapa versiones en las que la policy YA existe, y el walk deja de chequear estados
+  reales. Deriva en la direccion permisiva -- exactamente el modo de falla que este catalogo
+  existe para evitar, y la razon por la que sus otras listas se derivan en vez de escribirse
+  a mano.
+
+**Regla general: toda exencion se ata a la realidad que exime.** Si la exencion es un
+numero, algo tiene que fallar cuando ese numero no coincide con lo observable. Se verifico
+por mutacion: declarar 20 en vez de 13 pone rojo el walk con un mensaje que nombra la
+version, el conteo y la declaracion.
+
+## Y donde va la asercion: `at` es una etiqueta, no un estado
+
+El primer intento la puso dentro de `checkCatalogAt`, **y estaba mal**. Esa funcion recibe
+`at` como una etiqueta del que llama, y sus propios unit tests la ejercitan contra una base
+**ya migrada del todo**: ahi "version 1" no describe nada sobre el esquema que tiene
+adelante, y la asercion rechazaba un esquema sano.
+
+Lo encontro el subtest `a_clean_intermediate_schema_passes`, que existe justamente para eso:
+atrapar a quien agrega una regla que rechaza el esquema bueno. **Un test negativo que prueba
+que el checker acepta lo correcto vale tanto como el que prueba que rechaza lo roto.**
+
+La asercion vive en el **walk**, que es el unico lugar donde la base fue realmente revertida
+a `at` y donde comparar las dos cosas significa algo.

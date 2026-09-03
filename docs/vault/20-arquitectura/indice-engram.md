@@ -25,7 +25,7 @@ antes de `mem_save` (§6.6 del plan maestro).
 | Tarea | Tipo | Score | Archivo | Qué dice |
 |---|---|---|---|---|
 | `T-02-003` | constraint | 4 | [2026-09-02-has-table-privilege-no-ve-columnas.md](../../../.engram/queue/2026-09-02-has-table-privilege-no-ve-columnas.md) | Verificado en vivo contra PostgreSQL 17, no asumido: |
-| `T-02-004` | architecture | 4 | [2026-09-02-policylandsat-version-aware-catalog-exemption.md](../../../.engram/queue/2026-09-02-policylandsat-version-aware-catalog-exemption.md) | Sacar una tabla de NoPolicy puede romper un test que la tarea que la escribio no menciona, si esa tabla existio (con RLS, sin pol… |
+| `T-02-004` | architecture | 5 | [2026-09-02-policylandsat-version-aware-catalog-exemption.md](../../../.engram/queue/2026-09-02-policylandsat-version-aware-catalog-exemption.md) | Sacar una tabla de NoPolicy puede romper un test que la tarea que la escribio no menciona, si esa tabla existio (con RLS, sin pol… |
 
 ## Descartados — NO guardar
 
