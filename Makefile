@@ -5,9 +5,10 @@
 # what gets removed is a versioned artifact rather than a model's judgment call.
 # Keep every path in `clean` explicit. Never introduce a variable path here.
 
-.PHONY: help clean clean-api clean-web dev generate engram-index migrate migrate-down db-reset test test-api test-api-container test-short test-web test-race lint lint-api lint-web
+.PHONY: help clean clean-api clean-web doctor dev generate engram-index migrate migrate-down db-reset test test-api test-api-container test-short test-web test-race lint lint-api lint-web
 
 help:
+	@echo "doctor      Preflight: is every external tool present AND runnable here?"
 	@echo "clean       Remove build artifacts (explicit paths only)"
 	@echo "generate    Regenerate Go + TS types from api/openapi.yaml"
 	@echo "engram-index Regenerate docs/vault/20-arquitectura/indice-engram.md from .engram/queue"
@@ -19,6 +20,20 @@ help:
 	@echo "test-short  Go tests without the container-backed suite (fast, proves no isolation)"
 	@echo "lint        Run all linters (Go + web)"
 	@echo "test-race   Race detector (needs cgo + a C compiler; CI/Linux only)"
+
+# The first thing to run in a session. It executes every external tool this
+# workflow depends on -- executes, not just looks up on PATH -- and says what
+# breaks without each one.
+#
+# It exists because on 2026-09-02 `gentle-ai` vanished from this host mid-session
+# and NOTHING SAID SO. The step that needed it ran inside a pipeline, the
+# `command not found` went to stderr, and the pipeline returned 0.
+#
+# So: no pipe here, ever. Not `| tail`, not `| tee`, not `|| true`. A pipeline
+# returns the status of its LAST command, and that is precisely the failure this
+# target was built to stop. Read its output; do not filter it.
+doctor:
+	cd apps/api && go run ../../scripts/doctor.go
 
 clean: clean-api clean-web
 

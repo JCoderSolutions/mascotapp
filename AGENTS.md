@@ -27,6 +27,15 @@ Contexto completo: [`docs/vault/10-propuesta/analisis-y-plan.md`](docs/vault/10-
 
 ## 2. Ritual de inicio de sesión — obligatorio
 
+0. **`make doctor`.** Antes de leer nada. Ejecuta —no solo busca en el `PATH`—
+   cada herramienta externa de la que depende este flujo y dice qué se rompe sin
+   cada una. Sale con código distinto de cero solo si falta algo **requerido**;
+   una herramienta opcional ausente se reporta y no te frena.
+   **Leé su salida completa; nunca la pases por un pipe.**
+   Existe porque el 2026-09-02 `gentle-ai` desapareció de este host a mitad de
+   sesión y nada lo dijo: el paso que lo necesitaba corría dentro de un pipeline,
+   el `command not found` se fue a stderr y el pipeline devolvió 0. Una
+   herramienta ausente tiene que fallar al **empezar**, en primer plano.
 1. Leer [`PROJECT_STATE.md`](PROJECT_STATE.md). Es el contrato de continuidad:
    fase actual, tarea actual, qué está bloqueado y cuál es la próxima acción.
 2. Abrir el tablero de la fase en `docs/vault/30-fases/FASE-<current_phase>.md`.
@@ -50,6 +59,7 @@ Contexto completo: [`docs/vault/10-propuesta/analisis-y-plan.md`](docs/vault/10-
 ## 3. Cómo se corren los tests — leé esto antes de correr nada
 
 ```
+make doctor                # preflight: ¿están las herramientas Y corren?
 make test-api-container    # la suite de Go. La única que funciona en este host.
 make test-web              # vitest
 make lint                  # golangci-lint + eslint + tsc

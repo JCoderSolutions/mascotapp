@@ -12,9 +12,9 @@ que el repositorio siga siendo la verdad operativa (regla IA-4 del plan maestro)
 versionado. El `observation_id` es la misma nota dentro de Engram; sirve para
 trazabilidad, no es requisito para leerla.
 
-- Candidatos totales: **81**
+- Candidatos totales: **82**
 - Aprobados y guardados en Engram: **76**
-- Pendientes de aprobación explícita del usuario: **3**
+- Pendientes de aprobación explícita del usuario: **4**
 - Descartados por el pase de curaduría: **2**
 
 ## Pendientes de aprobación
@@ -27,6 +27,7 @@ antes de `mem_save` (§6.6 del plan maestro).
 | `T-02-003` | constraint | 4 | [2026-09-02-has-table-privilege-no-ve-columnas.md](../../../.engram/queue/2026-09-02-has-table-privilege-no-ve-columnas.md) | Verificado en vivo contra PostgreSQL 17, no asumido: |
 | `T-02-004` | architecture | 5 | [2026-09-02-policylandsat-version-aware-catalog-exemption.md](../../../.engram/queue/2026-09-02-policylandsat-version-aware-catalog-exemption.md) | Sacar una tabla de NoPolicy puede romper un test que la tarea que la escribio no menciona, si esa tabla existio (con RLS, sin pol… |
 | `T-02-016` | convention | 3 | [2026-09-02-totp-recovery-codes-third-pinned-inventory.md](../../../.engram/queue/2026-09-02-totp-recovery-codes-third-pinned-inventory.md) | rlstest/catalog.go's meta-test (TestCatalog_EveryRelationIsClassifiedAndProtected) only asserts that a table has RLS, is FORCEd… |
+| `T-02-005` | convention | 4 | [2026-09-03-tool-absence-must-fail-loudly.md](../../../.engram/queue/2026-09-03-tool-absence-must-fail-loudly.md) | On 2026-09-02 gentle-ai vanished from the development host in the middle of a session. The SDD settle that needed it ran inside a… |
 
 ## Descartados — NO guardar
 
