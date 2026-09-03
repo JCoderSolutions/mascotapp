@@ -3,6 +3,8 @@ type: bug
 score: 4
 topic_key: mascotapp/domain/trigger-when-guard-covers-the-common-case-not-the-edge
 task: T-02-007
+status: guardado
+observation_id: obs-011d82c25ec9d1d5
 rationale: "El comentario que justifica una guarda describe el alcance que su autor creyó, y ese alcance se usa después para decidir si la guarda se puede simplificar. Acá el autor —yo— escribió que la guarda protegía un caso de borde (desasignar) cuando en realidad protege el camino MÁS COMÚN (crear). Quien lea el comentario equivocado va a concluir que sacarla cuesta poco. La mutación es lo que midió la diferencia, y la regla general es que el alcance de una guarda se mide, no se razona."
 ---
 

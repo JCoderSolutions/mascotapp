@@ -13,19 +13,9 @@ versionado. El `observation_id` es la misma nota dentro de Engram; sirve para
 trazabilidad, no es requisito para leerla.
 
 - Candidatos totales: **85**
-- Aprobados y guardados en Engram: **81**
-- Pendientes de aprobación explícita del usuario: **2**
+- Aprobados y guardados en Engram: **83**
+- Pendientes de aprobación explícita del usuario: **0**
 - Descartados por el pase de curaduría: **2**
-
-## Pendientes de aprobación
-
-Nada de esto está en Engram todavía. Requiere el sí explícito del usuario
-antes de `mem_save` (§6.6 del plan maestro).
-
-| Tarea | Tipo | Score | Archivo | Qué dice |
-|---|---|---|---|---|
-| `T-02-006` | architecture | 5 | [2026-09-03-ab-probe-must-touch-a-writable-column.md](../../../.engram/queue/2026-09-03-ab-probe-must-touch-a-writable-column.md) | El runner A/B de este proyecto prueba que el tenant B no alcanza la fila del tenant A con un no-op: |
-| `T-02-007` | bug | 4 | [2026-09-03-when-guard-kills-the-feature-not-just-the-edge-case.md](../../../.engram/queue/2026-09-03-when-guard-kills-the-feature-not-just-the-edge-case.md) | 00016_assignee_active_membership instala un trigger que exige que el asignado de una solicitud de adopción tenga una membresía ac… |
 
 ## Descartados — NO guardar
 
@@ -40,7 +30,7 @@ exactamente lo que la columna de abajo explica que está mal.
 
 ## Guardadas
 
-### `mascotapp/arch/*` — 7
+### `mascotapp/arch/*` — 8
 
 | Tarea | `topic_key` | Score | Archivo | `observation_id` | Qué dice |
 |---|---|---|---|---|---|
@@ -51,6 +41,7 @@ exactamente lo que la columna de abajo explica que está mal.
 | `T-01-027` | `…/assignment-bounded-by-membership-key` | 5 | [2026-09-01-una-clave-compuesta-a-memberships-encierra-la-asignacion.md](../../../.engram/queue/2026-09-01-una-clave-compuesta-a-memberships-encierra-la-asignacion.md) | `obs-cb3fdedda1fa5e49` | adoption_applications.assigned_to_user_id no es una referencia a users. Es una clave compuesta a memberships (user_id, shelter_id… |
 | `T-01-034` | `…/verify-inherited-constraints` | 5 | [2026-09-01-una-restriccion-heredada-se-verifica-antes-de-disenar-contra-ella.md](../../../.engram/queue/2026-09-01-una-restriccion-heredada-se-verifica-antes-de-disenar-contra-ella.md) | `obs-ed6c4139b505a445` | D3 decia: *"no dependemos de extensiones de PostgreSQL, porque el free tier de Neon no las garantiza"*. |
 | `T-02-004` | `…/policy-lands-at-version-aware-exemption` | 5 | [2026-09-02-policylandsat-version-aware-catalog-exemption.md](../../../.engram/queue/2026-09-02-policylandsat-version-aware-catalog-exemption.md) | `obs-d88a3730b74fb389` | Sacar una tabla de NoPolicy puede romper un test que la tarea que la escribio no menciona, si esa tabla existio (con RLS, sin pol… |
+| `T-02-006` | `…/isolation-probe-must-use-a-writable-column` | 5 | [2026-09-03-ab-probe-must-touch-a-writable-column.md](../../../.engram/queue/2026-09-03-ab-probe-must-touch-a-writable-column.md) | `obs-d88f7a4c0b2d9ee5` | El runner A/B de este proyecto prueba que el tenant B no alcanza la fila del tenant A con un no-op: |
 
 ### `mascotapp/convention/*` — 42
 
@@ -99,7 +90,7 @@ exactamente lo que la columna de abajo explica que está mal.
 | `handoff multi-agente` | `…/commit-messages` | 3 | [2026-09-02-convencion-de-commits.md](../../../.engram/queue/2026-09-02-convencion-de-commits.md) | `obs-62d33d3023d8afae` | Los commits de MascotApp siguen Conventional Commits, y la convencion esta escrita en dos lugares ejecutables, no en la memoria d… |
 | `phase-01-domain-and-data (design D7, revertida por el usuario)` | `…/case-insensitive-email` | 4 | [2026-08-29-citext-vs-lower-index.md](../../../.engram/queue/2026-08-29-citext-vs-lower-index.md) | `obs-1ee4f1b598f5b471` | users.email es citext, no text + índice único sobre lower(email). |
 
-### `mascotapp/domain/*` — 4
+### `mascotapp/domain/*` — 5
 
 | Tarea | `topic_key` | Score | Archivo | `observation_id` | Qué dice |
 |---|---|---|---|---|---|
@@ -107,6 +98,7 @@ exactamente lo que la columna de abajo explica que está mal.
 | `T-01-020` | `…/append-only-tables` | 5 | [2026-08-31-append-only-con-fk-que-cascadea-es-teatro.md](../../../.engram/queue/2026-08-31-append-only-con-fk-que-cascadea-es-teatro.md) | `obs-99c2e3298b483ab8` | pet_status_history es inmutable desde el dia 1 (mitigacion LT-5). Se implemento con cuatro capas — politicas por comando, REVOKE… |
 | `T-01-022` | `…/shelter-verification` | 5 | [2026-08-31-lt2-no-lo-hace-cumplir-la-base.md](../../../.engram/queue/2026-08-31-lt2-no-lo-hace-cumplir-la-base.md) | `obs-85415c0b8700bec6` | §1.1 del plan pone pending_verification como requisito duro de MVP: *"un refugio no puede publicar hasta ser verificado manualmen… |
 | `T-01-024` | `…/historical-readability-from-the-renderer` | 5 | [2026-09-01-la-legibilidad-historica-se-afirma-desde-el-renderer.md](../../../.engram/queue/2026-09-01-la-legibilidad-historica-se-afirma-desde-el-renderer.md) | `obs-069b75a9882b4f07` | §4.4 regla 1 dice que una respuesta enviada siempre se renderiza contra la version con la que se lleno. Hay dos formas de "probar… |
+| `T-02-007` | `…/trigger-when-guard-covers-the-common-case-not-the-edge` | 4 | [2026-09-03-when-guard-kills-the-feature-not-just-the-edge-case.md](../../../.engram/queue/2026-09-03-when-guard-kills-the-feature-not-just-the-edge-case.md) | `obs-011d82c25ec9d1d5` | 00016_assignee_active_membership instala un trigger que exige que el asignado de una solicitud de adopción tenga una membresía ac… |
 
 ### `mascotapp/ops/*` — 8
 

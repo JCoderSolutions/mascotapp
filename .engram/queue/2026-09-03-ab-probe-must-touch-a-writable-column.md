@@ -3,6 +3,8 @@ type: architecture
 score: 5
 topic_key: mascotapp/arch/isolation-probe-must-use-a-writable-column
 task: T-02-006
+status: guardado
+observation_id: obs-d88f7a4c0b2d9ee5
 rationale: "Un harness de aislamiento que se pone verde por el motivo equivocado es peor que no tenerlo: reporta PASS sobre una propiedad que dejó de medir. Este falló en la dirección silenciosa —el rechazo por privilegio se ve idéntico a un rechazo por policy desde afuera— y le pasó a las dos tablas centrales de tenancy, cuyo aislamiento el plan marca como bloqueante. El patrón es general: cualquier sonda negativa tiene que garantizar que la capa que quiere medir sea la que efectivamente responde."
 ---
 
