@@ -146,7 +146,7 @@ exploration/proposal on this and the orchestrator verified it against source
 an arbitrary `applicant_user_id`, and column grants on `shelters`/`memberships` never touch that
 table. **No task in this file modifies it.**
 
-- [ ] **T-02-005** · Pin the PostgreSQL column-privilege semantics slice (b) depends on
+- [x] **T-02-005** · Pin the PostgreSQL column-privilege semantics slice (b) depends on
       - spec: authorization-rbac / *Column-level grants close the self-escalation gap (B1)*
       - **Why this is its own task, first — settled, not a spike.** Design P2-D4 rests this entire
         slice on a PostgreSQL GRANT-reference fact, and it is now **verified live on PG 17
@@ -172,7 +172,7 @@ table. **No task in this file modifies it.**
       - pilot: blacklisted (§7.2)
       - engram: —
 
-- [ ] **T-02-006** · Migration `00015_column_grants.sql` — B1 on `shelters` and `memberships`
+- [x] **T-02-006** · Migration `00015_column_grants.sql` — B1 on `shelters` and `memberships`
       - spec: authorization-rbac / *Column-level grants close the self-escalation gap (B1)* (both scenarios) · tenant-isolation / *Table-level grants on shelters and memberships exclude privilege-sensitive columns*
       - RED first: `UPDATE shelters.status`, `UPDATE shelters.verified_at`, `UPDATE shelters.verified_by` (design: *"same fact, second and third columns of it"*), `UPDATE shelters.storage_quota_bytes`, `UPDATE shelters.storage_bytes_used` (design: *"not in the proposal's table, and it is the same hole"* — the counter that defeats Phase 04's quota check as thoroughly as the quota itself), `UPDATE shelters.slug`, and `UPDATE memberships.role` all currently **succeed** under Phase 01's table-wide grants — write the tests asserting each fails `42501` (SQLSTATE only, per `T-02-005`'s gotcha — the message says *table*, not *column*) and each is red today · anti-vacuity case: a permitted column (`shelters.legal_name`, `memberships.status`) still writes, proving the grant narrows rather than breaks · `DELETE` on both tables fails `42501` (grant revoked entirely) · new characterization test `TestMembershipInsert_CanStillMintAnOwner` (P2-D5) — pins that `INSERT` still carries `role`, so a member of shelter A can still mint an `owner` membership for an accomplice **inside shelter A**; the test's own comment instructs its future reader to delete it when Phase 03's invitation endpoint narrows the path
       - build: `internal/db/migrations/00015_column_grants.sql` — `REVOKE` before `GRANT` (ADR-0009's rule, `FROM PUBLIC` included), then the column-scoped `GRANT`s exactly as P2-D4/P2-D5 enumerate them
@@ -684,6 +684,41 @@ security change from its behavioural proof for the length of one PR.
 The user chose the exception over that trade. It applies to `PR-02-02` and to nothing else;
 every other row in the table below is unchanged and still at or under 400.
 
+**`size:exception` accepted for `PR-02-05`, 2026-09-03.** Estimated 270 authored lines,
+measured **836** — 3.1×, and the fifth estimate in a row to land high, never low
+(250→399, 260→579, 150→314, 160→280, 270→836). It was split into its two tasks before
+being measured, which is where the honest cut already is:
+
+| Commit | Task | Authored | Fits 400? |
+|---|---|---|---|
+| `fc3ac5d` | `T-02-005` — the self-contained semantics pin | **221** | yes |
+| `798b92b` | `T-02-006` — migration `00015` + tests + harness + comment fix | **615** | no, 1.54× |
+
+**The second half does not divide further, and the reason is not preference.** A migration
+without its proof is the one thing this document refuses everywhere. And the A/B harness
+change cannot land on either side of `00015`: before it, it describes a schema that does
+not exist; after it, the suite is red in between. It is atomic with the migration.
+
+**Where the 566-line overshoot came from — none of it was in the task text, all of it
+appeared only on running:**
+
+- **The A/B harness (124 lines, `dbtest/tenants.go` + the two case declarations).** The
+  write probe self-assigns the TENANT column to test whether the policy lets a statement
+  reach another tenant's row. Column grants made `shelters.id` and `memberships.shelter_id`
+  non-updatable, so the probe started returning 42501 — **a privilege refusal standing in
+  for a policy that was never consulted**, on the two tables §10 calls blocking. Fixed with
+  `TouchColumn` (probe a column the tenant may actually write, so the grant steps aside) and
+  `NoDeleteGrant` (updatable but not deletable — a state `AppendOnly` could not describe).
+  Marking them `AppendOnly` instead would have silently stopped exercising their policies.
+- **`TestAnAssignedMembership_CannotBeDeleted` (56 lines).** Its probe ran as `app_tenant`,
+  which can no longer reach a DELETE on `memberships` at all, so `ON DELETE RESTRICT` was
+  never consulted and the test would have stayed green asserting nothing. Moved to the
+  owner, plus a separate case for the stronger new fact.
+- **Comment density.** The estimate assumed a lighter house style than this package's.
+
+The user chose the exception on the same grounds as `PR-02-02`: the estimate was wrong, not
+the work. It applies to `PR-02-05` and to nothing else.
+
 **The three non-negotiable constraints, applied:**
 
 1. **`T-02-007`'s trigger + pinned-test swap is one commit.** `T-02-007` is now its own PR,
@@ -718,7 +753,7 @@ labels move, no task's content or dependency changed.
 | `PR-02-02` | Migration `00013_auth_role` + `dbtest` third pool + reachability proof | T-02-003 | ~~260~~ **579** `size:exception` | `PR-02-01` |
 | `PR-02-03` | Catalog classification + `query/auth.sql` + `TestPolicies_DoNotCrossGUCs` | T-02-004 | 150 | `PR-02-02` |
 | `PR-02-04` | Migration `00014_totp_recovery_codes` — pulled forward, see the numbering note above | T-02-016 | ~~160~~ **280** | `PR-02-03` |
-| `PR-02-05` | Column-privilege semantics pin + migration `00015_column_grants` (B1) + the stale-comment fix | T-02-005, T-02-006 | 270 | `PR-02-04` (migration ordering only — no functional dependency) |
+| `PR-02-05` | Column-privilege semantics pin + migration `00015_column_grants` (B1) + the stale-comment fix | T-02-005, T-02-006 | ~~270~~ **836** `size:exception` | `PR-02-04` (migration ordering only — no functional dependency) |
 | `PR-02-06` | Migration `00016_assignee_active_membership` + the one pinned-test move | T-02-007 | 140 | `PR-02-05` (migration ordering only — no functional dependency) |
 | `PR-02-07` | `password.go` — RED+GREEN | T-02-008, T-02-009 | 160 | — (pure Go, parallel-eligible from `PR-02-01` on) |
 | `PR-02-08` | TOTP secret lifecycle — `envelope.go` + `totp.go`, RED+GREEN | T-02-010, T-02-011, T-02-012, T-02-013 | 390 | — (pure Go, parallel-eligible) |

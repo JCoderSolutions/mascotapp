@@ -167,9 +167,9 @@ Columna **PR**: en qué PR de la cadena entra. Columna **est**: líneas autorada
 | `[x]` `T-02-002` | GREEN — `internal/db/auth.go`: `WithAuthUser`, `WithAuthLookup`, `ErrNoAuthUser`, `NewAuthPool` | PR 1 | 120 |
 | `[x]` `T-02-003` | Migration `00013_auth_role.sql` + `dbtest` third-pool wiring + reachability/isolation proof | PR 2 | ~~260~~ **579** ⚠ |
 | `[x]` `T-02-004` | Catalog classification + `query/auth.sql` + `TestPolicies_DoNotCrossGUCs` | PR 3 | 150 |
-| `[ ]` `T-02-005` | Pin the PostgreSQL column-privilege semantics slice (b) depends on | PR 5 | 55 |
-| `[ ]` `T-02-006` | Migration `00015_column_grants.sql` — B1 on `shelters` and `memberships` | PR 5 | 215 |
-| `[ ]` `T-02-007` | Migration `00016_assignee_active_membership.sql` — the one pinned test move, same commit | PR 6 | 140 |
+| `[x]` `T-02-005` | Pin the PostgreSQL column-privilege semantics slice (b) depends on | PR 5 | 55 → 221 |
+| `[x]` `T-02-006` | Migration `00015_column_grants.sql` — B1 on `shelters` and `memberships` | PR 5 | 215 → 615 `size:exception` |
+| `[~]` `T-02-007` | Migration `00016_assignee_active_membership.sql` — the one pinned test move, same commit | PR 6 | 140 |
 | `[ ]` `T-02-008` | RED — `password.go` (Argon2id) unit tests | PR 7 | 90 |
 | `[ ]` `T-02-009` | GREEN — `password.go` | PR 7 | 70 |
 | `[ ]` `T-02-010` | RED — `envelope.go` (AES-256-GCM) unit tests | PR 8 | 110 |
