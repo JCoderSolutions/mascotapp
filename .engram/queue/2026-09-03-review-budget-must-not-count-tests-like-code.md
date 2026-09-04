@@ -3,6 +3,8 @@ type: convention
 score: 5
 topic_key: mascotapp/convention/review-budget-counts-code-and-tests-separately
 task: T-02-009
+status: guardado
+observation_id: obs-acb72253edc70966
 rationale: "Un presupuesto de revisión que suma tests e implementación en un solo número cobra igual por revisar una lista de casos ya verdes que por revisar una política de seguridad. En un proyecto con TDD estricto y mutation testing —donde los tests son el 70% del diff— eso se convierte en un impuesto a las prácticas que más protegen el código, y empuja a una de dos salidas, ambas peores: escribir menos pruebas, o volver la excepción rutina. La regla general es que un límite tiene que medir la cosa cuyo riesgo dice acotar."
 ---
 
