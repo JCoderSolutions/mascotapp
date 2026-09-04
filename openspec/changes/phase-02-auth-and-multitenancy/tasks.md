@@ -294,22 +294,26 @@ handlers themselves, then the contract and its codegen.
         compromise is unrecoverable. Recorded in ADR terms in
         [[../../../docs/vault/20-arquitectura/desviacion-p2-d8-totp-stdlib]].
 
-- [ ] **T-02-014** · RED — `token.go` (JWT) unit tests
+- [x] **T-02-014** · RED — `token.go` (JWT) unit tests
       - spec: identity-and-session / *JWT access tokens are short-lived and carry the tenant claim*
       - build: `apps/api/internal/auth/token_test.go`
       - tests: claims shape (`iss`, `aud`, `sub`, `exp`, `iat`, `shelter_id`, `role`, `amr`) · a token issued 16 minutes ago is rejected, one issued 1 minute ago is accepted (identity-and-session's two paired scenarios) · construction refuses a `JWT_SECRET` under 32 bytes, with synthetic test secrets — no real secret needed
-      - dod: fails to compile · pure Go, `t.Parallel()`
-      - est: 120
+      - added beyond the row: `alg: none` and `alg: HS512` forgeries · `shelter_id` absent-not-zero-uuid on an unscoped token · the expiry boundary at exactly `exp` · claims that identify nobody, refused both at issue AND on the way out of verify
+      - decision: the file decodes tokens BY HAND (`crypto/hmac` + `encoding/base64`) instead of parsing with `golang-jwt`. Parsing with the same library the implementation writes with proves a ROUND TRIP, not correctness. The implementation still uses the library — this is the test refusing to let it grade its own homework.
+      - est: 120 · actual: 643
       - pilot: blacklisted (§7.2)
       - parallel: T-02-008, T-02-010, T-02-012
       - engram: —
 
-- [ ] **T-02-015** · GREEN — `token.go`
+- [x] **T-02-015** · GREEN — `token.go`
       - spec: same as T-02-014
-      - build: `apps/api/internal/auth/token.go` — `golang-jwt/v5`, HS256 (P2-D11; EdDSA rejected — no second verifier exists yet, the design's own reopening condition)
+      - build: `apps/api/internal/auth/token.go` — `golang-jwt/v5` **v5.3.1, installed with the user's explicit approval** (supply chain, §7.3 `ask` list), HS256 (P2-D11; EdDSA rejected — no second verifier exists yet, the design's own reopening condition)
+      - dependency footprint: one direct `require`, two `go.sum` lines, nothing transitive. `govulncheck ./...` clean — the one module finding is `golang.org/x/crypto/openpgp` (unmaintained, `Fixed in: N/A`), pre-existing via Argon2id and never imported.
+      - why a library here and not in `totp.go`: JOSE fails all three conditions of the T-02-013 deviation — algorithm families, known confusion modes, an ACTIVE history of implementation vulnerabilities. Parsing attacker-supplied tokens is exactly the work a maintained library should do.
       - tests: T-02-014 turns green
       - dod: mutation-tested (expiry-check, algorithm-confusion, claim-omission mutants all die)
-      - est: 100
+      - mutation finding: the algorithm-confusion mutant (drop `jwt.WithValidMethods`) SURVIVED the first run. The two forgery tests were red for the wrong reason — their forged payloads omitted `amr`, so the implementation's own outbound `claims.validate()` refused them before the algorithm check was ever consulted. Fixed by extracting `forgeablePayload(now)`, a COMPLETE and valid claim set so the header is the only thing wrong. The mutant then dies, killed by exactly `TestVerify_RefusesAnAlgorithmOtherThanHS256` — `alg: none` still passes without the allowlist because the library refuses it independently, so the allowlist is load-bearing ONLY for HS512.
+      - est: 100 · actual: 289 (136 code, 120 comment, 33 blank)
       - pilot: blacklisted (§7.2)
       - engram: —
 
@@ -668,7 +672,7 @@ the pure-Go rows behave differently from the database rows.
 | `PR-02-22` | 300 | 708 | no |
 | `PR-02-12` · `PR-02-13` · `PR-02-15` | 290 | 684 | no |
 | `PR-02-21` | 230 | 543 | no |
-| `PR-02-09` | 220 | 519 | no |
+| `PR-02-09` | 220 | 519 | **measured 935 — OVER, see below** |
 | `PR-02-10` · `PR-02-16` | 190 | 448 | no |
 | `PR-02-17` | 160 | 378 | no |
 | `PR-02-23` | 150 | 354 | no |
@@ -873,7 +877,7 @@ labels move, no task's content or dependency changed.
 | `PR-02-07` | `password.go` — RED+GREEN | T-02-008, T-02-009 | ~~160~~ **538** `size:exception` | — (pure Go, parallel-eligible from `PR-02-01` on) |
 | `PR-02-08a` | `envelope.go` (AES-256-GCM) — RED+GREEN | T-02-010, T-02-011 | ~~200~~ **565** (impl 183/250, total 565/800 — fits both) | — (pure Go, parallel-eligible) |
 | `PR-02-08b` | `totp.go` — RED+GREEN | T-02-012, T-02-013 | 190 (proj. 448) · **actual 192 / 480** | — (pure Go, parallel-eligible) |
-| `PR-02-09` | `token.go` (JWT) — RED+GREEN | T-02-014, T-02-015 | 220 | — (pure Go, parallel-eligible) |
+| `PR-02-09` | `token.go` (JWT) — RED+GREEN | T-02-014, T-02-015 | 220 · **actual 289 / 935 — both budgets exceeded** | — (pure Go, parallel-eligible) |
 | `PR-02-10` | `recovery.go` — RED+GREEN | T-02-017, T-02-018 | 190 | `PR-02-04` (needs `totp_recovery_codes`) |
 | `PR-02-11` | `session.go` — rotation + reuse detection, RED+GREEN | T-02-019, T-02-020 | 320 | `PR-02-02` (needs the `refresh_tokens` access path) · **gated by Judgment Day (`T-02-021`) before merge — see constraint 2** |
 | `PR-02-12` | `middleware_auth.go` — the F02 tenant-scope boundary, RED+GREEN | T-02-023, T-02-024 | 290 | `PR-02-09` (bearer verification needs `token.go`) |

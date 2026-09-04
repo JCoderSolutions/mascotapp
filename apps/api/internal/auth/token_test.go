@@ -342,16 +342,15 @@ func TestVerify_RefusesTheNoneAlgorithm(t *testing.T) {
 	now := time.Date(2026, 9, 4, 12, 0, 0, 0, time.UTC)
 	forged := craftToken(t,
 		map[string]any{"alg": "none", "typ": "JWT"},
-		map[string]any{
-			"iss": testIssuer,
-			"aud": testAudience,
-			"sub": "22222222-2222-4222-8222-222222222222",
-
-			"role":       "owner",
-			"shelter_id": "11111111-1111-4111-8111-111111111111",
-			"iat":        now.Unix(),
-			"exp":        now.Add(accessTokenLifetime).Unix(),
-		},
+		// A COMPLETE, entirely valid payload. Every claim is well-formed, the
+		// issuer and audience match, and it is not expired -- so the ONLY thing
+		// wrong with this token is its algorithm, and the only layer that can
+		// refuse it is the one being measured.
+		//
+		// An earlier version of this test omitted `amr`, and mutation caught it:
+		// the claim validation refused the token before the signature check was
+		// ever consulted, so the test passed while measuring nothing.
+		forgeablePayload(now),
 		nil, // no signature at all
 	)
 
@@ -359,6 +358,21 @@ func TestVerify_RefusesTheNoneAlgorithm(t *testing.T) {
 		t.Fatal("an `alg: none` token was ACCEPTED. Anyone who can reach the API can now " +
 			"mint a token for any user, any shelter and any role, and the signature check " +
 			"they bypassed was the only thing that was ever stopping them")
+	}
+}
+
+// forgeablePayload is a fully valid claim set, so that a test forging the
+// HEADER is measuring the header and nothing else.
+func forgeablePayload(now time.Time) map[string]any {
+	return map[string]any{
+		"iss":        testIssuer,
+		"aud":        testAudience,
+		"sub":        "22222222-2222-4222-8222-222222222222",
+		"role":       "owner",
+		"amr":        []string{"pwd", "otp"},
+		"shelter_id": "11111111-1111-4111-8111-111111111111",
+		"iat":        now.Unix(),
+		"exp":        now.Add(accessTokenLifetime).Unix(),
 	}
 }
 
@@ -373,16 +387,14 @@ func TestVerify_RefusesAnAlgorithmOtherThanHS256(t *testing.T) {
 
 	now := time.Date(2026, 9, 4, 12, 0, 0, 0, time.UTC)
 	header := map[string]any{"alg": "HS512", "typ": "JWT"}
-	payload := map[string]any{
-		"iss":  testIssuer,
-		"aud":  testAudience,
-		"sub":  "22222222-2222-4222-8222-222222222222",
-		"role": "owner",
-		"iat":  now.Unix(),
-		"exp":  now.Add(accessTokenLifetime).Unix(),
-	}
 
-	signingInput := encodeSegment(t, header) + "." + encodeSegment(t, payload)
+	// Complete and valid, for the same reason as the `alg: none` case above: the
+	// header is the only thing wrong here, so the algorithm check is the only
+	// layer that can answer. This one matters more than its neighbour, because
+	// the library refuses `alg: none` on its own even without the allowlist --
+	// an HS512 signature computed with the same secret is genuinely valid, and
+	// ONLY the allowlist stops it.
+	signingInput := encodeSegment(t, header) + "." + encodeSegment(t, forgeablePayload(now))
 	mac := hmac.New(sha512.New, testSecret)
 	mac.Write([]byte(signingInput))
 	forged := signingInput + "." + base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
@@ -445,6 +457,77 @@ func TestVerify_RefusesAForeignSignatureOrAnEditedClaim(t *testing.T) {
 				"The signature covers the payload precisely so that this cannot happen")
 		}
 	})
+}
+
+// A valid signature is not a promise that the claims mean anything.
+//
+// The token below is signed correctly, with THIS issuer's secret, using HS256,
+// and it is not expired — every check on the way in passes. Its `role` is the
+// empty string.
+//
+// A signature proves a token came from this issuer; it does not prove this
+// issuer was CORRECT when it minted it. Tokens outlive the build that made
+// them, and a code path that skipped `Issue` — an older binary, a migration
+// script, a future refresh handler assembling claims by hand — leaves exactly
+// this shape in circulation for fifteen minutes. Verify has to refuse it rather
+// than hand a handler a user with no role.
+func TestVerify_RefusesAWellSignedTokenWhoseClaimsIdentifyNobody(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 9, 4, 12, 0, 0, 0, time.UTC)
+
+	sign := func(t *testing.T, payload map[string]any) string {
+		t.Helper()
+
+		signingInput := encodeSegment(t, map[string]any{"alg": "HS256", "typ": "JWT"}) +
+			"." + encodeSegment(t, payload)
+		mac := hmac.New(sha256.New, testSecret)
+		mac.Write([]byte(signingInput))
+
+		return signingInput + "." + base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
+	}
+
+	base := func() map[string]any {
+		return map[string]any{
+			"iss":  testIssuer,
+			"aud":  testAudience,
+			"sub":  "22222222-2222-4222-8222-222222222222",
+			"role": "owner",
+			"amr":  []string{"pwd", "otp"},
+			"iat":  now.Unix(),
+			"exp":  now.Add(accessTokenLifetime).Unix(),
+		}
+	}
+
+	issuer := newTestIssuer(t)
+
+	// Anti-vacuity: the hand-signed token with intact claims DOES verify, so
+	// the refusals below are about the claims and not about the forgery method.
+	if _, err := issuer.Verify(sign(t, base()), now); err != nil {
+		t.Fatalf("the hand-signed token with intact claims does not verify (%v), so the "+
+			"refusals below prove nothing about the claims", err)
+	}
+
+	for name, broken := range map[string]map[string]any{
+		"zero_subject":   {"sub": "00000000-0000-0000-0000-000000000000"},
+		"empty_role":     {"role": ""},
+		"empty_amr":      {"amr": []string{}},
+		"sub_not_a_uuid": {"sub": "not-a-uuid"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			payload := base()
+			for key, value := range broken {
+				payload[key] = value
+			}
+
+			if _, err := issuer.Verify(sign(t, payload), now); err == nil {
+				t.Errorf("a correctly signed, unexpired token with %s was ACCEPTED. The "+
+					"signature only proves who minted it, not that they were right to", name)
+			}
+		})
+	}
 }
 
 // Whatever arrives in the `Authorization` header has to be refused, not crashed
