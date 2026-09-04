@@ -3,8 +3,11 @@ type: bug
 score: 4
 topic_key: mascotapp/convention/the-layer-that-answers-first
 task: T-02-018
-status: pendiente-de-aprobacion
+status: guardado
+approved: 2026-09-04 por el usuario (T-02-018, cierre de PR-02-10)
+observation_id: obs-9e00e3a6413dc7d2
 extends: obs-9e00e3a6413dc7d2
+nota_de_guardado: "Mismo `observation_id` que las cuatro instancias anteriores: el `topic_key` compartido suma la nota al hilo existente. El id nombra el TEMA, no el candidato — la trazabilidad de esta instancia vive en este archivo. Ver [[2026-09-04-una-defensa-en-profundidad-nueva-desarma-el-test-de-abajo]]."
 rationale: "Quinta instancia del patrón, y la primera donde la capa intrusa no es una policy, ni un trigger, ni un chequeo mío: es el ROLLBACK de la transacción. Vale guardarla aparte porque el rollback vuelve EQUIVALENTE toda una familia de mutantes —cualquier reordenamiento de una guarda respecto de una escritura destructiva, dentro de la misma transacción— y eso es una clase, no un caso. Y porque el error concreto no estuvo en el test sino en el COMENTARIO del test: afirmaba que la aserción fijaba el orden, y la mutación demostró que no. Un comentario que le atribuye a un test una propiedad que no prueba es peor que no tener comentario, porque el próximo que lo lea va a creerle."
 ---
 
