@@ -299,12 +299,22 @@ trigger fails at the offending statement instead of at `COMMIT`, which is easier
 **`TestAssignment_DoesNotYetRequireAnActiveMembership` goes red here and is replaced** by its
 inverse, in the same commit. This is the one pinned test this phase moves.
 
-### P2-D8 — TOTP: `pquerna/otp`, 160-bit secret, AES-256-GCM with the user id as AAD
+### P2-D8 — TOTP: ~~`pquerna/otp`~~ **standard library**, 160-bit secret, AES-256-GCM with the header + user id as AAD
 
-**Library:** `github.com/pquerna/otp` — RFC 6238/4226, the de-facto Go implementation, and it
+> **AMENDED 2026-09-04 at `T-02-013`.** The library choice below was reversed and the AAD was
+> widened. Do NOT `go get github.com/pquerna/otp` — `apps/api/internal/auth/totp.go` is built on
+> `crypto/hmac` + `crypto/sha1` + `net/url`, and `go.mod` was not modified. Full reasoning, and the
+> three conditions that had to hold before overriding "crypto you write is crypto you maintain
+> forever", in `docs/vault/20-arquitectura/desviacion-p2-d8-totp-stdlib.md`. The short version: RFC
+> 6238 has been frozen since 2011 so there is no maintenance stream to inherit, its Appendix B test
+> vectors pin correctness from outside this repository, and the dependency would land in the one
+> package where a compromise is unrecoverable. **This is not a precedent for JWT** — P2-D11 keeps
+> `golang-jwt/v5`, because JOSE fails all three conditions.
+
+~~**Library:** `github.com/pquerna/otp` — RFC 6238/4226, the de-facto Go implementation, and it
 generates the `otpauth://` URI and the QR payload we need. **Rejected:** hand-rolled HMAC (crypto you
 write is crypto you maintain forever) and smaller forks (a second-order dependency for a first-order
-credential).
+credential).~~
 
 **Secret:** 20 bytes from `crypto/rand` (160 bits, RFC 4226's recommendation), base32 for the URI.
 
@@ -492,7 +502,7 @@ parse cookie → user_id prefix → WithAuthUser(user_id) → SELECT by token_ha
 | `apps/api/internal/email/` | Create | `Sender` port + `LogSender` stub (proposal Decision 2) |
 | `apps/api/internal/config/config.go` | Modify | auth DSN, `JWT_SECRET`, `AUTH_KEK`, `WEB_ORIGINS`, `API_PUBLIC_ORIGIN`, same-site boot refusal |
 | `api/openapi.yaml` | Modify | the auth surface (`oapi-codegen` regenerates `internal/api/openapi.gen.go`) |
-| `apps/api/go.mod` | Modify | `golang-jwt/v5`, `pquerna/otp`, `golang.org/x/crypto` (direct), `golang.org/x/net` |
+| `apps/api/go.mod` | Modify | `golang-jwt/v5`, ~~`pquerna/otp`~~ (dropped — see the P2-D8 amendment), `golang.org/x/crypto` (direct), `golang.org/x/net` |
 | `.env.example` | Modify | **Blocked pending user confirmation — see Open Questions** |
 
 ---

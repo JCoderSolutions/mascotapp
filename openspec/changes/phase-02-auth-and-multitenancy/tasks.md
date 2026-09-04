@@ -264,24 +264,35 @@ handlers themselves, then the contract and its codegen.
       - pilot: blacklisted (§7.2)
       - engram: —
 
-- [ ] **T-02-012** · RED — `totp.go` unit tests
+- [x] **T-02-012** · RED — `totp.go` unit tests
       - spec: identity-and-session / *TOTP is mandatory for owner and admin roles*
       - build: `apps/api/internal/auth/totp_test.go`
       - tests: 160-bit secret generation from `crypto/rand` · `otpauth://` URI shape · a code generated for the current window verifies · a code outside the window is rejected
       - dod: fails to compile · pure Go, `t.Parallel()`
-      - est: 100
+      - est: 100 · actual: 288
       - pilot: blacklisted (§7.2)
       - parallel: T-02-008, T-02-010, T-02-014
       - engram: —
 
-- [ ] **T-02-013** · GREEN — `totp.go`
+- [x] **T-02-013** · GREEN — `totp.go`
       - spec: same as T-02-012
-      - build: `apps/api/internal/auth/totp.go` — `github.com/pquerna/otp`
+      - build: `apps/api/internal/auth/totp.go` — **standard library**, NOT `github.com/pquerna/otp` (deviation from P2-D8, see below)
       - tests: T-02-012 turns green
       - dod: mutation-tested
-      - est: 90
+      - est: 90 · actual: 192
       - pilot: blacklisted (§7.2)
       - engram: —
+      - deviation: P2-D8 specified `github.com/pquerna/otp` and rejected a hand-rolled
+        implementation on the grounds that "crypto you write is crypto you maintain forever".
+        Built on `crypto/hmac` + `crypto/sha1` + `net/url` instead. The reasoning that
+        overturned it: RFC 6238 has been FROZEN since 2011, so there is no maintenance
+        stream to inherit, and RFC 6238 Appendix B's published test vectors pin correctness
+        from outside this codebase — which is stronger evidence than a dependency's own test
+        suite. The library was not in the module cache, so adopting it meant a `go get` into
+        the auth package. Cost of the deviation: 192 lines under this project's own review.
+        Cost of the dependency: permanent supply-chain surface in the one package where a
+        compromise is unrecoverable. Recorded in ADR terms in
+        [[../../../docs/vault/20-arquitectura/desviacion-p2-d8-totp-stdlib]].
 
 - [ ] **T-02-014** · RED — `token.go` (JWT) unit tests
       - spec: identity-and-session / *JWT access tokens are short-lived and carry the tenant claim*
@@ -673,10 +684,15 @@ wrong about the work; it was wrong about how much of the work is proof.
 **`PR-02-08` is split in two**, and it divides on a seam that already exists — it carried four
 tasks and two independent primitives:
 
-| new PR | tasks | `est:` | projected |
-|---|---|---:|---:|
-| `PR-02-08a` | `T-02-010`, `T-02-011` — `envelope.go` (AES-256-GCM) | 200 | 472 |
-| `PR-02-08b` | `T-02-012`, `T-02-013` — `totp.go` | 190 | 448 |
+| new PR | tasks | `est:` | projected | actual (impl / total) |
+|---|---|---:|---:|---:|
+| `PR-02-08a` | `T-02-010`, `T-02-011` — `envelope.go` (AES-256-GCM) | 200 | 472 | **183 / 565** |
+| `PR-02-08b` | `T-02-012`, `T-02-013` — `totp.go` | 190 | 448 | **192 / 480** |
+
+Both halves came in under both budgets, and the rebaselined estimator held: implementation was
+predicted within 9% and 1%. The TOTAL is the half still moving — `PR-02-08a` overshot its
+projection by 20% and `PR-02-08b` by 7%, both in the same direction. The ×2.36 factor is a
+floor, not a centre, and the next PR that projects near 800 should be treated as over it.
 
 RED and GREEN stay together inside each half: splitting them would merge a tree whose package
 does not compile, which is why `PR-02-01` and `PR-02-07` kept theirs together too.
@@ -856,7 +872,7 @@ labels move, no task's content or dependency changed.
 | `PR-02-06` | Migration `00016_assignee_active_membership` + the one pinned-test move | T-02-007 | ~~140~~ **291** (fits) | `PR-02-05` (migration ordering only — no functional dependency) |
 | `PR-02-07` | `password.go` — RED+GREEN | T-02-008, T-02-009 | ~~160~~ **538** `size:exception` | — (pure Go, parallel-eligible from `PR-02-01` on) |
 | `PR-02-08a` | `envelope.go` (AES-256-GCM) — RED+GREEN | T-02-010, T-02-011 | ~~200~~ **565** (impl 183/250, total 565/800 — fits both) | — (pure Go, parallel-eligible) |
-| `PR-02-08b` | `totp.go` — RED+GREEN | T-02-012, T-02-013 | 190 (proj. 448) | — (pure Go, parallel-eligible) |
+| `PR-02-08b` | `totp.go` — RED+GREEN | T-02-012, T-02-013 | 190 (proj. 448) · **actual 192 / 480** | — (pure Go, parallel-eligible) |
 | `PR-02-09` | `token.go` (JWT) — RED+GREEN | T-02-014, T-02-015 | 220 | — (pure Go, parallel-eligible) |
 | `PR-02-10` | `recovery.go` — RED+GREEN | T-02-017, T-02-018 | 190 | `PR-02-04` (needs `totp_recovery_codes`) |
 | `PR-02-11` | `session.go` — rotation + reuse detection, RED+GREEN | T-02-019, T-02-020 | 320 | `PR-02-02` (needs the `refresh_tokens` access path) · **gated by Judgment Day (`T-02-021`) before merge — see constraint 2** |

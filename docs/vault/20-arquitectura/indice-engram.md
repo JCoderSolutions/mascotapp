@@ -12,10 +12,19 @@ que el repositorio siga siendo la verdad operativa (regla IA-4 del plan maestro)
 versionado. El `observation_id` es la misma nota dentro de Engram; sirve para
 trazabilidad, no es requisito para leerla.
 
-- Candidatos totales: **87**
+- Candidatos totales: **88**
 - Aprobados y guardados en Engram: **85**
-- Pendientes de aprobación explícita del usuario: **0**
+- Pendientes de aprobación explícita del usuario: **1**
 - Descartados por el pase de curaduría: **2**
+
+## Pendientes de aprobación
+
+Nada de esto está en Engram todavía. Requiere el sí explícito del usuario
+antes de `mem_save` (§6.6 del plan maestro).
+
+| Tarea | Tipo | Score | Archivo | Qué dice |
+|---|---|---|---|---|
+| `T-02-013` | architecture | 5 | [2026-09-04-when-hand-rolling-crypto-beats-a-dependency.md](../../../.engram/queue/2026-09-04-when-hand-rolling-crypto-beats-a-dependency.md) | P2-D8 eligió github.com/pquerna/otp para TOTP y rechazó el HMAC propio con el argumento estándar: *"crypto you write is crypto yo… |
 
 ## Descartados — NO guardar
 
