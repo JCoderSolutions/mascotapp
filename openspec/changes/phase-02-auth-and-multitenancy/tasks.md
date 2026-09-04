@@ -672,7 +672,7 @@ the pure-Go rows behave differently from the database rows.
 | `PR-02-22` | 300 | 708 | no |
 | `PR-02-12` · `PR-02-13` · `PR-02-15` | 290 | 684 | no |
 | `PR-02-21` | 230 | 543 | no |
-| `PR-02-09` | 220 | 519 | **measured 935 — OVER, see below** |
+| `PR-02-09` | 220 | 519 | **measured 935 — OVER both budgets, `size:exception` accepted 2026-09-04** |
 | `PR-02-10` · `PR-02-16` | 190 | 448 | no |
 | `PR-02-17` | 160 | 378 | no |
 | `PR-02-23` | 150 | 354 | no |
@@ -838,6 +838,45 @@ appeared only on running:**
 The user chose the exception on the same grounds as `PR-02-02`: the estimate was wrong, not
 the work. It applies to `PR-02-05` and to nothing else.
 
+**`size:exception` accepted for `PR-02-09`, 2026-09-04 — the first one that breaches BOTH
+budgets.** Projected 519 total, measured **935**; implementation limit 250, measured **289**.
+
+| | implementation | total |
+|---|---:|---:|
+| limit | 250 | 800 |
+| measured | **289** | **935** |
+| over by | **+39** | **+135** |
+
+Two things make this exception different from the two before it, and both are worth writing
+down rather than absorbing into "the estimate was wrong again".
+
+**First, the implementation budget had never been breached.** The two-budget regime was
+introduced precisely because counting tests like code measures the wrong thing — and until
+now every overshoot lived entirely on the test side, which is what the 800 limit exists to
+absorb. `PR-02-07` at 221 was the closest observation to the 250 line. `token.go` at 289 is
+the first row that crosses it, and it crosses it with **136 lines of code**: 120 are comment
+and 33 are blank. The limit counts file lines, not code lines, and that distinction is the
+whole difference here. That is not an argument for waiving it — the limit is the limit and it
+was exceeded — but it does decide *what* a smaller version would have to cut, and the answer
+is the comments explaining why `alg` is never read from the token. Those are the lines a
+reader six months from now needs most.
+
+**Second, RED and GREEN cannot be split.** Merging the RED alone leaves `internal/auth`
+without a compiling package: `token_test.go` references types that do not exist yet. A PR
+that breaks its base branch's build is not a smaller PR, it is a broken one. This is the same
+constraint recorded at line 702 for `PR-02-01` and `PR-02-07`.
+
+**What this costs us, stated plainly.** One PR earlier, `PR-02-08b`'s log entry concluded:
+*"the ×2.36 factor is a floor, not a centre — the next PR projecting near 800 has to be
+treated as though it already passed it, instead of discovering it at measurement time."*
+`PR-02-09` projected 519 — not near 800 — and measured 935, **1.8× the projection**. Three
+consecutive PRs have now landed above projection (472→565, 448→519→935 respectively). The
+note was right about the direction and wrong about the trigger: the signal is not "projects
+near 800", it is **"is this PR's subject security-critical enough that its comments carry
+argument rather than description"**. `password.go`, `envelope.go`, `totp.go` and `token.go`
+all overshot; the database rows behaved differently. That is the split worth re-baselining on,
+and it belongs in the projection before `PR-02-11`, not after it.
+
 **The three non-negotiable constraints, applied:**
 
 1. **`T-02-007`'s trigger + pinned-test swap is one commit.** `T-02-007` is now its own PR,
@@ -877,7 +916,7 @@ labels move, no task's content or dependency changed.
 | `PR-02-07` | `password.go` — RED+GREEN | T-02-008, T-02-009 | ~~160~~ **538** `size:exception` | — (pure Go, parallel-eligible from `PR-02-01` on) |
 | `PR-02-08a` | `envelope.go` (AES-256-GCM) — RED+GREEN | T-02-010, T-02-011 | ~~200~~ **565** (impl 183/250, total 565/800 — fits both) | — (pure Go, parallel-eligible) |
 | `PR-02-08b` | `totp.go` — RED+GREEN | T-02-012, T-02-013 | 190 (proj. 448) · **actual 192 / 480** | — (pure Go, parallel-eligible) |
-| `PR-02-09` | `token.go` (JWT) — RED+GREEN | T-02-014, T-02-015 | 220 · **actual 289 / 935 — both budgets exceeded** | — (pure Go, parallel-eligible) |
+| `PR-02-09` | `token.go` (JWT) — RED+GREEN | T-02-014, T-02-015 | ~~220~~ **289 impl / 935 total** `size:exception` (both budgets) | — (pure Go, parallel-eligible) |
 | `PR-02-10` | `recovery.go` — RED+GREEN | T-02-017, T-02-018 | 190 | `PR-02-04` (needs `totp_recovery_codes`) |
 | `PR-02-11` | `session.go` — rotation + reuse detection, RED+GREEN | T-02-019, T-02-020 | 320 | `PR-02-02` (needs the `refresh_tokens` access path) · **gated by Judgment Day (`T-02-021`) before merge — see constraint 2** |
 | `PR-02-12` | `middleware_auth.go` — the F02 tenant-scope boundary, RED+GREEN | T-02-023, T-02-024 | 290 | `PR-02-09` (bearer verification needs `token.go`) |

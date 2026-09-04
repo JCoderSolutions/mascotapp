@@ -13,18 +13,9 @@ versionado. El `observation_id` es la misma nota dentro de Engram; sirve para
 trazabilidad, no es requisito para leerla.
 
 - Candidatos totales: **89**
-- Aprobados y guardados en Engram: **86**
-- Pendientes de aprobación explícita del usuario: **1**
+- Aprobados y guardados en Engram: **87**
+- Pendientes de aprobación explícita del usuario: **0**
 - Descartados por el pase de curaduría: **2**
-
-## Pendientes de aprobación
-
-Nada de esto está en Engram todavía. Requiere el sí explícito del usuario
-antes de `mem_save` (§6.6 del plan maestro).
-
-| Tarea | Tipo | Score | Archivo | Qué dice |
-|---|---|---|---|---|
-| `T-02-015` | bug | 4 | [2026-09-04-una-defensa-en-profundidad-nueva-desarma-el-test-de-abajo.md](../../../.engram/queue/2026-09-04-una-defensa-en-profundidad-nueva-desarma-el-test-de-abajo.md) | Cuarta instancia de obs-9e00e3a6413dc7d2 (*la capa que contesta primero vacía el test de abajo*), y la primera fuera de la base d… |
 
 ## Descartados — NO guardar
 
@@ -52,7 +43,7 @@ exactamente lo que la columna de abajo explica que está mal.
 | `T-02-004` | `…/policy-lands-at-version-aware-exemption` | 5 | [2026-09-02-policylandsat-version-aware-catalog-exemption.md](../../../.engram/queue/2026-09-02-policylandsat-version-aware-catalog-exemption.md) | `obs-d88a3730b74fb389` | Sacar una tabla de NoPolicy puede romper un test que la tarea que la escribio no menciona, si esa tabla existio (con RLS, sin pol… |
 | `T-02-006` | `…/isolation-probe-must-use-a-writable-column` | 5 | [2026-09-03-ab-probe-must-touch-a-writable-column.md](../../../.engram/queue/2026-09-03-ab-probe-must-touch-a-writable-column.md) | `obs-d88f7a4c0b2d9ee5` | El runner A/B de este proyecto prueba que el tenant B no alcanza la fila del tenant A con un no-op: |
 
-### `mascotapp/convention/*` — 43
+### `mascotapp/convention/*` — 44
 
 | Tarea | `topic_key` | Score | Archivo | `observation_id` | Qué dice |
 |---|---|---|---|---|---|
@@ -94,6 +85,7 @@ exactamente lo que la columna de abajo explica que está mal.
 | `T-01-033` | `…/queries-never-filter-by-shelter-id` | 5 | [2026-09-01-una-query-no-filtra-por-shelter-id.md](../../../.engram/queue/2026-09-01-una-query-no-filtra-por-shelter-id.md) | `obs-c94143b56078801e` | Regla dura para todo internal/db/query/*.sql: ninguna lectura lleva shelter_id en un WHERE, en un AND ni en una condicion de JOIN. |
 | `T-02-005` | `…/tool-absence-must-fail-at-session-start` | 4 | [2026-09-03-tool-absence-must-fail-loudly.md](../../../.engram/queue/2026-09-03-tool-absence-must-fail-loudly.md) | `obs-e03b5d9cf88abd24` | On 2026-09-02 gentle-ai vanished from the development host in the middle of a session. The SDD settle that needed it ran inside a… |
 | `T-02-009` | `…/review-budget-counts-code-and-tests-separately` | 5 | [2026-09-03-review-budget-must-not-count-tests-like-code.md](../../../.engram/queue/2026-09-03-review-budget-must-not-count-tests-like-code.md) | `obs-acb72253edc70966` | MascotApp fijó un presupuesto de 400 líneas autoradas por PR. Siete PRs consecutivos de la Fase 02 lo excedieron; tres necesitaro… |
+| `T-02-015` | `…/the-layer-that-answers-first` | 4 | [2026-09-04-una-defensa-en-profundidad-nueva-desarma-el-test-de-abajo.md](../../../.engram/queue/2026-09-04-una-defensa-en-profundidad-nueva-desarma-el-test-de-abajo.md) | `obs-9e00e3a6413dc7d2` | Cuarta instancia de obs-9e00e3a6413dc7d2 (*la capa que contesta primero vacía el test de abajo*), y la primera fuera de la base d… |
 | `T-02-016` | `…/every-rls-migration-extends-two-pinned-inventories` | 3 | [2026-09-02-totp-recovery-codes-third-pinned-inventory.md](../../../.engram/queue/2026-09-02-totp-recovery-codes-third-pinned-inventory.md) | `obs-a46dedb3f04d9188` | rlstest/catalog.go's meta-test (TestCatalog_EveryRelationIsClassifiedAndProtected) only asserts that a table has RLS, is FORCEd… |
 | `fase-02 planning` | `…/recompute-announced-numbers` | 4 | [2026-09-02-un-numero-anunciado-se-recomputa.md](../../../.engram/queue/2026-09-02-un-numero-anunciado-se-recomputa.md) | `obs-99a194c5559106b8` | Un agente cerro la cadena de entrega de la Fase 02 con 23 PRs, 4.875 lineas, ninguno sobre 400. Los tres numeros eran del mismo r… |
 | `fase-02 planning` | `…/spec-must-carry-the-property` | 5 | [2026-09-02-un-requisito-que-el-verificador-no-puede-leer.md](../../../.engram/queue/2026-09-02-un-requisito-que-el-verificador-no-puede-leer.md) | `obs-51c9db2915bb5533` | El diseno de la Fase 02 prohibe que un tenant escriba shelters.storage_bytes_used — el contador contra el que se chequea la cuota… |

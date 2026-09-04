@@ -3,8 +3,11 @@ type: bug
 score: 4
 topic_key: mascotapp/convention/the-layer-that-answers-first
 task: T-02-015
-status: pendiente-de-aprobacion
+status: guardado
+approved: 2026-09-04 por el usuario (T-02-015, cierre de PR-02-09)
+observation_id: obs-9e00e3a6413dc7d2
 extends: obs-9e00e3a6413dc7d2
+nota_de_guardado: "El `mem_save` devolvió el MISMO `observation_id` que la instancia original, no uno nuevo: compartir `topic_key` suma la nota al hilo existente en vez de abrir uno aparte. Es lo correcto acá —es el mismo patrón, cuarta instancia— pero conviene saberlo: el `observation_id` identifica el TEMA, no el candidato. La trazabilidad fina de esta instancia vive en este archivo, no en el id."
 rationale: "Cuarta instancia del patrón ya guardado, pero con un giro que el original no cubre y que cambia qué hay que hacer al respecto. Las tres anteriores fueron en tests de base de datos y la capa intrusa era del motor — RLS, un grant, un trigger — o sea algo que ya estaba ahí antes de escribir el test. Esta fue en Go puro y la capa intrusa la escribí YO, en la misma tarea, tres funciones más abajo. El patrón original dice 'verificá que la capa que decís medir es la que contesta'. Lo que falta es la consecuencia operativa: cada chequeo redundante que agregás es una capa nueva que puede contestar primero, y desarma en silencio todo test negativo escrito antes de que existiera. La defensa en profundidad no es el error; ignorar que reordena quién contesta, sí."
 ---
 
