@@ -365,12 +365,15 @@ handlers themselves, then the contract and its codegen.
       `PR-02-04`'s share of the 400-line PR budget, no `size:exception`
       needed.
 
-- [ ] **T-02-017** · RED — `recovery.go` tests
+- [x] **T-02-017** · RED — `recovery.go` tests
       - spec: data-model-core / *TOTP recovery codes provide single-use account recovery, non-tenant scoped*
       - build: `apps/api/internal/auth/recovery_test.go`
       - tests: pure — ten 128-bit codes generated, each hashed with SHA-256 (same treatment as `refresh_tokens.token_hash`, P2-D8: *"a password stretcher exists to compensate for low entropy, and there is none to compensate for here"*) · integration — regenerating the set deletes all ten and inserts ten more in one `WithAuthUser` transaction · redeeming a code marks `used_at`, never deletes the row individually
       - dod: fails to compile · both unit and container tests written before the implementation
-      - est: 100
+      - api pinned by the tests: `RecoveryCodeCount` · `RecoveryCode{Plaintext, Hash}` · `NewRecoveryCodes()` · `HashRecoveryCode(string) []byte` · `RegenerateRecoveryCodes(ctx, pgx.Tx, uuid.UUID, []RecoveryCode) error` · `RedeemRecoveryCode(ctx, pgx.Tx, string) error` · `ErrRecoveryCodeInvalid`. The two database functions take a `pgx.Tx`, never a pool: `SET LOCAL app.user_id` and the transaction boundary belong to `db.WithAuthUser`, and a function taking a pool would be free to run outside that scope.
+      - decision: the file decodes base32 and re-hashes with `crypto/sha256` BY HAND, never through a helper of the package under test — the same discipline `token_test.go` applies to JWT. A test that hashes with the function the implementation hashes with proves the function agrees with itself.
+      - layer discipline (obs-9e00e3a6413dc7d2, fourth instance was T-02-015): `rlstest/totp_recovery_codes_test.go` ALREADY pins single-use redemption at the table level via the `used_at IS NULL` predicate, and RLS already pins cross-user refusal. Both refusal tests here say in their own comments which layer answers and name the only thing this package can claim — the translation of "zero rows affected" into `ErrRecoveryCodeInvalid`. The test that isolates THIS layer is the positive one: a valid code must be ACCEPTED, which is the only case that can tell "hashed correctly and matched" apart from "hashed wrongly and missed".
+      - est: 100 · actual: 467
       - pilot: blacklisted (§7.2)
       - engram: —
 
