@@ -596,11 +596,108 @@ Interfaces section).
 
 ---
 
+## Budget — REBASELINED 2026-09-03 (user decision)
+
+**The single 400-line budget is retired. Two budgets replace it, because it was measuring two
+things whose review costs are not comparable.**
+
+| Budget | Limit | What counts |
+|---|---:|---|
+| **Implementation** | **250** | non-test Go, migration SQL, sqlc query files, `go.mod` |
+| **Total diff** | **800** | all of the above plus tests |
+
+`size:exception` now attaches to whichever of the two is exceeded, named explicitly.
+
+### Why, from measurement rather than from opinion
+
+Seven PRs were measured against `git diff --numstat` between branch tips (code only;
+bookkeeping, `sqlcgen/` and `go.sum` excluded). Full analysis:
+`docs/vault/20-arquitectura/diagnostico-presupuesto-400.md`.
+
+**Non-test code never once came close to 400**: 139, 129, 120, 90, 193, 92, 221 — median
+129, max 221. What exceeded the budget was the test suite, at **58–77% of every PR** and 70%
+overall. That is not padding; it is the direct consequence of strict TDD, mutation testing per
+task, and an anti-vacuity case behind every negative assertion.
+
+So the old rule taxed the three practices this phase depends on most, and it did it while the
+thing it was actually meant to bound — the surface a defect can hide in — sat at a third of
+its limit.
+
+`est:` turned out to predict *implementation*, not the PR: against real code it **over**-predicts
+in six of seven cases (1.25×–2.02×). The one case where it under-predicts is `PR-02-07`, the
+only pure-Go PR with no database. Against the **total**, `est:` is short by **2.36×**
+(range 1.60×–3.36×, median 2.08×).
+
+### 250 was set from measurement and will be revisited from measurement
+
+The implementation limit has exactly one observation near it (`PR-02-07` at 221), and that
+observation is pure-Go crypto — the regime that stresses it. Projected forward, `PR-02-08`
+split in two lands around 276 and 262, which is over.
+
+**That projection does not move the number.** A budget set from seven measurements is not
+re-set from an arithmetic forecast; if `PR-02-08` measures over 250, that is a real
+conversation with a real number, and it is the same discipline this document applies
+everywhere else: measure, do not predict.
+
+800 was not invented to fit the data either. It is the **second standard option of the SDD
+framework itself** (`review_budget_lines: 400 | 800`), so adopting it is choosing a documented
+alternative rather than fabricating a number. Under it six of the seven delivered PRs fit;
+`PR-02-05` (836) still does not, and keeps its exception. **900 was deliberately rejected**
+precisely because it would have legalised everything retroactively.
+
+### Re-baselined projection for the 17 remaining PRs
+
+`est:` × **2.36**, the measured factor. A projection, not a promise — the spread is wide and
+the pure-Go rows behave differently from the database rows.
+
+| PR | `est:` | projected total | over 800? |
+|---|---:|---:|---|
+| `PR-02-08` | 390 | **920** | **YES — split** |
+| `PR-02-11` | 320 | 755 | no, but close |
+| `PR-02-22` | 300 | 708 | no |
+| `PR-02-12` · `PR-02-13` · `PR-02-15` | 290 | 684 | no |
+| `PR-02-21` | 230 | 543 | no |
+| `PR-02-09` | 220 | 519 | no |
+| `PR-02-10` · `PR-02-16` | 190 | 448 | no |
+| `PR-02-17` | 160 | 378 | no |
+| `PR-02-23` | 150 | 354 | no |
+| `PR-02-14` · `PR-02-18` | 140 | 330 | no |
+| `PR-02-19` | 100 | 236 | no |
+| `PR-02-20` | 90 | 212 | no |
+| `PR-02-24` | 10 | 24 | no |
+| **remaining** | **3,500** | **~8,260** | |
+
+**Phase projection: ~11,500 authored lines against the 4,890 planned.** The plan was not
+wrong about the work; it was wrong about how much of the work is proof.
+
+**`PR-02-08` is split in two**, and it divides on a seam that already exists — it carried four
+tasks and two independent primitives:
+
+| new PR | tasks | `est:` | projected |
+|---|---|---:|---:|
+| `PR-02-08a` | `T-02-010`, `T-02-011` — `envelope.go` (AES-256-GCM) | 200 | 472 |
+| `PR-02-08b` | `T-02-012`, `T-02-013` — `totp.go` | 190 | 448 |
+
+RED and GREEN stay together inside each half: splitting them would merge a tree whose package
+does not compile, which is why `PR-02-01` and `PR-02-07` kept theirs together too.
+
+**No other PR is re-cut.** One flagged row out of seventeen is what a budget is supposed to
+produce — a rule that flags nothing is not measuring, and one that flags everything is not a
+rule.
+
+---
+
 ## Review workload
 
 Estimated **~4,890 authored lines** across **40 tasks**, `est:` summed per task above (generated
 output excluded: `internal/db/sqlcgen/`, the generated body of `openapi.gen.go`, `go.sum`). The
-proposal already flags **budget risk: High**, and every slice below exceeds the 400-line
+> **Historical. Superseded by the REBASELINED budget above (2026-09-03): implementation 250,
+> total diff 800.** The 400 figure below is left in place rather than rewritten, because the
+> slice cuts and the chained-PR decision were both made under it. Restating the reasoning in
+> terms of a number that did not exist yet would misrepresent why those cuts are shaped the
+> way they are.
+
+The proposal already flags **budget risk: High**, and every slice below exceeds the 400-line
 per-reviewable-unit budget except (d) — none of the five slices as a *whole* is reviewable as one
 unit, which is exactly why **Delivery — chained PRs** below cuts each into per-task or
 per-few-task PRs.
@@ -648,7 +745,9 @@ direct modules: `golang-jwt/v5`, `pquerna/otp`, `golang.org/x/crypto` promoted t
 **User decision, 2026-09-02: chained PRs, not `size:exception`.** Strategy is
 **feature-branch-chain**, mirroring Phase 01's 2026-08-29 decision: `PR-02-01` bases on
 `feature/fase-02`; `PR-02-n` bases on `PR-02-(n-1)`'s branch; the whole chain merges to `main`
-together. Every PR below is **at or under 400 authored lines**. Cuts follow the boundaries the
+together. Every PR below was cut to be **at or under 400 authored lines** -- the budget in force
+when these cuts were made. Under the 2026-09-03 rebaseline (implementation 250, total 800) the
+only row that had to be re-cut is `PR-02-08`, now `PR-02-08a` and `PR-02-08b`. Cuts follow the boundaries the
 tasks already have: a RED/GREEN pair never splits across PRs, one migration is one PR, one
 handler is one PR (even where TDD split it into two tasks, e.g. the login handler's core and
 TOTP/recovery paths). Where two small units share a subject and fit together under 400, they are
@@ -756,7 +855,8 @@ labels move, no task's content or dependency changed.
 | `PR-02-05` | Column-privilege semantics pin + migration `00015_column_grants` (B1) + the stale-comment fix | T-02-005, T-02-006 | ~~270~~ **836** `size:exception` | `PR-02-04` (migration ordering only — no functional dependency) |
 | `PR-02-06` | Migration `00016_assignee_active_membership` + the one pinned-test move | T-02-007 | ~~140~~ **291** (fits) | `PR-02-05` (migration ordering only — no functional dependency) |
 | `PR-02-07` | `password.go` — RED+GREEN | T-02-008, T-02-009 | ~~160~~ **538** `size:exception` | — (pure Go, parallel-eligible from `PR-02-01` on) |
-| `PR-02-08` | TOTP secret lifecycle — `envelope.go` + `totp.go`, RED+GREEN | T-02-010, T-02-011, T-02-012, T-02-013 | 390 | — (pure Go, parallel-eligible) |
+| `PR-02-08a` | `envelope.go` (AES-256-GCM) — RED+GREEN | T-02-010, T-02-011 | 200 (proj. 472) | — (pure Go, parallel-eligible) |
+| `PR-02-08b` | `totp.go` — RED+GREEN | T-02-012, T-02-013 | 190 (proj. 448) | — (pure Go, parallel-eligible) |
 | `PR-02-09` | `token.go` (JWT) — RED+GREEN | T-02-014, T-02-015 | 220 | — (pure Go, parallel-eligible) |
 | `PR-02-10` | `recovery.go` — RED+GREEN | T-02-017, T-02-018 | 190 | `PR-02-04` (needs `totp_recovery_codes`) |
 | `PR-02-11` | `session.go` — rotation + reuse detection, RED+GREEN | T-02-019, T-02-020 | 320 | `PR-02-02` (needs the `refresh_tokens` access path) · **gated by Judgment Day (`T-02-021`) before merge — see constraint 2** |

@@ -12,10 +12,19 @@ que el repositorio siga siendo la verdad operativa (regla IA-4 del plan maestro)
 versionado. El `observation_id` es la misma nota dentro de Engram; sirve para
 trazabilidad, no es requisito para leerla.
 
-- Candidatos totales: **85**
+- Candidatos totales: **86**
 - Aprobados y guardados en Engram: **83**
-- Pendientes de aprobación explícita del usuario: **0**
+- Pendientes de aprobación explícita del usuario: **1**
 - Descartados por el pase de curaduría: **2**
+
+## Pendientes de aprobación
+
+Nada de esto está en Engram todavía. Requiere el sí explícito del usuario
+antes de `mem_save` (§6.6 del plan maestro).
+
+| Tarea | Tipo | Score | Archivo | Qué dice |
+|---|---|---|---|---|
+| `T-02-009` | convention | 5 | [2026-09-03-review-budget-must-not-count-tests-like-code.md](../../../.engram/queue/2026-09-03-review-budget-must-not-count-tests-like-code.md) | MascotApp fijó un presupuesto de 400 líneas autoradas por PR. Siete PRs consecutivos de la Fase 02 lo excedieron; tres necesitaro… |
 
 ## Descartados — NO guardar
 

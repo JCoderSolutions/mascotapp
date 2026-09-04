@@ -219,9 +219,31 @@ Spec-Driven Development: `exploration` → `proposal` → `spec` → `design` �
 
 - Los artefactos de planificación viven en `openspec/changes/<change>/`.
 - El tablero de `docs/vault/30-fases/` **enlaza** al change; no duplica contenido.
-- **Presupuesto de revisión: 400 líneas por PR.** Cuando una rebanada lo revienta
-  se parte en PRs encadenados (PR *n* se basa en PR *n-1*), nunca se baja el
-  estimado para que entre.
+- **Presupuesto de revisión: DOS números, no uno** (rebaseline del 2026-09-03).
+
+  | Presupuesto | Límite | Qué cuenta |
+  |---|---:|---|
+  | Implementación | **250** | Go que no es test, SQL de migración, archivos de `query/`, `go.mod` |
+  | Diff total | **800** | todo lo anterior más los tests |
+
+  Cuando algo lo revienta se parte en PRs encadenados (PR *n* se basa en PR
+  *n-1*), y **nunca se baja el estimado para que entre**. Una `size:exception`
+  nombra explícitamente cuál de los dos se excedió.
+
+  **Por qué dos.** Se midieron los siete primeros PRs de la Fase 02 contra `git`:
+  el código que no es test dio 139, 129, 120, 90, 193, 92 y 221 — nunca cerca de
+  400. Lo que reventaba el presupuesto viejo eran **los tests, 58–77% de cada
+  PR**, que es la consecuencia directa de TDD estricto, mutation testing por
+  tarea y un caso de anti-vacuidad por cada aserción negativa. Un número que
+  suma las dos cosas cobra igual por revisar una lista de casos ya verdes que
+  por revisar una política RLS, y termina siendo un impuesto al testing.
+  Análisis completo: [`docs/vault/20-arquitectura/diagnostico-presupuesto-400.md`](docs/vault/20-arquitectura/diagnostico-presupuesto-400.md).
+
+- **`est:` predice implementación, no el PR.** Medido: contra el total se queda
+  corto por **2,36×** (rango 1,60–3,36). Al estimar una tarea, estimá el código
+  y proyectá los tests aparte: **~2×** el código en trabajo de base de datos,
+  **~1,5×** en Go puro. Un solo número que mezcla las dos cosas va a seguir
+  fallando por 2× sin importar dónde esté el techo.
 - **Judgment Day** — revisión ciega dual — va antes del merge de exactamente tres
   entregables, donde un error no se recupera: políticas RLS (F01), rotación de
   tokens (F02) y cifrado de PII (F07).

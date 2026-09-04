@@ -133,3 +133,37 @@ fallando por 2×, sin importar dónde se ponga el techo.
   mutante o cerró una vacuidad.
 - **Dejarlo como está y seguir pidiendo excepción.** Tres de siete ya la pidieron. A la
   quinta, la excepción es la regla y ya nadie la lee.
+
+---
+
+## APLICADO — decisión del usuario, 2026-09-03
+
+La recomendación se adoptó entera. Los cambios concretos:
+
+1. **`openspec/changes/phase-02-auth-and-multitenancy/tasks.md`** lleva la sección
+   **Budget — REBASELINED** al frente de *Review workload*, con los dos presupuestos, el
+   porqué medido, y la proyección re-baselineada de los 17 PRs restantes.
+2. **La sección vieja de 400 quedó en su lugar, marcada como superseded.** No se reescribió:
+   los cortes de rebanada y la decisión de PRs encadenados se tomaron bajo ese número, y
+   reformular el razonamiento en términos de un número que todavía no existía sería
+   falsificar por qué esos cortes tienen la forma que tienen.
+3. **`AGENTS.md` §8** lleva la regla nueva —que es el archivo que también leen Kiro y
+   OpenCode— más la corrección del estimador: `est:` predice implementación, y los tests se
+   proyectan aparte a ~2× en trabajo de base y ~1,5× en Go puro.
+4. **`PR-02-08` se partió en `PR-02-08a` (envelope.go) y `PR-02-08b` (totp.go).** Es el
+   **único** de los 17 restantes que rompe el techo de 800 (proyección 920). Se dividió por
+   una costura que ya existía: llevaba cuatro tareas y dos primitivas independientes.
+
+**Un solo PR marcado de diecisiete es exactamente lo que un presupuesto tiene que producir.**
+Una regla que no marca nada no está midiendo; una que marca todo no es una regla.
+
+### La parte que queda expuesta a propósito
+
+El límite de implementación de **250** tiene **una sola observación cerca** —`PR-02-07` en
+221— y esa observación es cripto de Go puro, el régimen que lo estresa. Proyectado,
+`PR-02-08a`/`b` aterrizan cerca de 276 y 262. Por encima.
+
+**Esa proyección no mueve el número.** Un presupuesto fijado con siete mediciones no se
+re-fija con una cuenta. Si `PR-02-08a` mide más de 250, eso es una conversación real con un
+número real — y es la misma disciplina que este documento aplica en todos lados: medir, no
+predecir.
