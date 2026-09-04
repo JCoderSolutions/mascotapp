@@ -239,6 +239,51 @@ func TestIssue_OmitsShelterIDWhenTheTokenIsNotScopedToAShelter(t *testing.T) {
 	}
 }
 
+// Claims that identify nobody are refused at issue time.
+//
+// This is the same argument as the zero-uuid `shelter_id` above, applied to the
+// other two claims that carry identity. `sub` is the user the whole request
+// will be attributed to, and `role` is what RBAC reads; a token minted with
+// either one empty is a credential for an account that does not exist. Refusing
+// it here costs one branch. Discovering it downstream means an audit log that
+// blames the zero uuid for whatever happened.
+//
+// `amr` is in the list for a narrower reason: P2-D11 gives it a job — letting a
+// route demand a second factor was actually USED. An empty `amr` does not mean
+// "no second factor", it means "nothing was recorded", and a route cannot tell
+// those apart.
+func TestIssue_RefusesClaimsThatIdentifyNobody(t *testing.T) {
+	t.Parallel()
+
+	shelter := uuid.MustParse("11111111-1111-4111-8111-111111111111")
+
+	for name, mutate := range map[string]func(*auth.AccessClaims){
+		"zero_subject": func(c *auth.AccessClaims) { c.Subject = uuid.Nil },
+		"empty_role":   func(c *auth.AccessClaims) { c.Role = "" },
+		"nil_amr":      func(c *auth.AccessClaims) { c.AMR = nil },
+		"empty_amr":    func(c *auth.AccessClaims) { c.AMR = []string{} },
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			claims := testClaims()
+			claims.ShelterID = &shelter
+			mutate(&claims)
+
+			if _, err := newTestIssuer(t).Issue(claims, time.Now()); err == nil {
+				t.Errorf("%s was accepted and a token was minted for it", name)
+			}
+		})
+	}
+
+	// Anti-vacuity: the unmutated claims DO issue. Without this, an Issue that
+	// always errored would pass every case above.
+	if _, err := newTestIssuer(t).Issue(testClaims(), time.Now()); err != nil {
+		t.Fatalf("the intact claims do not issue (%v), so the refusals above prove nothing",
+			err)
+	}
+}
+
 // The requirement's two paired scenarios, kept in one test because they ARE a
 // pair: either one alone is satisfied by a verifier that always answers the
 // same way.
