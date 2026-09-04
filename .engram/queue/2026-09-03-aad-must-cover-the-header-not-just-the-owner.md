@@ -3,6 +3,8 @@ type: architecture
 score: 5
 topic_key: mascotapp/security/aead-aad-must-cover-the-unencrypted-header
 task: T-02-011
+status: guardado
+observation_id: obs-5899d1ed7c1b5256
 rationale: "Un formato con cabecera fuera del AAD parece correcto y pasa el round-trip: la cabecera no está cifrada porque no es secreta, y de ahí es fácil concluir que tampoco hace falta autenticarla. Pero un byte de versión o de key id que nadie autentica es un byte que un atacante con escritura sobre la columna edita a gusto, y la confusión de versiones es la forma de ataque que un byte de rotación invita por diseño. El diseño de esta fase especificaba el AAD como 'el id del usuario' y era incompleto; lo encontró un test de tampering, no una revisión."
 ---
 
