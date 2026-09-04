@@ -377,12 +377,15 @@ handlers themselves, then the contract and its codegen.
       - pilot: blacklisted (§7.2)
       - engram: —
 
-- [ ] **T-02-018** · GREEN — `recovery.go`
+- [x] **T-02-018** · GREEN — `recovery.go`
       - spec: same as T-02-017
-      - build: `apps/api/internal/auth/recovery.go`
-      - tests: T-02-017 turns green
-      - dod: mutation-tested
-      - est: 90
+      - build: `apps/api/internal/auth/recovery.go` — the FIRST production consumer of `sqlcgen` (until now only `wiring_test.go` referenced it), and the first use of `uuid.NewV7` anywhere outside test fixtures. SHA-256 unsalted, deliberately not Argon2id: a stretcher compensates for low entropy and 128 uniform random bits have none to compensate for, and the redemption path must FIND the row from the submitted code alone, which a per-row salt would forbid.
+      - added beyond the row: `RegenerateRecoveryCodes` refuses an empty set. Regeneration is a delete plus ten inserts; hand it nothing to insert and it clears the user's last way into their account and reports success. No database constraint catches it — deleting ten rows and inserting zero is a legal transaction. Written test-first, before the implementation existed.
+      - tests: T-02-017 turns green — all ten confirmed by name with `-run 'Recovery' -v`, container cases included (not skipped)
+      - dod: mutation-tested — five mutants, and one of them survived
+      - mutation finding: **mutant 2 (the empty-set guard moved BELOW the delete) SURVIVED**, and the test comment claiming to pin that ordering was wrong. `db.WithAuthUser` rolls the transaction back on any error the callback returns, so the guard's position is unobservable to a caller — the ROLLBACK is what keeps the old set alive, not the ordering. Proved equivalent rather than assumed: mutant 3 removed the guard entirely and killed the test at the `err == nil` line, so the guard is load-bearing even though its position is not. Both comments were corrected to say which layer answers which assertion.
+      - mutation confirming the layer claim: mutant 4 made `RedeemRecoveryCode` hash differently from what `Regenerate` stores. Only the POSITIVE probe died (plus the first, succeeding redemption inside the second-redemption test); `RefusesACodeThatWasNeverIssued` and `RefusesAnotherUsersCode` stayed GREEN with the hashing completely broken — exactly as T-02-017's comments claimed. Mutant 1 (redeem returns nil on zero rows) died by all three refusal tests; mutant 5 (`recoveryCodeBytes` 16→8) died by the 128-bit test alone.
+      - est: 90 · actual: 197
       - pilot: blacklisted (§7.2)
       - engram: —
 
@@ -676,7 +679,8 @@ the pure-Go rows behave differently from the database rows.
 | `PR-02-12` · `PR-02-13` · `PR-02-15` | 290 | 684 | no |
 | `PR-02-21` | 230 | 543 | no |
 | `PR-02-09` | 220 | 519 | **measured 935 — OVER both budgets, `size:exception` accepted 2026-09-04** |
-| `PR-02-10` · `PR-02-16` | 190 | 448 | no |
+| `PR-02-16` | 190 | 448 | no |
+| `PR-02-10` | 190 | 448 | **measured 721 — under BOTH budgets (impl 197/250), no exception needed** |
 | `PR-02-17` | 160 | 378 | no |
 | `PR-02-23` | 150 | 354 | no |
 | `PR-02-14` · `PR-02-18` | 140 | 330 | no |
@@ -880,6 +884,20 @@ argument rather than description"**. `password.go`, `envelope.go`, `totp.go` and
 all overshot; the database rows behaved differently. That is the split worth re-baselining on,
 and it belongs in the projection before `PR-02-11`, not after it.
 
+**Amended the same day, by the very next PR.** On that reading `PR-02-10` (`recovery.go` —
+credentials, hashing, a destructive regeneration path) was called as needing an exception
+"almost certainly", before its GREEN was written. It measured **197 implementation and 721
+total: inside both budgets.** The heuristic got a counterexample on its first use.
+
+What actually separates them is narrower than "security-critical". `token.go` had to argue
+about a *hostile input format* — algorithm confusion, `aud` serialisation, why `alg` is never
+read from the token — and every one of those arguments is a paragraph that exists only because
+a reader would otherwise assume the opposite. `recovery.go` makes two such arguments (why
+SHA-256 and not Argon2id, why unsalted) and the rest is a delete plus ten inserts. **The cost
+driver is adversarial surface, not the security label**, and `PR-02-11` (`session.go`, refresh
+rotation and reuse detection) has plenty of it. The projection stands there; it does not
+generalise to every file in `internal/auth`.
+
 **The three non-negotiable constraints, applied:**
 
 1. **`T-02-007`'s trigger + pinned-test swap is one commit.** `T-02-007` is now its own PR,
@@ -920,7 +938,7 @@ labels move, no task's content or dependency changed.
 | `PR-02-08a` | `envelope.go` (AES-256-GCM) — RED+GREEN | T-02-010, T-02-011 | ~~200~~ **565** (impl 183/250, total 565/800 — fits both) | — (pure Go, parallel-eligible) |
 | `PR-02-08b` | `totp.go` — RED+GREEN | T-02-012, T-02-013 | 190 (proj. 448) · **actual 192 / 480** | — (pure Go, parallel-eligible) |
 | `PR-02-09` | `token.go` (JWT) — RED+GREEN | T-02-014, T-02-015 | ~~220~~ **289 impl / 935 total** `size:exception` (both budgets) | — (pure Go, parallel-eligible) |
-| `PR-02-10` | `recovery.go` — RED+GREEN | T-02-017, T-02-018 | 190 | `PR-02-04` (needs `totp_recovery_codes`) |
+| `PR-02-10` | `recovery.go` — RED+GREEN | T-02-017, T-02-018 | ~~190~~ **197 impl / 721 total** — fits both, no exception | `PR-02-04` (needs `totp_recovery_codes`) |
 | `PR-02-11` | `session.go` — rotation + reuse detection, RED+GREEN | T-02-019, T-02-020 | 320 | `PR-02-02` (needs the `refresh_tokens` access path) · **gated by Judgment Day (`T-02-021`) before merge — see constraint 2** |
 | `PR-02-12` | `middleware_auth.go` — the F02 tenant-scope boundary, RED+GREEN | T-02-023, T-02-024 | 290 | `PR-02-09` (bearer verification needs `token.go`) |
 | `PR-02-13` | Cross-cutting HTTP security config — `cors.go` + `csrf.go` + `config.go` | T-02-025, T-02-026 | 290 | — (independent; placed here for review sequencing) |

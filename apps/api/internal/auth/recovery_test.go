@@ -198,6 +198,63 @@ func TestRegenerateRecoveryCodes_ReplacesTheWholeSet(t *testing.T) {
 	}
 }
 
+// An empty set is refused, and refused BEFORE the delete runs.
+//
+// This is the one destructive shape the function owns on its own. Regeneration
+// is a delete followed by ten inserts; hand it nothing to insert and it clears
+// the user's last way back into their account, reports success, and the user
+// finds out the next time they lose their phone. No database constraint catches
+// it — deleting ten rows and inserting zero is a perfectly legal transaction.
+//
+// **Which layer answers which assertion**, corrected after mutation said
+// otherwise. The `err == nil` check is this package's: mutation confirmed it,
+// removing the guard makes exactly this line fail, and nothing below this
+// package refuses an empty set.
+//
+// The surviving-set assertion is NOT this package's, and an earlier version of
+// this comment claimed it pinned the guard's position. It does not. Moving the
+// guard below the delete leaves this test green, because `db.WithAuthUser`
+// rolls the transaction back on any error — the rollback is what keeps the old
+// codes alive. The assertion still earns its place: it pins that a refused
+// regeneration is ATOMIC, and would catch a future version that ran the delete
+// outside the caller's transaction or swallowed the error. It just does not
+// prove what the guard's ordering is doing.
+func TestRegenerateRecoveryCodes_RefusesAnEmptySetWithoutClearingTheExistingOne(t *testing.T) {
+	env := dbtest.Postgres(t)
+	ctx := context.Background()
+
+	user := uuid.New()
+	seedRecoveryUser(ctx, t, env.OwnerPool, user)
+
+	codes, err := auth.NewRecoveryCodes()
+	if err != nil {
+		t.Fatalf("generating the set: %v", err)
+	}
+	if err := withUser(ctx, env, user, func(ctx context.Context, tx pgx.Tx) error {
+		return auth.RegenerateRecoveryCodes(ctx, tx, user, codes)
+	}); err != nil {
+		t.Fatalf("writing the set: %v", err)
+	}
+
+	err = withUser(ctx, env, user, func(ctx context.Context, tx pgx.Tx) error {
+		return auth.RegenerateRecoveryCodes(ctx, tx, user, nil)
+	})
+	if err == nil {
+		t.Fatal("regenerating with an empty set reported success — the user's codes are gone")
+	}
+
+	stored := storedHashes(ctx, t, env, user)
+	if len(stored) != auth.RecoveryCodeCount {
+		t.Fatalf("the user holds %d codes after the refused regeneration, want %d — the "+
+			"delete ran before the guard did", len(stored), auth.RecoveryCodeCount)
+	}
+	for i, code := range codes {
+		if _, present := stored[string(code.Hash)]; !present {
+			t.Fatalf("code %d is gone after a regeneration that was supposed to be refused", i)
+		}
+	}
+}
+
 // THE positive probe, and the one test here that dies if the hashing is wrong.
 //
 // Every refusal test below stays red when `RedeemRecoveryCode` hashes the

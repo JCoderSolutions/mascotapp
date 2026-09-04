@@ -12,10 +12,19 @@ que el repositorio siga siendo la verdad operativa (regla IA-4 del plan maestro)
 versionado. El `observation_id` es la misma nota dentro de Engram; sirve para
 trazabilidad, no es requisito para leerla.
 
-- Candidatos totales: **89**
+- Candidatos totales: **90**
 - Aprobados y guardados en Engram: **87**
-- Pendientes de aprobación explícita del usuario: **0**
+- Pendientes de aprobación explícita del usuario: **1**
 - Descartados por el pase de curaduría: **2**
+
+## Pendientes de aprobación
+
+Nada de esto está en Engram todavía. Requiere el sí explícito del usuario
+antes de `mem_save` (§6.6 del plan maestro).
+
+| Tarea | Tipo | Score | Archivo | Qué dice |
+|---|---|---|---|---|
+| `T-02-018` | bug | 4 | [2026-09-04-un-rollback-contesta-antes-que-el-orden-de-tu-guarda.md](../../../.engram/queue/2026-09-04-un-rollback-contesta-antes-que-el-orden-de-tu-guarda.md) | Quinta instancia de obs-9e00e3a6413dc7d2 (*la capa que contesta primero vacía el test de abajo*). (T-02-018, MascotApp Fase 02.) |
 
 ## Descartados — NO guardar
 
