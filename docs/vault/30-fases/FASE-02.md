@@ -170,9 +170,9 @@ Columna **PR**: en qué PR de la cadena entra. Columna **est**: líneas autorada
 | `[x]` `T-02-005` | Pin the PostgreSQL column-privilege semantics slice (b) depends on | PR 5 | 55 → 221 |
 | `[x]` `T-02-006` | Migration `00015_column_grants.sql` — B1 on `shelters` and `memberships` | PR 5 | 215 → 615 `size:exception` |
 | `[x]` `T-02-007` | Migration `00016_assignee_active_membership.sql` — the one pinned test move, same commit | PR 6 | 140 → 291 |
-| `[~]` `T-02-008` | RED — `password.go` (Argon2id) unit tests | PR 7 | 90 |
-| `[ ]` `T-02-009` | GREEN — `password.go` | PR 7 | 70 |
-| `[ ]` `T-02-010` | RED — `envelope.go` (AES-256-GCM) unit tests | PR 8 | 110 |
+| `[x]` `T-02-008` | RED — `password.go` (Argon2id) unit tests | PR 7 | 90 → 317 |
+| `[x]` `T-02-009` | GREEN — `password.go` | PR 7 | 70 → 221 |
+| `[~]` `T-02-010` | RED — `envelope.go` (AES-256-GCM) unit tests | PR 8 | 110 |
 | `[ ]` `T-02-011` | GREEN — `envelope.go` | PR 8 | 90 |
 | `[ ]` `T-02-012` | RED — `totp.go` unit tests | PR 8 | 100 |
 | `[ ]` `T-02-013` | GREEN — `totp.go` | PR 8 | 90 |

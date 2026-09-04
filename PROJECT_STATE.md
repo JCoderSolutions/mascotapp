@@ -1,10 +1,10 @@
 ---
 project: mascotapp
 current_phase: "02"
-current_task: "T-02-008"  # T-02-007 (PR-02-06) cerrada en local, branch feat/pr-02-06-assignee-membership; cierra la rebanada (b) y el ultimo alcance heredado de Fase 01
+current_task: "T-02-010"  # T-02-008 y T-02-009 (PR-02-07) cerradas en local, branch feat/pr-02-07-password, size:exception aceptada
 sdd_change: "phase-02-auth-and-multitenancy"
 rdd_enabled: false  # fase marcada RDD; el usuario decide, no se activa solo
-task_status: in_progress  # PR-02-01..PR-02-06 verdes en local. Sigue T-02-008 (PR-02-07, arranca la rebanada c)
+task_status: in_progress  # PR-02-01..PR-02-07 verdes en local. Sigue T-02-010 (PR-02-08, envelope.go)
 blocked_by: ".env.example: denegado a los agentes por regla global. Bloquea SOLO T-02-035 (PR-02-24, ultimo de la cadena). El usuario tiene que confirmar si JWT_SECRET y RESEND_API_KEY ya existen y pegar DATABASE_URL_AUTH, AUTH_KEK, WEB_ORIGINS, API_PUBLIC_ORIGIN y el password de app_auth. La cadena funcional entera mergea sin eso."
 last_updated: 2026-09-03
 sdd_store: hybrid

@@ -226,7 +226,7 @@ dependencies exist before the handler that needs them: crypto primitives first, 
 logic before anything is layered on top of it, then middleware/CORS/CSRF/config, then the
 handlers themselves, then the contract and its codegen.
 
-- [ ] **T-02-008** · RED — `password.go` (Argon2id) unit tests
+- [x] **T-02-008** · RED — `password.go` (Argon2id) unit tests
       - spec: identity-and-session / *Password-based registration and login use Argon2id*
       - build: `apps/api/internal/auth/password_test.go`
       - tests: correct password verifies against its own hash · wrong password fails · the stored hash is never the plaintext · Argon2id parameters are asserted, not left to the library default silently drifting
@@ -236,7 +236,7 @@ handlers themselves, then the contract and its codegen.
       - parallel: T-02-010, T-02-012, T-02-014
       - engram: —
 
-- [ ] **T-02-009** · GREEN — `password.go`
+- [x] **T-02-009** · GREEN — `password.go`
       - spec: same as T-02-008
       - build: `apps/api/internal/auth/password.go`
       - tests: T-02-008 turns green
@@ -755,7 +755,7 @@ labels move, no task's content or dependency changed.
 | `PR-02-04` | Migration `00014_totp_recovery_codes` — pulled forward, see the numbering note above | T-02-016 | ~~160~~ **280** | `PR-02-03` |
 | `PR-02-05` | Column-privilege semantics pin + migration `00015_column_grants` (B1) + the stale-comment fix | T-02-005, T-02-006 | ~~270~~ **836** `size:exception` | `PR-02-04` (migration ordering only — no functional dependency) |
 | `PR-02-06` | Migration `00016_assignee_active_membership` + the one pinned-test move | T-02-007 | ~~140~~ **291** (fits) | `PR-02-05` (migration ordering only — no functional dependency) |
-| `PR-02-07` | `password.go` — RED+GREEN | T-02-008, T-02-009 | 160 | — (pure Go, parallel-eligible from `PR-02-01` on) |
+| `PR-02-07` | `password.go` — RED+GREEN | T-02-008, T-02-009 | ~~160~~ **538** `size:exception` | — (pure Go, parallel-eligible from `PR-02-01` on) |
 | `PR-02-08` | TOTP secret lifecycle — `envelope.go` + `totp.go`, RED+GREEN | T-02-010, T-02-011, T-02-012, T-02-013 | 390 | — (pure Go, parallel-eligible) |
 | `PR-02-09` | `token.go` (JWT) — RED+GREEN | T-02-014, T-02-015 | 220 | — (pure Go, parallel-eligible) |
 | `PR-02-10` | `recovery.go` — RED+GREEN | T-02-017, T-02-018 | 190 | `PR-02-04` (needs `totp_recovery_codes`) |
