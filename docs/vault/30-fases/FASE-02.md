@@ -172,10 +172,10 @@ Columna **PR**: en qué PR de la cadena entra. Columna **est**: líneas autorada
 | `[x]` `T-02-007` | Migration `00016_assignee_active_membership.sql` — the one pinned test move, same commit | PR 6 | 140 → 291 |
 | `[x]` `T-02-008` | RED — `password.go` (Argon2id) unit tests | PR 7 | 90 → 317 |
 | `[x]` `T-02-009` | GREEN — `password.go` | PR 7 | 70 → 221 |
-| `[~]` `T-02-010` | RED — `envelope.go` (AES-256-GCM) unit tests | PR 8 | 110 |
-| `[ ]` `T-02-011` | GREEN — `envelope.go` | PR 8 | 90 |
-| `[ ]` `T-02-012` | RED — `totp.go` unit tests | PR 8 | 100 |
-| `[ ]` `T-02-013` | GREEN — `totp.go` | PR 8 | 90 |
+| `[x]` `T-02-010` | RED — `envelope.go` (AES-256-GCM) unit tests | PR 8a | 110 → 382 |
+| `[x]` `T-02-011` | GREEN — `envelope.go` | PR 8a | 90 → 183 |
+| `[~]` `T-02-012` | RED — `totp.go` unit tests | PR 8b | 100 |
+| `[ ]` `T-02-013` | GREEN — `totp.go` | PR 8b | 90 |
 | `[ ]` `T-02-014` | RED — `token.go` (JWT) unit tests | PR 9 | 120 |
 | `[ ]` `T-02-015` | GREEN — `token.go` | PR 9 | 100 |
 | `[x]` `T-02-016` | Migration `00014_totp_recovery_codes.sql` + catalog/query + recovery-code scenarios | PR 4 | ~~160~~ **280** |

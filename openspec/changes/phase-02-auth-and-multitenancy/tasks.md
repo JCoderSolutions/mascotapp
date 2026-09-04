@@ -245,7 +245,7 @@ handlers themselves, then the contract and its codegen.
       - pilot: blacklisted (§7.2)
       - engram: —
 
-- [ ] **T-02-010** · RED — `envelope.go` (AES-256-GCM) unit tests
+- [x] **T-02-010** · RED — `envelope.go` (AES-256-GCM) unit tests
       - spec: identity-and-session / *TOTP is mandatory for owner and admin roles* (design P2-D8 governs the at-rest format `users.totp_secret_enc` implies)
       - build: `apps/api/internal/auth/envelope_test.go`
       - tests: encrypt/decrypt round-trip · **a blob re-tagged with another user's id fails to open** — the AAD binding this design decision exists for · the blob format `version(1) || key_id(1) || nonce(12) || ciphertext || tag(16)` is asserted byte-for-byte
@@ -255,7 +255,7 @@ handlers themselves, then the contract and its codegen.
       - parallel: T-02-008, T-02-012, T-02-014
       - engram: —
 
-- [ ] **T-02-011** · GREEN — `envelope.go`
+- [x] **T-02-011** · GREEN — `envelope.go`
       - spec: same as T-02-010
       - build: `apps/api/internal/auth/envelope.go` — `AUTH_KEK` (base64, 32 bytes) consumed as a single key directly, per P2-D8's deliberate deviation from §5.4's wrapped-data-key shape; `key_id` byte reserved for the Phase 07 rotation the design defers
       - tests: T-02-010 turns green
@@ -855,7 +855,7 @@ labels move, no task's content or dependency changed.
 | `PR-02-05` | Column-privilege semantics pin + migration `00015_column_grants` (B1) + the stale-comment fix | T-02-005, T-02-006 | ~~270~~ **836** `size:exception` | `PR-02-04` (migration ordering only — no functional dependency) |
 | `PR-02-06` | Migration `00016_assignee_active_membership` + the one pinned-test move | T-02-007 | ~~140~~ **291** (fits) | `PR-02-05` (migration ordering only — no functional dependency) |
 | `PR-02-07` | `password.go` — RED+GREEN | T-02-008, T-02-009 | ~~160~~ **538** `size:exception` | — (pure Go, parallel-eligible from `PR-02-01` on) |
-| `PR-02-08a` | `envelope.go` (AES-256-GCM) — RED+GREEN | T-02-010, T-02-011 | 200 (proj. 472) | — (pure Go, parallel-eligible) |
+| `PR-02-08a` | `envelope.go` (AES-256-GCM) — RED+GREEN | T-02-010, T-02-011 | ~~200~~ **565** (impl 183/250, total 565/800 — fits both) | — (pure Go, parallel-eligible) |
 | `PR-02-08b` | `totp.go` — RED+GREEN | T-02-012, T-02-013 | 190 (proj. 448) | — (pure Go, parallel-eligible) |
 | `PR-02-09` | `token.go` (JWT) — RED+GREEN | T-02-014, T-02-015 | 220 | — (pure Go, parallel-eligible) |
 | `PR-02-10` | `recovery.go` — RED+GREEN | T-02-017, T-02-018 | 190 | `PR-02-04` (needs `totp_recovery_codes`) |
