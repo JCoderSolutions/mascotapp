@@ -13,18 +13,9 @@ versionado. El `observation_id` es la misma nota dentro de Engram; sirve para
 trazabilidad, no es requisito para leerla.
 
 - Candidatos totales: **88**
-- Aprobados y guardados en Engram: **85**
-- Pendientes de aprobación explícita del usuario: **1**
+- Aprobados y guardados en Engram: **86**
+- Pendientes de aprobación explícita del usuario: **0**
 - Descartados por el pase de curaduría: **2**
-
-## Pendientes de aprobación
-
-Nada de esto está en Engram todavía. Requiere el sí explícito del usuario
-antes de `mem_save` (§6.6 del plan maestro).
-
-| Tarea | Tipo | Score | Archivo | Qué dice |
-|---|---|---|---|---|
-| `T-02-013` | architecture | 5 | [2026-09-04-when-hand-rolling-crypto-beats-a-dependency.md](../../../.engram/queue/2026-09-04-when-hand-rolling-crypto-beats-a-dependency.md) | P2-D8 eligió github.com/pquerna/otp para TOTP y rechazó el HMAC propio con el argumento estándar: *"crypto you write is crypto yo… |
 
 ## Descartados — NO guardar
 
@@ -123,7 +114,7 @@ exactamente lo que la columna de abajo explica que está mal.
 | `T-02-005` | `…/gentle-ai-pinned-until-phase-02-closes` | 4 | [2026-09-03-gentle-ai-pinned-to-1-49-0.md](../../../.engram/queue/2026-09-03-gentle-ai-pinned-to-1-49-0.md) | `obs-7b890b7ace39e1e4` | Decisión del usuario, 2026-09-03. gentle-ai update reporta latest: 2.5.0 — no se sube. |
 | `fase-02 planning` | `…/failed-report-is-not-lost-work` | 3 | [2026-09-02-un-agente-que-falla-al-reportar-no-fallo-al-escribir.md](../../../.engram/queue/2026-09-02-un-agente-que-falla-al-reportar-no-fallo-al-escribir.md) | `obs-216cdb370cd7e725` | sdd-design se cayo por limite de sesion de proveedor. Su ultimo texto era *"Now I have the full picture. Writing the design."*, y… |
 
-### `mascotapp/security/*` — 21
+### `mascotapp/security/*` — 22
 
 | Tarea | `topic_key` | Score | Archivo | `observation_id` | Qué dice |
 |---|---|---|---|---|---|
@@ -146,6 +137,7 @@ exactamente lo que la columna de abajo explica que está mal.
 | `T-01-028` | `…/fk-cannot-reference-partial-unique` | 4 | [2026-09-01-una-fk-no-referencia-un-indice-unico-parcial.md](../../../.engram/queue/2026-09-01-una-fk-no-referencia-un-indice-unico-parcial.md) | `obs-28d2d22bf005152e` | Verificado en PostgreSQL 17, no supuesto: |
 | `T-02-003` | `…/column-grants-are-not-table-privileges` | 4 | [2026-09-02-has-table-privilege-no-ve-columnas.md](../../../.engram/queue/2026-09-02-has-table-privilege-no-ve-columnas.md) | `obs-eb0d04da21d94427` | Verificado en vivo contra PostgreSQL 17, no asumido: |
 | `T-02-011` | `…/aead-aad-must-cover-the-unencrypted-header` | 5 | [2026-09-03-aad-must-cover-the-header-not-just-the-owner.md](../../../.engram/queue/2026-09-03-aad-must-cover-the-header-not-just-the-owner.md) | `obs-5899d1ed7c1b5256` | El formato at-rest de users.totp_secret_enc (P2-D8) es: |
+| `T-02-013` | `…/three-conditions-to-override-never-hand-roll-crypto` | 5 | [2026-09-04-when-hand-rolling-crypto-beats-a-dependency.md](../../../.engram/queue/2026-09-04-when-hand-rolling-crypto-beats-a-dependency.md) | `obs-bf6fea41522ee496` | P2-D8 eligió github.com/pquerna/otp para TOTP y rechazó el HMAC propio con el argumento estándar: *"crypto you write is crypto yo… |
 | `phase-01-domain-and-data (sdd-design, D5)` | `…/fk-checks-bypass-rls` | 5 | [2026-08-29-fk-checks-bypass-rls.md](../../../.engram/queue/2026-08-29-fk-checks-bypass-rls.md) | `obs-f97019216916c800` | Las comprobaciones de integridad referencial de PostgreSQL se saltan RLS. Siempre. |
 | `phase-01-domain-and-data (sdd-propose)` | `…/neon-rls-bypass` | 5 | [2026-08-29-neon-bypassrls-defeats-policies.md](../../../.engram/queue/2026-08-29-neon-bypassrls-defeats-policies.md) | `obs-ff9448b3c1505e50` | En Neon, crear el rol de aplicación desde la consola, el CLI o la API desactiva todas las políticas RLS, en silencio. |
 

@@ -3,8 +3,8 @@ type: architecture
 score: 5
 topic_key: mascotapp/security/three-conditions-to-override-never-hand-roll-crypto
 task: T-02-013
-status: pendiente
-observation_id:
+status: guardado
+observation_id: obs-bf6fea41522ee496
 rationale: "\"Nunca escribas cripto propia\" es una de las reglas mejor establecidas que existe, y es correcta casi siempre — por eso pasarle por encima sin un criterio escrito es cómo un proyecto termina con un AES casero. Pero aplicada sin condiciones también hace que se agregue una dependencia a internal/auth para no escribir un algoritmo congelado hace quince años con vectores de prueba publicados. Lo que vale guardar no es la decisión de TOTP: es el TEST de tres condiciones que la habilitó, y sobre todo que las tres tienen que darse juntas. Dentro de tres meses alguien va a citar este caso para justificar el próximo, y sin las condiciones va a citar la conclusión en vez del criterio."
 ---
 
