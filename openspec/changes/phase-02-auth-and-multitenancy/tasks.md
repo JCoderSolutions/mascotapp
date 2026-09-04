@@ -389,12 +389,18 @@ handlers themselves, then the contract and its codegen.
       - pilot: blacklisted (§7.2)
       - engram: —
 
-- [ ] **T-02-019** · RED — `session.go` (refresh rotation + reuse detection) tests
+- [x] **T-02-019** · RED — `session.go` (refresh rotation + reuse detection) tests
       - spec: identity-and-session / *Refresh tokens rotate on use and reuse revokes the whole family* (all three scenarios)
       - build: `apps/api/internal/auth/session_test.go`, integration against `refresh_tokens` through `app_auth`
       - tests: a valid, not-yet-rotated token rotates — new token in the same `family_id`, presented token marked rotated · reusing an already-rotated token is refused **and** revokes every token in that `family_id`, including the one currently valid · a token that was valid immediately before the reuse event is refused afterward, proving the revocation is family-wide and not single-token · the cookie's `<base64url(user_id)>.<base64url(secret)>` prefix parsing (P2-D2) — a mangled `user_id` prefix scopes to a user whose rows do not contain the hash, gets zero rows, is refused, and (honest limitation, stated in the test) is **not** flagged as a reuse event
       - dod: fails to compile · every scenario in the spec requirement has its own test case
-      - est: 170
+      - api pinned by the tests: `RefreshSecretLength` (=32) · `RefreshTokenLifetime` · `RefreshCookie{UserID, Secret}` · `FormatRefreshCookie(uuid.UUID, []byte) string` · `ParseRefreshCookie(string) (RefreshCookie, error)` · `NewRefreshSecret() ([]byte, error)` · `HashRefreshSecret([]byte) []byte` · `IssueRefreshToken(ctx, pgx.Tx, uuid.UUID, time.Time) (string, error)` · `RotateRefreshToken(ctx, pgx.Tx, secret []byte, now time.Time) (string, error)` · `ErrRefreshTokenInvalid` · `ErrRefreshTokenReused`
+      - decision — **`RotateRefreshToken` takes the SECRET, never the parsed `user_id`.** The prefix is attacker-controlled input whose only job is to tell the CALLER which `WithAuthUser` scope to open. Handing it to the rotation function too would give it a second, weaker answer to a question RLS is already answering; the new token's `user_id` comes off the row the database returned inside that scope. The signature is the guarantee — the function cannot trust the client, because it never sees what the client claimed.
+      - decision — **`ErrRefreshTokenReused` wraps `ErrRefreshTokenInvalid`.** Reuse is a security EVENT the server must be able to alarm on separately, but the HTTP response is identical to any other bad cookie, so `errors.Is(err, ErrRefreshTokenInvalid)` holds for both and no caller can accidentally treat reuse as success. Tested in both directions: reuse satisfies both sentinels, a mangled prefix and an expired token satisfy only the first.
+      - decision — `RefreshTokenLifetime = 30 days` is set HERE. Neither the spec nor the design fixes a number (§5.2 fixes only the access token's 15 minutes), so this is a choice, not a transcription, and is flagged as such for review.
+      - added beyond the row: an expired token is refused and its family SURVIVES — expiry is the ordinary end of a quiet session, not evidence of theft, and burning the family for it would log a user out of every device and fire the reuse alarm on a non-event.
+      - layer discipline: the reuse tests name what answers. The refusal and the family revocation are BOTH this package's — nothing in the database refuses a revoked token (`GetRefreshTokenByHash` carries no predicate beyond the hash) and nothing revokes a family on its own. The mangled-prefix test names the opposite case: there RLS is what hides the row, and the test says so.
+      - est: 170 · actual: 536
       - pilot: blacklisted (§7.2)
       - engram: —
 

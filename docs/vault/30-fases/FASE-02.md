@@ -181,8 +181,8 @@ Columna **PR**: en qué PR de la cadena entra. Columna **est**: líneas autorada
 | `[x]` `T-02-016` | Migration `00014_totp_recovery_codes.sql` + catalog/query + recovery-code scenarios | PR 4 | ~~160~~ **280** |
 | `[x]` `T-02-017` | RED — `recovery.go` tests | PR 10 | ~~100~~ **524** |
 | `[x]` `T-02-018` | GREEN — `recovery.go` | PR 10 | ~~90~~ **197** (PR 10: 721 total, entra en los dos presupuestos) |
-| `[~]` `T-02-019` | RED — `session.go` (refresh rotation + reuse detection) tests | PR 11 | 170 |
-| `[ ]` `T-02-020` | GREEN — `session.go` | PR 11 | 150 |
+| `[x]` `T-02-019` | RED — `session.go` (refresh rotation + reuse detection) tests | PR 11 | ~~170~~ **536** |
+| `[~]` `T-02-020` | GREEN — `session.go` | PR 11 | 150 |
 | `[ ]` `T-02-021` | 🔴 **Judgment Day** — adversarial review before the refresh-token rotation logic merges | gate PR 11 | 0 |
 | `[ ]` `T-02-022` | Email port + `LogSender` stub — sequenced here, see the Ordering note above | PR 16 | 70 |
 | `[ ]` `T-02-023` | RED — `middleware_auth.go` tests (the F02 success criterion) | PR 12 | 150 |
