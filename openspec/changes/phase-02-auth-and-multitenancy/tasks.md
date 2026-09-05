@@ -686,7 +686,7 @@ the pure-Go rows behave differently from the database rows.
 | PR | `est:` | projected total | over 800? |
 |---|---:|---:|---|
 | `PR-02-08` | 390 | **920** | **YES — split** |
-| `PR-02-11` | 320 | 755 | **measured 930 — OVER both budgets (impl 381/250), size:exception needed** |
+| `PR-02-11` | 320 | 755 | **measured 930 — OVER both budgets (impl 381/250), `size:exception` ACCEPTED 2026-09-04** |
 | `PR-02-22` | 300 | 708 | no |
 | `PR-02-12` · `PR-02-13` · `PR-02-15` | 290 | 684 | no |
 | `PR-02-21` | 230 | 543 | no |
@@ -910,6 +910,45 @@ driver is adversarial surface, not the security label**, and `PR-02-11` (`sessio
 rotation and reuse detection) has plenty of it. The projection stands there; it does not
 generalise to every file in `internal/auth`.
 
+**`size:exception` accepted for `PR-02-11`, 2026-09-04 — the second to breach both budgets, and
+the last one this phase should be surprised by.**
+
+| | implementation | total |
+|---|---:|---:|
+| limit | 250 | 800 |
+| measured | **381** | **930** |
+| over by | **+131** | **+130** |
+
+`sqlcgen` is excluded from both per the `est:` note at line 56; the 21 lines added to
+`query/auth.sql` are counted.
+
+**What it bought, stated plainly, because this is the exception with something to show for
+it.** `PR-02-11` is the only PR in the chain whose tests found a security defect in its own
+implementation: reuse detection wrote the family revocation and then the transactional rollback
+undid it, so a thief was refused and kept a live session. The fix was a contract change
+(`RotationOutcome`), not a patch, and six mutants now pin it — including one that IS the
+original bug, so the next person who "simplifies" that odd-looking signature gets caught. Two
+of the 549 test lines are what found it: the third spec scenario, which asserts the state
+AFTER the reuse event rather than only the error. A cheaper test file would have shipped the
+defect.
+
+**The re-baselining, third revision, and this time as a rule rather than a heuristic.** The
+prediction recorded when `PR-02-10` closed was 700–750, "probably inside". It measured 930.
+Direction right, magnitude wrong — the same error as `PR-02-09`, with the sign flipped from
+the `PR-02-10` miss. Three predictions, three misses, and the honest conclusion is not another
+heuristic:
+
+> **The estimator is not calibrated for `internal/auth`, and no amount of re-baselining inside
+> this phase will calibrate it.** Every file in that package has overshot: `password.go`,
+> `envelope.go`, `totp.go`, `token.go`, `session.go`. The database rows did not. Rather than
+> predicting each one again, treat every remaining `internal/auth` PR as needing an exception
+> by default, and be pleasantly surprised when one does not — which is what `PR-02-10` was.
+
+Remaining PRs in that package: none. `PR-02-12` onward are handlers, config and wiring, where
+the estimator has been accurate. **So this should be the phase's last budget surprise, and if
+`PR-02-12` overshoots too, the estimator is wrong about handlers as well and the whole
+projection needs redoing rather than another note.**
+
 **The three non-negotiable constraints, applied:**
 
 1. **`T-02-007`'s trigger + pinned-test swap is one commit.** `T-02-007` is now its own PR,
@@ -951,7 +990,7 @@ labels move, no task's content or dependency changed.
 | `PR-02-08b` | `totp.go` — RED+GREEN | T-02-012, T-02-013 | 190 (proj. 448) · **actual 192 / 480** | — (pure Go, parallel-eligible) |
 | `PR-02-09` | `token.go` (JWT) — RED+GREEN | T-02-014, T-02-015 | ~~220~~ **289 impl / 935 total** `size:exception` (both budgets) | — (pure Go, parallel-eligible) |
 | `PR-02-10` | `recovery.go` — RED+GREEN | T-02-017, T-02-018 | ~~190~~ **197 impl / 721 total** — fits both, no exception | `PR-02-04` (needs `totp_recovery_codes`) |
-| `PR-02-11` | `session.go` — rotation + reuse detection, RED+GREEN | T-02-019, T-02-020 | ~~320~~ **381 impl / 930 total** `size:exception` pendiente | `PR-02-02` (needs the `refresh_tokens` access path) · **gated by Judgment Day (`T-02-021`) before merge — see constraint 2** |
+| `PR-02-11` | `session.go` — rotation + reuse detection, RED+GREEN | T-02-019, T-02-020 | ~~320~~ **381 impl / 930 total** `size:exception` | `PR-02-02` (needs the `refresh_tokens` access path) · **gated by Judgment Day (`T-02-021`) before merge — see constraint 2** |
 | `PR-02-12` | `middleware_auth.go` — the F02 tenant-scope boundary, RED+GREEN | T-02-023, T-02-024 | 290 | `PR-02-09` (bearer verification needs `token.go`) |
 | `PR-02-13` | Cross-cutting HTTP security config — `cors.go` + `csrf.go` + `config.go` | T-02-025, T-02-026 | 290 | — (independent; placed here for review sequencing) |
 | `PR-02-14` | Registration handler | T-02-027 | 140 | `PR-02-02` (`WithAuthUser`), `PR-02-07` (`password.go`) |

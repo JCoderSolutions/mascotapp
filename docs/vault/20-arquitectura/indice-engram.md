@@ -13,18 +13,9 @@ versionado. El `observation_id` es la misma nota dentro de Engram; sirve para
 trazabilidad, no es requisito para leerla.
 
 - Candidatos totales: **91**
-- Aprobados y guardados en Engram: **88**
-- Pendientes de aprobación explícita del usuario: **1**
+- Aprobados y guardados en Engram: **89**
+- Pendientes de aprobación explícita del usuario: **0**
 - Descartados por el pase de curaduría: **2**
-
-## Pendientes de aprobación
-
-Nada de esto está en Engram todavía. Requiere el sí explícito del usuario
-antes de `mem_save` (§6.6 del plan maestro).
-
-| Tarea | Tipo | Score | Archivo | Qué dice |
-|---|---|---|---|---|
-| `T-02-020` | architecture | 5 | [2026-09-04-un-rechazo-que-escribe-no-puede-viajar-como-error.md](../../../.engram/queue/2026-09-04-un-rechazo-que-escribe-no-puede-viajar-como-error.md) | (T-02-020, MascotApp Fase 02. Relacionado con obs-9e00e3a6413dc7d2.) |
 
 ## Descartados — NO guardar
 
@@ -39,7 +30,7 @@ exactamente lo que la columna de abajo explica que está mal.
 
 ## Guardadas
 
-### `mascotapp/arch/*` — 8
+### `mascotapp/arch/*` — 9
 
 | Tarea | `topic_key` | Score | Archivo | `observation_id` | Qué dice |
 |---|---|---|---|---|---|
@@ -51,6 +42,7 @@ exactamente lo que la columna de abajo explica que está mal.
 | `T-01-034` | `…/verify-inherited-constraints` | 5 | [2026-09-01-una-restriccion-heredada-se-verifica-antes-de-disenar-contra-ella.md](../../../.engram/queue/2026-09-01-una-restriccion-heredada-se-verifica-antes-de-disenar-contra-ella.md) | `obs-ed6c4139b505a445` | D3 decia: *"no dependemos de extensiones de PostgreSQL, porque el free tier de Neon no las garantiza"*. |
 | `T-02-004` | `…/policy-lands-at-version-aware-exemption` | 5 | [2026-09-02-policylandsat-version-aware-catalog-exemption.md](../../../.engram/queue/2026-09-02-policylandsat-version-aware-catalog-exemption.md) | `obs-d88a3730b74fb389` | Sacar una tabla de NoPolicy puede romper un test que la tarea que la escribio no menciona, si esa tabla existio (con RLS, sin pol… |
 | `T-02-006` | `…/isolation-probe-must-use-a-writable-column` | 5 | [2026-09-03-ab-probe-must-touch-a-writable-column.md](../../../.engram/queue/2026-09-03-ab-probe-must-touch-a-writable-column.md) | `obs-d88f7a4c0b2d9ee5` | El runner A/B de este proyecto prueba que el tenant B no alcanza la fila del tenant A con un no-op: |
+| `T-02-020` | `…/refusals-with-side-effects` | 5 | [2026-09-04-un-rechazo-que-escribe-no-puede-viajar-como-error.md](../../../.engram/queue/2026-09-04-un-rechazo-que-escribe-no-puede-viajar-como-error.md) | `obs-a88eecda20bb1bc4` | (T-02-020, MascotApp Fase 02. Relacionado con obs-9e00e3a6413dc7d2.) |
 
 ### `mascotapp/convention/*` — 45
 

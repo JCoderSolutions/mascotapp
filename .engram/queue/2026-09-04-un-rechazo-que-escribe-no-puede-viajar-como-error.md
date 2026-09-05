@@ -3,8 +3,11 @@ type: architecture
 score: 5
 topic_key: mascotapp/arch/refusals-with-side-effects
 task: T-02-020
-status: pendiente-de-aprobacion
+status: guardado
+approved: 2026-09-04 por el usuario (T-02-020, cierre del trabajo de PR-02-11)
+observation_id: obs-a88eecda20bb1bc4
 relacionado: obs-9e00e3a6413dc7d2
+nota_de_guardado: "Primer `observation_id` NUEVO en varias tareas. Las cuatro notas anteriores compartían `topic_key` con obs-9e00e3a6413dc7d2 y se sumaban a ese hilo; esta abre uno propio (`mascotapp/arch/refusals-with-side-effects`) porque no es otra instancia de *qué capa contesta* sino una regla de diseño sobre dónde puede viajar un rechazo. Están cruzadas por `relacionado`."
 rationale: "Es una regla de diseño, no un bug de una función: el idioma de Go 'devolvé error para rechazar' y el idioma transaccional 'rollback ante error' son correctos por separado y se destruyen entre sí en el único caso donde un rechazo tiene que ESCRIBIR. Acá el costo era la contención de un token robado — el ladrón era rechazado y se quedaba con la sesión viva, o sea el resultado exacto que la revocación de familia existe para impedir. Y no lo encontró la mutación ni una revisión: lo encontró el primer GREEN, porque el RED había escrito el escenario completo del robo en vez de solo 'devuelve error'. Dentro de tres meses, cualquier flujo que audite o marque algo mientras rechaza pisa exactamente esta mina."
 ---
 
