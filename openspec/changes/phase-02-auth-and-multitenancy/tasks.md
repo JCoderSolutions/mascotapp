@@ -446,7 +446,8 @@ handlers themselves, then the contract and its codegen.
       - **"no outbound network call" is asserted twice, on purpose.** Swapping `http.DefaultTransport` proves only that *this* call did not leave through *that* client — a hand-built client or a shell-out to `sendmail` sails past it. A second test reads the package's own imports and fails on `net`, `net/http`, `net/smtp` or `os/exec`, which proves the package has no way out at all. It counts the files it parsed and fails under two, so an empty directory cannot pass it quietly.
       - **`LogSender` records the recipient, which is a deliberate exception to §5.4** (logs never carry PII). A stub that records "somebody was mailed" makes the flow unobservable and makes `T-02-030`'s *"only the existing account's address receives an email"* unassertable. The exception is bounded by `LogSender` never being the production adapter — named in its doc comment, because nothing in the type system enforces it. It never records `Message.Body`: a magic-link body is a live single-use credential.
       - **`Purpose` ships with one member,** `PurposeMagicLink` — the only mail Phase 02 sends. Constants get added when a task actually sends that kind.
-      - **Branching note.** `PR-02-16` merges at position 16 but its first half lands now, so `feat/pr-02-16-email` branches off `feat/pr-02-11-session` and `PR-02-12`…`PR-02-15` branch off it as **siblings**, not on top of this one. The email package touches nothing else, so nothing in `PR-02-12`…`PR-02-15` needs it. `T-02-030` (the magic-link handler, the second half of `PR-02-16`) rebases onto `PR-02-15` when it is written.
+      - **`PR-02-16` is SPLIT into `PR-02-16a` and `PR-02-16b`** — the same cut `PR-02-08` took, for a different reason. `T-02-022` (the port) depends on nothing; `T-02-030` (the magic-link handler) needs `auth_handlers.go`, which `PR-02-14`/`PR-02-15` create. Two tasks in one PR that sit on opposite sides of four other PRs is not one reviewable unit.
+      - **Correction — the first branching decision was wrong and lasted one commit.** It made `PR-02-12`…`PR-02-15` **siblings** of `feat/pr-02-16-email` off `feat/pr-02-11-session`, to protect a merge order that said 12 before 16. That protects the list and breaks the thing the list exists for: `PROJECT_STATE.md` is the continuity contract, it lives in the repo, and on a sibling branch it still read *"sigue T-02-022"* — a task already closed on the branch next door. Two branches, two contradictory answers to *where are we*, which is exactly failure IA-4. Splitting the PR fixes the merge order at its source and keeps **one linear chain**: `PR-02-16a` merges at position 12, right after `PR-02-11`, and nothing in `PR-02-12`…`PR-02-15` needs it either way. Chain: `feat/pr-02-11-session` → `feat/pr-02-16-email` (`PR-02-16a`) → `feat/pr-02-12-middleware` → … `PR-02-16b` lands in its original slot, on top of `PR-02-15`.
       - verified: full container suite `exit=0` (captured, not piped) with all nine tests named in the output · `golangci-lint` 0 issues · `gofmt` clean · `govulncheck` unchanged · three mutations killed (logging the body, dropping the `ctx` check, adding a `net/http` import) · zero mutation residue
       - engram: `obs-fb93b875590f191e` — *proving an absence by behaviour only proves the path you took* (approved 2026-09-05)
 
@@ -703,7 +704,8 @@ the pure-Go rows behave differently from the database rows.
 | `PR-02-12` · `PR-02-13` · `PR-02-15` | 290 | 684 | no |
 | `PR-02-21` | 230 | 543 | no |
 | `PR-02-09` | 220 | 519 | **measured 935 — OVER both budgets, `size:exception` accepted 2026-09-04** |
-| `PR-02-16` | 190 | 448 | **half measured** — `T-02-022` alone is 158 impl / 469 total, already past the projected 448 with `T-02-030` still to come |
+| `PR-02-16a` | 70 | 165 | **measured 158 impl / 469 total** — fits both budgets. The ×2.36 factor missed badly here (projected 165, actual 469) because the task's own `est: 70` counted surface, and the overshoot is comment density on a package that exports six names |
+| `PR-02-16b` | 120 | 283 | no — and the split is what keeps it that way; unsplit, `PR-02-16` was heading past 800 |
 | `PR-02-10` | 190 | 448 | **measured 721 — under BOTH budgets (impl 197/250), no exception needed** |
 | `PR-02-17` | 160 | 378 | no |
 | `PR-02-23` | 150 | 354 | no |
@@ -1007,7 +1009,8 @@ labels move, no task's content or dependency changed.
 | `PR-02-13` | Cross-cutting HTTP security config — `cors.go` + `csrf.go` + `config.go` | T-02-025, T-02-026 | 290 | — (independent; placed here for review sequencing) |
 | `PR-02-14` | Registration handler | T-02-027 | 140 | `PR-02-02` (`WithAuthUser`), `PR-02-07` (`password.go`) |
 | `PR-02-15` | Login handler — core + TOTP/recovery paths (one handler, two tasks) | T-02-028, T-02-029 | 290 | `PR-02-07`, `PR-02-08`, `PR-02-09`, `PR-02-10`, `PR-02-11` |
-| `PR-02-16` | Email port + stub, and the magic-link handler that consumes it | T-02-022 ✅, T-02-030 | ~~190~~ **158 impl / 469 total for `T-02-022` alone**; `T-02-030` still to come | `PR-02-09` · branch `feat/pr-02-16-email` off `feat/pr-02-11-session`; `PR-02-12`…`PR-02-15` branch as **siblings**, not on top of it — see the `T-02-022` branching note |
+| `PR-02-16a` | Email port + `LogSender` stub | T-02-022 ✅ | ~~190~~ **158 impl / 469 total** — fits both, no exception | `PR-02-11` · branch `feat/pr-02-16-email`; **merges at position 12**, right after `PR-02-11` |
+| `PR-02-16b` | The magic-link handler that consumes the port | T-02-030 | 120 (proj. 283) | `PR-02-15` (needs `auth_handlers.go`) · `PR-02-16a` |
 | `PR-02-17` | Refresh + logout handler | T-02-031 | 160 | `PR-02-11`, `PR-02-13` (CSRF check) |
 | `PR-02-18` | TOTP enrol/verify handler | T-02-032 | 140 | `PR-02-08`, `PR-02-10` |
 | `PR-02-19` | Session/shelter-exchange handler | T-02-033 | 100 | `PR-02-09` |
@@ -1078,17 +1081,18 @@ labels move, no task's content or dependency changed.
 8. `PR-02-08`
 9. `PR-02-09`
 10. `PR-02-10`
-11. `PR-02-11` *(blocked on Judgment Day, `T-02-021`)*
-12. `PR-02-12`
-13. `PR-02-13`
-14. `PR-02-14`
-15. `PR-02-15`
-16. `PR-02-16`
-17. `PR-02-17`
-18. `PR-02-18`
-19. `PR-02-19`
-20. `PR-02-20`
-21. `PR-02-21`
-22. `PR-02-22`
-23. `PR-02-23` *(last functional PR)*
-24. `PR-02-24` *(blocked on the user; does not gate anything above it)*
+11. `PR-02-11` *(was blocked on Judgment Day, `T-02-021` — **APPROVED**)*
+12. `PR-02-16a` *(the email port — moved up from 16 when `PR-02-16` was split; depends on nothing below it, and nothing below it depends on it)*
+13. `PR-02-12`
+14. `PR-02-13`
+15. `PR-02-14`
+16. `PR-02-15`
+17. `PR-02-16b` *(the magic-link handler — needs `auth_handlers.go` from `PR-02-14`/`PR-02-15`)*
+18. `PR-02-17`
+19. `PR-02-18`
+20. `PR-02-19`
+21. `PR-02-20`
+22. `PR-02-21`
+23. `PR-02-22`
+24. `PR-02-23` *(last functional PR)*
+25. `PR-02-24` *(blocked on the user; does not gate anything above it)*
