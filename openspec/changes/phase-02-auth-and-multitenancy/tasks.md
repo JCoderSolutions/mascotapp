@@ -395,6 +395,7 @@ handlers themselves, then the contract and its codegen.
       - tests: a valid, not-yet-rotated token rotates — new token in the same `family_id`, presented token marked rotated · reusing an already-rotated token is refused **and** revokes every token in that `family_id`, including the one currently valid · a token that was valid immediately before the reuse event is refused afterward, proving the revocation is family-wide and not single-token · the cookie's `<base64url(user_id)>.<base64url(secret)>` prefix parsing (P2-D2) — a mangled `user_id` prefix scopes to a user whose rows do not contain the hash, gets zero rows, is refused, and (honest limitation, stated in the test) is **not** flagged as a reuse event
       - dod: fails to compile · every scenario in the spec requirement has its own test case
       - api pinned by the tests: `RefreshSecretLength` (=32) · `RefreshTokenLifetime` · `RefreshCookie{UserID, Secret}` · `FormatRefreshCookie(uuid.UUID, []byte) string` · `ParseRefreshCookie(string) (RefreshCookie, error)` · `NewRefreshSecret() ([]byte, error)` · `HashRefreshSecret([]byte) []byte` · `IssueRefreshToken(ctx, pgx.Tx, uuid.UUID, time.Time) (string, error)` · `RotateRefreshToken(ctx, pgx.Tx, secret []byte, now time.Time) (string, error)` · `ErrRefreshTokenInvalid` · `ErrRefreshTokenReused`
+      - **AMENDED by T-02-020.** `RotateRefreshToken`'s signature is `(RotationOutcome, error)`, not `(string, error)`. The RED's version was wrong and two of its own tests proved it — see T-02-020's rollback finding. The test file changed in exactly one place, its `rotate` helper, which is the handler shape.
       - decision — **`RotateRefreshToken` takes the SECRET, never the parsed `user_id`.** The prefix is attacker-controlled input whose only job is to tell the CALLER which `WithAuthUser` scope to open. Handing it to the rotation function too would give it a second, weaker answer to a question RLS is already answering; the new token's `user_id` comes off the row the database returned inside that scope. The signature is the guarantee — the function cannot trust the client, because it never sees what the client claimed.
       - decision — **`ErrRefreshTokenReused` wraps `ErrRefreshTokenInvalid`.** Reuse is a security EVENT the server must be able to alarm on separately, but the HTTP response is identical to any other bad cookie, so `errors.Is(err, ErrRefreshTokenInvalid)` holds for both and no caller can accidentally treat reuse as success. Tested in both directions: reuse satisfies both sentinels, a mangled prefix and an expired token satisfy only the first.
       - decision — `RefreshTokenLifetime = 30 days` is set HERE. Neither the spec nor the design fixes a number (§5.2 fixes only the access token's 15 minutes), so this is a choice, not a transcription, and is flagged as such for review.
@@ -404,14 +405,19 @@ handlers themselves, then the contract and its codegen.
       - pilot: blacklisted (§7.2)
       - engram: —
 
-- [ ] **T-02-020** · GREEN — `session.go`
+- [x] **T-02-020** · GREEN — `session.go`
       - spec: same as T-02-019
-      - build: `apps/api/internal/auth/session.go`
-      - tests: T-02-019 turns green
-      - dod: mutation-tested — this is the single most security-critical unit in the phase (stolen-token containment); every mutant on the family-revocation `WHERE family_id = $1 AND revoked_at IS NULL` clause must die
-      - est: 150
+      - build: `apps/api/internal/auth/session.go` · two new queries in `query/auth.sql` (`InsertRefreshToken`, `MarkRefreshTokenRotated`) — rotation needs a write and a mark, and neither existed; `make generate` regenerated `sqlcgen` (excluded from both budgets per the `est:` note at line 56)
+      - tests: T-02-019 turns green — all eleven confirmed by name
+      - dod: mutation-tested — six mutants, all six dead
+      - **THE finding, and it is a design bug the RED could not have predicted: a refusal that has a persistent side effect cannot travel as an error out of a transactional callback.** `db.WithAuthUser` rolls back whenever its callback returns an error (`db/auth.go:68`, `:77`). Reuse detection is the one refusal in this system that WRITES — it revokes the whole family. Returning `ErrRefreshTokenReused` from inside that callback rolled the revocation back with it: the thief was refused and **kept a live session**, which is exactly what family revocation exists to prevent. Two of T-02-019's own tests caught it on the first GREEN run, before any mutation.
+      - the fix is a contract change, not a patch: `RotateRefreshToken` returns `(RotationOutcome, error)` where `error` is infrastructure ONLY and a refusal rides in `RotationOutcome.Refusal`, so the callback returns nil and the transaction commits carrying the revocation. The one refusal that must NOT commit — losing a concurrent-rotation race, where a successor row was already inserted — deliberately still uses the error return, and says so in its comment.
+      - this is the same mechanism as T-02-018's surviving mutant (`obs-9e00e3a6413dc7d2`), in the opposite direction: there the rollback SAVED the user's recovery codes and made a mutant equivalent; here it DESTROYS the containment. The layer that answers cuts both ways.
+      - mutants, all dead: family revocation `WHERE family_id` → `WHERE id` (kills both family tests) · `revoked_at IS NULL` → `IS NOT NULL` (both) · reuse returned as an infrastructure error, i.e. the original bug (both) · rotation starts a new family instead of continuing (three) · expiry check removed (the expiry test alone) · the reuse branch removed entirely (both)
+      - est: 150 · actual: 360 (+21 query SQL)
       - pilot: blacklisted (§7.2)
       - engram: —
+      - **carried to `T-02-021` (Judgment Day), which already has `auth.go` in its scope:** `internal/db/auth.go` and `auth_test.go` are `gofmt`-dirty, pre-existing from `6bffd3c` (T-02-002) and untouched by this PR. Not fixed here, because this PR's diff is exactly what Judgment Day reviews and widening it to unrelated files makes that review worse.
 
 - [ ] **T-02-021** · 🔴 **Judgment Day** — adversarial review before the refresh-token rotation logic merges
       - spec: n/a — process gate, per `FASE-02.md`'s `RDD: ✅ recomendado · Judgment Day antes del merge de la rotación de tokens`
@@ -680,7 +686,7 @@ the pure-Go rows behave differently from the database rows.
 | PR | `est:` | projected total | over 800? |
 |---|---:|---:|---|
 | `PR-02-08` | 390 | **920** | **YES — split** |
-| `PR-02-11` | 320 | 755 | no, but close |
+| `PR-02-11` | 320 | 755 | **measured 930 — OVER both budgets (impl 381/250), size:exception needed** |
 | `PR-02-22` | 300 | 708 | no |
 | `PR-02-12` · `PR-02-13` · `PR-02-15` | 290 | 684 | no |
 | `PR-02-21` | 230 | 543 | no |
@@ -945,7 +951,7 @@ labels move, no task's content or dependency changed.
 | `PR-02-08b` | `totp.go` — RED+GREEN | T-02-012, T-02-013 | 190 (proj. 448) · **actual 192 / 480** | — (pure Go, parallel-eligible) |
 | `PR-02-09` | `token.go` (JWT) — RED+GREEN | T-02-014, T-02-015 | ~~220~~ **289 impl / 935 total** `size:exception` (both budgets) | — (pure Go, parallel-eligible) |
 | `PR-02-10` | `recovery.go` — RED+GREEN | T-02-017, T-02-018 | ~~190~~ **197 impl / 721 total** — fits both, no exception | `PR-02-04` (needs `totp_recovery_codes`) |
-| `PR-02-11` | `session.go` — rotation + reuse detection, RED+GREEN | T-02-019, T-02-020 | 320 | `PR-02-02` (needs the `refresh_tokens` access path) · **gated by Judgment Day (`T-02-021`) before merge — see constraint 2** |
+| `PR-02-11` | `session.go` — rotation + reuse detection, RED+GREEN | T-02-019, T-02-020 | ~~320~~ **381 impl / 930 total** `size:exception` pendiente | `PR-02-02` (needs the `refresh_tokens` access path) · **gated by Judgment Day (`T-02-021`) before merge — see constraint 2** |
 | `PR-02-12` | `middleware_auth.go` — the F02 tenant-scope boundary, RED+GREEN | T-02-023, T-02-024 | 290 | `PR-02-09` (bearer verification needs `token.go`) |
 | `PR-02-13` | Cross-cutting HTTP security config — `cors.go` + `csrf.go` + `config.go` | T-02-025, T-02-026 | 290 | — (independent; placed here for review sequencing) |
 | `PR-02-14` | Registration handler | T-02-027 | 140 | `PR-02-02` (`WithAuthUser`), `PR-02-07` (`password.go`) |

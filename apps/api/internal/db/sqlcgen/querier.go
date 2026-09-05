@@ -95,6 +95,12 @@ type Querier interface {
 	// grant, INSERT the same, and UPDATE is column-scoped to used_at only -- code_hash
 	// and created_at are never rewritten once a row exists.
 	InsertRecoveryCode(ctx context.Context, arg InsertRecoveryCodeParams) error
+	// Both halves of a session's life: login starts a family by passing a fresh
+	// family_id, rotation continues one by passing the presented token's. The
+	// caller chooses, because only the caller knows which of the two it is --
+	// a default here would silently make every rotation start a new family and
+	// quietly disable family-wide revocation.
+	InsertRefreshToken(ctx context.Context, arg InsertRefreshTokenParams) error
 	// Supplying `shelter_id` is not filtering by it: the column is NOT NULL and
 	// `WITH CHECK` is what verifies the value.
 	InviteMember(ctx context.Context, arg InviteMemberParams) error
@@ -125,6 +131,14 @@ type Querier interface {
 	// Global reference data: readable by both roles, writable by neither.
 	ListSpecies(ctx context.Context) ([]Species, error)
 	ListStatusHistory(ctx context.Context, petID uuid.UUID) ([]PetStatusHistory, error)
+	// The rotation half of the write: the presented token is revoked AND
+	// pointed at its successor, in one statement.
+	//
+	// `revoked_at IS NULL` is a guard, not decoration: it makes this the write
+	// that loses a concurrent race. Two simultaneous rotations of the same
+	// token both read a live row, and only one can affect a row here -- the
+	// other gets zero and is refused, instead of both minting a session.
+	MarkRefreshTokenRotated(ctx context.Context, arg MarkRefreshTokenRotatedParams) (int64, error)
 	PublishPet(ctx context.Context, id uuid.UUID) (int64, error)
 	// Publishing APPENDS. There is deliberately no query that updates a published
 	// version: 00007's trigger refuses it, and a query that tried would be code

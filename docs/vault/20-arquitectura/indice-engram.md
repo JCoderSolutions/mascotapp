@@ -12,10 +12,19 @@ que el repositorio siga siendo la verdad operativa (regla IA-4 del plan maestro)
 versionado. El `observation_id` es la misma nota dentro de Engram; sirve para
 trazabilidad, no es requisito para leerla.
 
-- Candidatos totales: **90**
+- Candidatos totales: **91**
 - Aprobados y guardados en Engram: **88**
-- Pendientes de aprobación explícita del usuario: **0**
+- Pendientes de aprobación explícita del usuario: **1**
 - Descartados por el pase de curaduría: **2**
+
+## Pendientes de aprobación
+
+Nada de esto está en Engram todavía. Requiere el sí explícito del usuario
+antes de `mem_save` (§6.6 del plan maestro).
+
+| Tarea | Tipo | Score | Archivo | Qué dice |
+|---|---|---|---|---|
+| `T-02-020` | architecture | 5 | [2026-09-04-un-rechazo-que-escribe-no-puede-viajar-como-error.md](../../../.engram/queue/2026-09-04-un-rechazo-que-escribe-no-puede-viajar-como-error.md) | (T-02-020, MascotApp Fase 02. Relacionado con obs-9e00e3a6413dc7d2.) |
 
 ## Descartados — NO guardar
 

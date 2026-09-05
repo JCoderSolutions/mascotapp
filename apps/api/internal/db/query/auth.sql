@@ -13,6 +13,27 @@
 -- inside that scope. token_hash is UNIQUE, so :one is correct.
 SELECT * FROM refresh_tokens WHERE token_hash = $1;
 
+-- name: InsertRefreshToken :exec
+-- Both halves of a session's life: login starts a family by passing a fresh
+-- family_id, rotation continues one by passing the presented token's. The
+-- caller chooses, because only the caller knows which of the two it is --
+-- a default here would silently make every rotation start a new family and
+-- quietly disable family-wide revocation.
+INSERT INTO refresh_tokens (id, user_id, token_hash, family_id, expires_at)
+VALUES ($1, $2, $3, $4, $5);
+
+-- name: MarkRefreshTokenRotated :execrows
+-- The rotation half of the write: the presented token is revoked AND
+-- pointed at its successor, in one statement.
+--
+-- `revoked_at IS NULL` is a guard, not decoration: it makes this the write
+-- that loses a concurrent race. Two simultaneous rotations of the same
+-- token both read a live row, and only one can affect a row here -- the
+-- other gets zero and is refused, instead of both minting a session.
+UPDATE refresh_tokens
+SET revoked_at = now(), replaced_by = $2
+WHERE id = $1 AND revoked_at IS NULL;
+
 -- name: RevokeRefreshTokenFamily :execrows
 -- Reuse detection revokes the whole family in one statement (§5.2): every
 -- token sharing family_id, not just the one presented. execrows so a caller

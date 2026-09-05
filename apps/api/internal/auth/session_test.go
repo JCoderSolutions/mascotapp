@@ -457,6 +457,13 @@ func issue(
 // `scope` is a parameter rather than derived from the cookie because the whole
 // point of the mangled-prefix test is that the caller opens the transaction
 // with what the CLIENT claimed, not with the truth.
+//
+// **This helper is the handler.** It returns only the infrastructure error to
+// `WithAuthUser`, so a refusal COMMITS — which is what lets reuse detection's
+// family revocation survive. Returning `outcome.Refusal` from inside the
+// callback instead would roll that revocation back and hand the thief a live
+// session; the first version of this file did exactly that, and two tests
+// caught it. See `RotationOutcome`'s comment.
 func rotate(
 	ctx context.Context,
 	env *dbtest.Env,
@@ -469,14 +476,20 @@ func rotate(
 		return "", err
 	}
 
-	var fresh string
+	var outcome auth.RotationOutcome
 	err = db.WithAuthUser(ctx, env.AuthPool, scope, func(ctx context.Context, tx pgx.Tx) error {
-		fresh, err = auth.RotateRefreshToken(ctx, tx, parsed.Secret, now)
+		var infra error
+		outcome, infra = auth.RotateRefreshToken(ctx, tx, parsed.Secret, now)
 
-		return err
+		// ONLY the infrastructure error. `outcome.Refusal` deliberately does
+		// not travel here.
+		return infra
 	})
+	if err != nil {
+		return "", err
+	}
 
-	return fresh, err
+	return outcome.Cookie, outcome.Refusal
 }
 
 // readSession reads the row behind a cookie with raw SQL, hashing the secret

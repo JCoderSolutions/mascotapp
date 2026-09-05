@@ -133,6 +133,35 @@ func (q *Queries) InsertRecoveryCode(ctx context.Context, arg InsertRecoveryCode
 	return err
 }
 
+const insertRefreshToken = `-- name: InsertRefreshToken :exec
+INSERT INTO refresh_tokens (id, user_id, token_hash, family_id, expires_at)
+VALUES ($1, $2, $3, $4, $5)
+`
+
+type InsertRefreshTokenParams struct {
+	ID        uuid.UUID
+	UserID    uuid.UUID
+	TokenHash []byte
+	FamilyID  uuid.UUID
+	ExpiresAt pgtype.Timestamptz
+}
+
+// Both halves of a session's life: login starts a family by passing a fresh
+// family_id, rotation continues one by passing the presented token's. The
+// caller chooses, because only the caller knows which of the two it is --
+// a default here would silently make every rotation start a new family and
+// quietly disable family-wide revocation.
+func (q *Queries) InsertRefreshToken(ctx context.Context, arg InsertRefreshTokenParams) error {
+	_, err := q.db.Exec(ctx, insertRefreshToken,
+		arg.ID,
+		arg.UserID,
+		arg.TokenHash,
+		arg.FamilyID,
+		arg.ExpiresAt,
+	)
+	return err
+}
+
 const listOwnMemberships = `-- name: ListOwnMemberships :many
 SELECT id, user_id, shelter_id, role, status FROM memberships WHERE user_id = $1
 `
@@ -173,6 +202,32 @@ func (q *Queries) ListOwnMemberships(ctx context.Context, userID uuid.UUID) ([]L
 		return nil, err
 	}
 	return items, nil
+}
+
+const markRefreshTokenRotated = `-- name: MarkRefreshTokenRotated :execrows
+UPDATE refresh_tokens
+SET revoked_at = now(), replaced_by = $2
+WHERE id = $1 AND revoked_at IS NULL
+`
+
+type MarkRefreshTokenRotatedParams struct {
+	ID         uuid.UUID
+	ReplacedBy pgtype.UUID
+}
+
+// The rotation half of the write: the presented token is revoked AND
+// pointed at its successor, in one statement.
+//
+// `revoked_at IS NULL` is a guard, not decoration: it makes this the write
+// that loses a concurrent race. Two simultaneous rotations of the same
+// token both read a live row, and only one can affect a row here -- the
+// other gets zero and is refused, instead of both minting a session.
+func (q *Queries) MarkRefreshTokenRotated(ctx context.Context, arg MarkRefreshTokenRotatedParams) (int64, error) {
+	result, err := q.db.Exec(ctx, markRefreshTokenRotated, arg.ID, arg.ReplacedBy)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const redeemRecoveryCode = `-- name: RedeemRecoveryCode :execrows

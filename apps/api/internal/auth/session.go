@@ -1,0 +1,360 @@
+package auth
+
+import (
+	"context"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
+	"errors"
+	"fmt"
+	"strings"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
+
+	"github.com/gentleman/mascotapp/apps/api/internal/db/sqlcgen"
+)
+
+// Refresh-token rotation and reuse detection (identity-and-session / *Refresh
+// tokens rotate on use and reuse revokes the whole family*, design P2-D2).
+//
+// This is the stolen-token containment story. An access token expires in
+// fifteen minutes and nothing revokes it; the refresh token underneath is what
+// carries revocation, and it is a long-lived bearer credential. The only thing
+// standing between a stolen copy and a permanent session is this: the moment
+// both copies are used, every token in the family dies.
+//
+// Which means the guarantee is NOT "we detect theft". It is "theft cannot
+// outlive the legitimate user's next refresh" — whoever refreshes second is
+// refused, and both are logged out. That is weaker than detection and stronger
+// than nothing, and it is worth being precise about which one is on offer.
+const (
+	// RefreshSecretLength is the 32 random bytes P2-D2 fixes.
+	//
+	// The `user_id` prefix is attacker-chosen and the hash is a lookup key, so
+	// this secret is the entire credential.
+	RefreshSecretLength = 32
+
+	// RefreshTokenLifetime is how long a session survives without being used.
+	//
+	// NOT INHERITED FROM THE SPEC — §5.2 fixes the access token's fifteen
+	// minutes and says nothing about this one, so thirty days is a choice made
+	// here. It is the trade between "volunteers log in again every week, so
+	// they write the password on a sticky note" and "a stolen cookie is useful
+	// for a month". Rotation is what makes the long end tolerable: each use
+	// replaces the token, so a month-old session has a days-old credential.
+	RefreshTokenLifetime = 30 * 24 * time.Hour
+
+	// refreshCookieSeparator splits the two halves of the cookie value.
+	refreshCookieSeparator = "."
+)
+
+// refreshEncoding is base64url without padding, for both halves of the cookie.
+//
+// Unpadded because `=` in a cookie value is legal but reliably mishandled
+// somewhere in a proxy chain, and url-safe because `+` and `/` are not.
+var refreshEncoding = base64.RawURLEncoding
+
+// ErrRefreshTokenInvalid is returned for any cookie that cannot be rotated.
+//
+// One sentinel for "malformed", "never issued", "belongs to another user",
+// "expired" and "already revoked". Every one of them is the same HTTP response,
+// and telling them apart would tell an attacker how close they got.
+var ErrRefreshTokenInvalid = errors.New("auth: the refresh token is not valid")
+
+// ErrRefreshTokenReused marks the one case the server must be able to see.
+//
+// It WRAPS ErrRefreshTokenInvalid, so `errors.Is(err, ErrRefreshTokenInvalid)`
+// still holds and no caller can mistake reuse for success. The distinction is
+// for the server's own eyes -- a log line, an alert, a mail to the account --
+// never for the response body. Reuse means a credential existed in two places,
+// which is the difference between a bad cookie and evidence of theft.
+var ErrRefreshTokenReused = fmt.Errorf("%w: it was already rotated, and its family has been "+
+	"revoked", ErrRefreshTokenInvalid)
+
+// RotationOutcome is what a rotation attempt decided, separately from whether
+// the database worked.
+//
+// **This split is not ergonomic taste — it is required for correctness, and it
+// was found by a failing test rather than reasoned about in advance.**
+//
+// `db.WithAuthUser` rolls the transaction back whenever its callback returns an
+// error (`db/auth.go:68`, `:77`). Reuse detection is the one refusal in this
+// system with a PERSISTENT side effect: it revokes the whole family. Returning
+// `ErrRefreshTokenReused` from inside that callback rolled the revocation back
+// with it — the thief was refused and kept a live session, which is precisely
+// the outcome family revocation exists to prevent.
+//
+// So a refusal travels in this struct, and the callback returns nil, and the
+// transaction commits carrying the revocation. Only an infrastructure failure —
+// a broken connection, a query that will not run — is a real error, because
+// that is the only case where undoing the work is right.
+type RotationOutcome struct {
+	// Cookie is the new value to set, empty unless the rotation succeeded.
+	Cookie string
+
+	// Refusal is why the caller must answer 401, or nil on success. It is
+	// ErrRefreshTokenInvalid, or ErrRefreshTokenReused when the caller should
+	// also raise an alarm.
+	Refusal error
+}
+
+// RefreshCookie is a parsed cookie value.
+type RefreshCookie struct {
+	// UserID is what the CLIENT claims. It is never trusted as identity: its
+	// only job is telling the caller which `WithAuthUser` scope to open, and
+	// a client that lies scopes itself to rows that do not contain its hash.
+	UserID uuid.UUID
+
+	// Secret is the credential. `sha256(Secret)` is what the row holds.
+	Secret []byte
+}
+
+// FormatRefreshCookie builds the value the browser stores:
+// `<base64url(user_id)>.<base64url(secret)>`.
+func FormatRefreshCookie(userID uuid.UUID, secret []byte) string {
+	return refreshEncoding.EncodeToString(userID[:]) +
+		refreshCookieSeparator +
+		refreshEncoding.EncodeToString(secret)
+}
+
+// ParseRefreshCookie splits and decodes a cookie value.
+//
+// This is the first code an attacker reaches on the refresh path: it runs on
+// unauthenticated input, before any hash is computed and before any transaction
+// is opened. Everything it cannot fully account for is refused here rather than
+// carried further in a partly-valid state.
+func ParseRefreshCookie(raw string) (RefreshCookie, error) {
+	// SplitN(…, 2) would accept a secret half containing separators. Exactly
+	// two parts, or it is not a cookie this server issued.
+	parts := strings.Split(raw, refreshCookieSeparator)
+	if len(parts) != 2 {
+		return RefreshCookie{}, fmt.Errorf("%w: the cookie is not two dot-separated parts",
+			ErrRefreshTokenInvalid)
+	}
+
+	// RawURLEncoding refuses padding, which is what rejects a `=`-padded value
+	// rather than silently accepting a second spelling of the same bytes.
+	rawUser, err := refreshEncoding.DecodeString(parts[0])
+	if err != nil {
+		return RefreshCookie{}, fmt.Errorf("%w: the user half is not base64url",
+			ErrRefreshTokenInvalid)
+	}
+	userID, err := uuid.FromBytes(rawUser)
+	if err != nil {
+		return RefreshCookie{}, fmt.Errorf("%w: the user half is not a uuid",
+			ErrRefreshTokenInvalid)
+	}
+
+	secret, err := refreshEncoding.DecodeString(parts[1])
+	if err != nil {
+		return RefreshCookie{}, fmt.Errorf("%w: the secret half is not base64url",
+			ErrRefreshTokenInvalid)
+	}
+	// A short secret is refused before it is hashed. SHA-256 happily digests
+	// three bytes and produces a perfectly well-formed lookup key, so without
+	// this the length check would never happen anywhere.
+	if len(secret) != RefreshSecretLength {
+		return RefreshCookie{}, fmt.Errorf("%w: the secret is %d bytes, want %d",
+			ErrRefreshTokenInvalid, len(secret), RefreshSecretLength)
+	}
+
+	return RefreshCookie{UserID: userID, Secret: secret}, nil
+}
+
+// NewRefreshSecret draws one credential's worth of randomness.
+func NewRefreshSecret() ([]byte, error) {
+	secret := make([]byte, RefreshSecretLength)
+	if _, err := rand.Read(secret); err != nil {
+		return nil, fmt.Errorf("auth: drawing a refresh secret: %w", err)
+	}
+
+	return secret, nil
+}
+
+// HashRefreshSecret is what goes in `token_hash`.
+//
+// SHA-256 of the RAW BYTES, not of the cookie text and not of the base64 form.
+// `token_hash` is UNIQUE and rotation finds the row by it, so these exact bytes
+// are a contract between the issue path and the rotate path: hash the encoded
+// form in one and the raw form in the other and you get two functions that each
+// work alone and never find each other's rows.
+//
+// Unsalted and unstretched, like `totp_recovery_codes.code_hash` and for the
+// same reason: 32 uniform random bytes have no low entropy to compensate for,
+// and the lookup must find the row from the submitted secret alone.
+func HashRefreshSecret(secret []byte) []byte {
+	sum := sha256.Sum256(secret)
+
+	return sum[:]
+}
+
+// IssueRefreshToken starts a NEW session family and returns its cookie value.
+//
+// This is the login path. Every login gets its own family, so revoking one
+// device's session does not touch another's -- if login reused a family, a
+// single stolen token would log the user out everywhere.
+func IssueRefreshToken(
+	ctx context.Context,
+	tx pgx.Tx,
+	userID uuid.UUID,
+	now time.Time,
+) (string, error) {
+	return issueInFamily(ctx, tx, userID, uuid.New(), now)
+}
+
+// RotateRefreshToken spends the presented secret and returns a fresh cookie.
+//
+// **It takes the secret, never the parsed `user_id`.** The prefix is
+// attacker-controlled input whose only job is telling the CALLER which
+// `WithAuthUser` scope to open; handing it here too would give this function a
+// second, weaker answer to a question RLS is already answering. The new token's
+// owner comes off the row the database returned inside that scope, which is the
+// one `user_id` no client chose.
+//
+// **The `error` return is infrastructure only.** A refused rotation comes back
+// in RotationOutcome.Refusal with a nil error, so the caller commits — see
+// RotationOutcome for why that is a correctness requirement and not a style
+// choice. A caller that returns this function's error from its `WithAuthUser`
+// callback is doing the right thing; a caller that returns `outcome.Refusal`
+// from there would undo the family revocation.
+func RotateRefreshToken(
+	ctx context.Context,
+	tx pgx.Tx,
+	secret []byte,
+	now time.Time,
+) (RotationOutcome, error) {
+	queries := sqlcgen.New(tx)
+
+	presented, err := queries.GetRefreshTokenByHash(ctx, HashRefreshSecret(secret))
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			// Either the secret was never issued, or the caller opened this
+			// transaction under a different user and the RLS policy hid the
+			// row. The two are indistinguishable here BY DESIGN -- and this is
+			// P2-D2's stated limitation: a mangled `user_id` prefix is not
+			// reported as reuse. Nothing was reused, the attacker got no
+			// session, and an alarm on an attack that already failed is an
+			// alarm people learn to ignore.
+			return RotationOutcome{Refusal: ErrRefreshTokenInvalid}, nil
+		}
+
+		return RotationOutcome{}, fmt.Errorf(
+			"auth: looking up the presented refresh token: %w", err)
+	}
+
+	// THE reuse check. A revoked row means this secret was already spent --
+	// either rotated by its legitimate holder, or burned when its family was
+	// revoked. Both mean a credential is in circulation that should not be, so
+	// the family dies.
+	//
+	// Nothing in the database refuses a revoked token: the row is perfectly
+	// selectable and `GetRefreshTokenByHash` carries no predicate beyond the
+	// hash. This branch is the refusal, and the statement below is the
+	// containment. Both are this package's, not the schema's.
+	if presented.RevokedAt.Valid {
+		if _, err := queries.RevokeRefreshTokenFamily(ctx, presented.FamilyID); err != nil {
+			// The revocation failing is worse than the refusal: the thief
+			// keeps a live token. It IS a real error — rolling back here is
+			// correct, because nothing was contained.
+			return RotationOutcome{}, fmt.Errorf(
+				"auth: revoking the family of a reused refresh token: %w", err)
+		}
+
+		// nil error, so the caller COMMITS the revocation just written above.
+		return RotationOutcome{Refusal: ErrRefreshTokenReused}, nil
+	}
+
+	// Expiry is refused WITHOUT touching the family. A session that simply sat
+	// unused is not evidence of theft, and burning the family for it would log
+	// the user out of every other device and fire the reuse alarm on a
+	// non-event.
+	if !presented.ExpiresAt.Valid || !presented.ExpiresAt.Time.After(now) {
+		return RotationOutcome{Refusal: ErrRefreshTokenInvalid}, nil
+	}
+
+	// The successor is written FIRST because `replaced_by` is a foreign key
+	// into this same table: the row it points at has to exist. The ordering is
+	// the schema's requirement, not a safety property of this function -- if
+	// the mark below fails, the caller's rollback undoes the insert.
+	fresh, freshID, err := issueInFamilyReturningID(ctx, tx,
+		presented.UserID, presented.FamilyID, now)
+	if err != nil {
+		return RotationOutcome{}, err
+	}
+
+	// `revoked_at IS NULL` in this statement is what makes it the write that
+	// loses a concurrent race: two simultaneous rotations of the same token
+	// both read a live row above, and only one can affect a row here.
+	marked, err := queries.MarkRefreshTokenRotated(ctx, sqlcgen.MarkRefreshTokenRotatedParams{
+		ID:         presented.ID,
+		ReplacedBy: pgtype.UUID{Bytes: freshID, Valid: true},
+	})
+	if err != nil {
+		return RotationOutcome{}, fmt.Errorf(
+			"auth: marking the presented refresh token rotated: %w", err)
+	}
+	if marked == 0 {
+		// Lost the race. Refused, but NOT called reuse: the other winner is
+		// the same legitimate user, and alarming here would fire on a
+		// double-clicked refresh.
+		//
+		// This is the ONE refusal that must NOT commit — the successor row was
+		// already inserted above and has to go away. A real error is exactly
+		// how to ask for that, so this branch deliberately uses the error
+		// return where its neighbours use Refusal.
+		return RotationOutcome{}, fmt.Errorf("%w: another rotation of this token won the race",
+			ErrRefreshTokenInvalid)
+	}
+
+	return RotationOutcome{Cookie: fresh}, nil
+}
+
+// issueInFamily writes one token into an existing or new family.
+func issueInFamily(
+	ctx context.Context,
+	tx pgx.Tx,
+	userID, familyID uuid.UUID,
+	now time.Time,
+) (string, error) {
+	cookie, _, err := issueInFamilyReturningID(ctx, tx, userID, familyID, now)
+
+	return cookie, err
+}
+
+// issueInFamilyReturningID is the shared write behind both paths. Rotation
+// needs the new row's id for `replaced_by`; login does not.
+func issueInFamilyReturningID(
+	ctx context.Context,
+	tx pgx.Tx,
+	userID, familyID uuid.UUID,
+	now time.Time,
+) (string, uuid.UUID, error) {
+	secret, err := NewRefreshSecret()
+	if err != nil {
+		return "", uuid.Nil, err
+	}
+
+	// v7: time-ordered, so a session's tokens land together in the primary
+	// key's index instead of scattering across it.
+	id, err := uuid.NewV7()
+	if err != nil {
+		return "", uuid.Nil, fmt.Errorf("auth: generating a refresh token id: %w", err)
+	}
+
+	err = sqlcgen.New(tx).InsertRefreshToken(ctx, sqlcgen.InsertRefreshTokenParams{
+		ID:        id,
+		UserID:    userID,
+		TokenHash: HashRefreshSecret(secret),
+		FamilyID:  familyID,
+		ExpiresAt: pgtype.Timestamptz{Time: now.Add(RefreshTokenLifetime), Valid: true},
+	})
+	if err != nil {
+		return "", uuid.Nil, fmt.Errorf("auth: storing a refresh token: %w", err)
+	}
+
+	// The cookie carries the row's OWN user, never a caller-supplied one.
+	return FormatRefreshCookie(userID, secret), id, nil
+}
