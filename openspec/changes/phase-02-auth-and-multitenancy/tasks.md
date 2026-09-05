@@ -451,13 +451,18 @@ handlers themselves, then the contract and its codegen.
       - verified: full container suite `exit=0` (captured, not piped) with all nine tests named in the output · `golangci-lint` 0 issues · `gofmt` clean · `govulncheck` unchanged · three mutations killed (logging the body, dropping the `ctx` check, adding a `net/http` import) · zero mutation residue
       - engram: `obs-fb93b875590f191e` — *proving an absence by behaviour only proves the path you took* (approved 2026-09-05)
 
-- [ ] **T-02-023** · RED — `middleware_auth.go` tests (the F02 success criterion)
+- [x] **T-02-023** · RED — `middleware_auth.go` tests (the F02 success criterion)
       - spec: authorization-rbac / *Tenant scope derives only from the verified token claim* (all three scenarios)
       - build: `apps/api/internal/httpapi/middleware_auth_test.go`, `httptest`
       - tests: a valid token with claim `shelter_id = A` on a path scoped to A proceeds, `WithTenant` invoked with A · **a forged `shelter_id` in the path (B, while the claim says A) is refused with 403 before `WithTenant` or any handler logic runs** — asserted by a spy that fails the test if `WithTenant` is ever called · a missing or invalid claim is refused and `WithTenant` is never invoked
       - dod: fails to compile · this is the phase's central security boundary — every scenario in the spec requirement gets its own test, no combined case
-      - est: 150
+      - est: 150 · **actual 445 test lines, 0 implementation** (3×, see the budget warning below)
       - pilot: blacklisted (§7.2)
+      - **RED verified by build failure**, not by a failing assertion: `ClaimsFromContext`, `TxFromContext`, `ShelterIDPathParam`, `RequireAuth`, `RequireTenant` all undefined. Ten tests.
+      - **The API the RED pins**, for `T-02-024` to satisfy: `RequireAuth(*auth.TokenIssuer, func() time.Time) func(http.Handler) http.Handler` · `RequireTenant(TenantScoper) func(http.Handler) http.Handler` · `TenantScoper = func(ctx, uuid.UUID, func(context.Context, pgx.Tx) error) error` (a closure over `db.WithTenant` + the tenant pool — a seam that exists so the spy can assert *"never invoked"* exactly) · `ClaimsFromContext` / `TxFromContext` · `ShelterIDPathParam`. **Order of checks is part of the contract:** verify (401) → require a non-`nil`, non-zero `shelter_id` claim (403) → compare path/query/header (403) → *then* `WithTenant`.
+      - **Two tests exist because the obvious ones cannot tell the two sources apart.** (1) Scope on a route with **no** shelter segment in the path: on a matching request a middleware reading the claim and one parsing the path produce the same uuid, so only a route without the segment distinguishes them — an implementation taking scope from the path passes every other test in the file. (2) The **zero uuid** is refused: it is non-`nil` in Go, so a presence check written as `claims.ShelterID != nil` over a decode that defaulted the field passes it through to `WithTenant`, which refuses it one layer too late.
+      - both spies fail the test **on contact**, so *"never invoked"* is the default and being reached has to be opted into. Every refusal is asserted twice — the status the client sees, and that neither the scoper nor the handler ran. Tokens are real and really signed; a stubbed verifier would keep the file green over a middleware that never verifies anything.
+      - **⚠️ budget warning for `PR-02-12`:** `est:` 290, projected 684. `T-02-023` alone is **445** with `T-02-024` (`est: 140`) unwritten. The total limit (800) is at real risk and the implementation limit (250) depends entirely on how `T-02-024` lands. Flagged now, before there is no alternative left.
       - engram: —
 
 - [ ] **T-02-024** · GREEN — `middleware_auth.go`
