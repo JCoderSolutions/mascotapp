@@ -435,14 +435,19 @@ handlers themselves, then the contract and its codegen.
       - **This is NOT a delivery receipt.** Judgment Day issues no delivery authority and satisfies no commit, push, PR or release gate. Push and PR remain the user's gate, as everywhere else in this phase.
       - engram: —
 
-- [ ] **T-02-022** · Email port + `LogSender` stub — sequenced here, see the Ordering note above
+- [x] **T-02-022** · Email port + `LogSender` stub — sequenced here, see the Ordering note above
       - spec: email-delivery / *Email is sent through a port with no dependency on a concrete provider* (both scenarios)
       - RED first: `Sender` interface tests — the stub records the intended send (recipient + purpose) and makes **no** outbound network call · a second adapter (test double) substitutes with no change to the calling code
       - build: `apps/api/internal/email/` — `Sender` interface (`Send(ctx, to, msg) error`), `LogSender` adapter
       - tests: both scenarios green
       - dod: RED→GREEN · lint clean · coverage held
-      - est: 70
+      - est: 70 · **actual 158 impl / 469 total** (implementation fits the 250 budget; against this task's own `est: 70` it is 2.3×, and the overshoot is comment density, not surface — the package exports one interface, one struct, one constructor, one constant and two errors)
       - pilot: eligible
+      - **"no outbound network call" is asserted twice, on purpose.** Swapping `http.DefaultTransport` proves only that *this* call did not leave through *that* client — a hand-built client or a shell-out to `sendmail` sails past it. A second test reads the package's own imports and fails on `net`, `net/http`, `net/smtp` or `os/exec`, which proves the package has no way out at all. It counts the files it parsed and fails under two, so an empty directory cannot pass it quietly.
+      - **`LogSender` records the recipient, which is a deliberate exception to §5.4** (logs never carry PII). A stub that records "somebody was mailed" makes the flow unobservable and makes `T-02-030`'s *"only the existing account's address receives an email"* unassertable. The exception is bounded by `LogSender` never being the production adapter — named in its doc comment, because nothing in the type system enforces it. It never records `Message.Body`: a magic-link body is a live single-use credential.
+      - **`Purpose` ships with one member,** `PurposeMagicLink` — the only mail Phase 02 sends. Constants get added when a task actually sends that kind.
+      - **Branching note.** `PR-02-16` merges at position 16 but its first half lands now, so `feat/pr-02-16-email` branches off `feat/pr-02-11-session` and `PR-02-12`…`PR-02-15` branch off it as **siblings**, not on top of this one. The email package touches nothing else, so nothing in `PR-02-12`…`PR-02-15` needs it. `T-02-030` (the magic-link handler, the second half of `PR-02-16`) rebases onto `PR-02-15` when it is written.
+      - verified: full container suite `exit=0` (captured, not piped) with all nine tests named in the output · `golangci-lint` 0 issues · `gofmt` clean · `govulncheck` unchanged · three mutations killed (logging the body, dropping the `ctx` check, adding a `net/http` import) · zero mutation residue
       - engram: —
 
 - [ ] **T-02-023** · RED — `middleware_auth.go` tests (the F02 success criterion)
@@ -698,7 +703,7 @@ the pure-Go rows behave differently from the database rows.
 | `PR-02-12` · `PR-02-13` · `PR-02-15` | 290 | 684 | no |
 | `PR-02-21` | 230 | 543 | no |
 | `PR-02-09` | 220 | 519 | **measured 935 — OVER both budgets, `size:exception` accepted 2026-09-04** |
-| `PR-02-16` | 190 | 448 | no |
+| `PR-02-16` | 190 | 448 | **half measured** — `T-02-022` alone is 158 impl / 469 total, already past the projected 448 with `T-02-030` still to come |
 | `PR-02-10` | 190 | 448 | **measured 721 — under BOTH budgets (impl 197/250), no exception needed** |
 | `PR-02-17` | 160 | 378 | no |
 | `PR-02-23` | 150 | 354 | no |
@@ -1002,7 +1007,7 @@ labels move, no task's content or dependency changed.
 | `PR-02-13` | Cross-cutting HTTP security config — `cors.go` + `csrf.go` + `config.go` | T-02-025, T-02-026 | 290 | — (independent; placed here for review sequencing) |
 | `PR-02-14` | Registration handler | T-02-027 | 140 | `PR-02-02` (`WithAuthUser`), `PR-02-07` (`password.go`) |
 | `PR-02-15` | Login handler — core + TOTP/recovery paths (one handler, two tasks) | T-02-028, T-02-029 | 290 | `PR-02-07`, `PR-02-08`, `PR-02-09`, `PR-02-10`, `PR-02-11` |
-| `PR-02-16` | Email port + stub, and the magic-link handler that consumes it | T-02-022, T-02-030 | 190 | `PR-02-09` |
+| `PR-02-16` | Email port + stub, and the magic-link handler that consumes it | T-02-022 ✅, T-02-030 | ~~190~~ **158 impl / 469 total for `T-02-022` alone**; `T-02-030` still to come | `PR-02-09` · branch `feat/pr-02-16-email` off `feat/pr-02-11-session`; `PR-02-12`…`PR-02-15` branch as **siblings**, not on top of it — see the `T-02-022` branching note |
 | `PR-02-17` | Refresh + logout handler | T-02-031 | 160 | `PR-02-11`, `PR-02-13` (CSRF check) |
 | `PR-02-18` | TOTP enrol/verify handler | T-02-032 | 140 | `PR-02-08`, `PR-02-10` |
 | `PR-02-19` | Session/shelter-exchange handler | T-02-033 | 100 | `PR-02-09` |
