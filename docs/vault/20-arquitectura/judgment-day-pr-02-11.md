@@ -210,21 +210,30 @@ mientras esperábamos produce cero filas y la rotación se rechaza. Lo único qu
 **clasificación** del rechazo ("perdí la carrera" en vez de "reutilización"), y esa alarma ya
 la levantó quien detectó el reuse. Ambos jueces lo confirmaron por separado en la ronda 2.
 
-> ### ⚠️ Condición de reapertura — hallada por el orquestador, no por los jueces
+> ### ⚠️ Condición de reapertura — WARNING · planteada por el orquestador, **corroborada por un juez**
 >
 > **Esa seguridad depende de que `revoked_at` sea monótono, y eso lo garantiza la convención
-> del código, NO el esquema.** Las dos únicas escrituras lo ponen a `now()`; ninguna a `NULL`.
-> Pero el grant de `00013_auth_role.sql:56` es `UPDATE` a nivel **tabla**, no por columna: nada
-> en la base impide que alguien escriba mañana una query que ponga `revoked_at = NULL`.
+> del código, NO el esquema.** El grant de `00013_auth_role.sql:56` es `UPDATE` a nivel
+> **tabla**, no por columna, y no hay `CHECK` ni trigger que impida escribir `revoked_at =
+> NULL`.
 >
-> **Si `revoked_at` deja de ser monótono, quitar el re-read pasa de correcto a inseguro.**
-> El arreglo, si ese día llega, es un grant por columna — el mismo patrón que `00015` ya usa.
+> El juez B la verificó por su cuenta y la elevó a WARNING formal, con un dato que el
+> orquestador no tenía: grepeando todo `apps/api` hay **exactamente tres** sentencias
+> `UPDATE refresh_tokens` en producción, las tres en el camino de `RotateRefreshToken`, y
+> **ninguna toca `expires_at`, `family_id` ni `user_id`**. Eso cierra el argumento: el único
+> campo que puede quedar viejo entre la lectura pre-lock y el lock es `revoked_at`. (Hay un
+> cuarto `UPDATE` en `rlstest/auth_door_test.go`, pero es armado de test, no camino de
+> producción.)
+>
+> **No reproduce contra el código actual** — es una dependencia latente, no un bug vivo. Pero
+> si `revoked_at` deja de ser monótono, quitar el re-read pasa de correcto a inseguro. El
+> arreglo, si ese día llega, es un grant por columna: el patrón que `00015` ya usa.
 
 ## Hallazgos de la ronda 2
 
 | # | Severidad | Estado |
 |---|---|---|
-| Comentario generado desactualizado en `sqlcgen` (describía el re-read borrado) | WARNING, **ambos jueces** | **CORREGIDO** — `make generate` re-corrido; el diff resultó ser solo comentarios |
+| Comentario generado desactualizado en `sqlcgen` (describía el re-read borrado) | WARNING, **ambos jueces** | **CORREGIDO y re-verificado por el juez B**, que releyó los archivos generados en vez de aceptar la palabra del orquestador: el texto del re-read no está, coincide literalmente con la fuente `auth.sql:36-41`, y el SQL generado quedó **idéntico**. Comments-only confirmado desde afuera |
 | `CREATE UNIQUE INDEX` sin `CONCURRENTLY` bloquea escritores durante la construcción | SUGGESTION, un juez | **Follow-up, no bloqueante.** No hay producción todavía y la tabla está vacía. Requeriría `-- +goose NO TRANSACTION`, porque `CONCURRENTLY` no corre dentro de una transacción |
 
 El WARNING lo introdujo la propia corrección y era **mío**: corregí el comentario en
