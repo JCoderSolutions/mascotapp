@@ -177,7 +177,85 @@ Cerrar `JD-1` necesita **serializar dos transacciones distintas que tocan la mis
 El actor de corrección se detuvo en vez de sustituir el diseño aprobado, que es exactamente lo
 que se le pidió. Las opciones quedan para la decisión de la ronda 2.
 
-## Estado
+---
 
-**Ronda 1 de corrección agotada. Queda una sola ronda** antes de que el veredicto sea
-`ESCALATED`. Pendiente de la decisión del usuario sobre el enfoque.
+## Ronda 2 de corrección — **cierra JD-1**
+
+**Aprobado por el usuario:** lock consultivo por familia.
+
+`pg_advisory_xact_lock(hashtext(family_id::text)::bigint)`, tomado después de leer la fila
+presentada (antes no se conoce el `family_id`) y **antes de decidir nada**. Mientras se
+sostiene, ninguna otra transacción puede empezar a decidir sobre esa familia. `xact` significa
+que se libera en COMMIT o ROLLBACK, así que ningún camino puede filtrarlo.
+
+### Evidencia
+
+| Escenario | Resultado |
+|---|---|
+| Con el lock, 5 corridas × 25 trials | **125 trials verdes** |
+| Mutante: lock quitado, 3 corridas | **las 3 fallan** |
+| Suite completa | verde, `exit=0` |
+| `golangci-lint` sobre `auth` y `db` | 0 issues |
+| `govulncheck` | limpio |
+
+### El re-read que escribí y borré
+
+La corrección original incluía una **re-lectura** de la fila después del lock. La mutación la
+mató: quitarla no cambia nada observable, así que **no cargaba peso y se fue**.
+
+La razón por la que es seguro actuar sobre la lectura pre-lock: el único campo que otra
+transacción puede cambiar es `revoked_at`, y un `NULL` que quedó viejo lo atrapa una sentencia
+después — `RevokeRefreshTokenIfLive` lleva `revoked_at IS NULL`, así que una familia revocada
+mientras esperábamos produce cero filas y la rotación se rechaza. Lo único que se pierde es la
+**clasificación** del rechazo ("perdí la carrera" en vez de "reutilización"), y esa alarma ya
+la levantó quien detectó el reuse. Ambos jueces lo confirmaron por separado en la ronda 2.
+
+> ### ⚠️ Condición de reapertura — hallada por el orquestador, no por los jueces
+>
+> **Esa seguridad depende de que `revoked_at` sea monótono, y eso lo garantiza la convención
+> del código, NO el esquema.** Las dos únicas escrituras lo ponen a `now()`; ninguna a `NULL`.
+> Pero el grant de `00013_auth_role.sql:56` es `UPDATE` a nivel **tabla**, no por columna: nada
+> en la base impide que alguien escriba mañana una query que ponga `revoked_at = NULL`.
+>
+> **Si `revoked_at` deja de ser monótono, quitar el re-read pasa de correcto a inseguro.**
+> El arreglo, si ese día llega, es un grant por columna — el mismo patrón que `00015` ya usa.
+
+## Hallazgos de la ronda 2
+
+| # | Severidad | Estado |
+|---|---|---|
+| Comentario generado desactualizado en `sqlcgen` (describía el re-read borrado) | WARNING, **ambos jueces** | **CORREGIDO** — `make generate` re-corrido; el diff resultó ser solo comentarios |
+| `CREATE UNIQUE INDEX` sin `CONCURRENTLY` bloquea escritores durante la construcción | SUGGESTION, un juez | **Follow-up, no bloqueante.** No hay producción todavía y la tabla está vacía. Requeriría `-- +goose NO TRANSACTION`, porque `CONCURRENTLY` no corre dentro de una transacción |
+
+El WARNING lo introdujo la propia corrección y era **mío**: corregí el comentario en
+`auth.sql` y no volví a generar.
+
+---
+
+# JUDGMENT: APPROVED ✅
+
+| | |
+|---|---|
+| Target | `f507692` → corregido en `64bcf0b` |
+| Rondas de corrección usadas | **2 de 2** |
+| Severos confirmados | 1 (`JD-1`) — **cerrado y con test de regresión** |
+| Severos abiertos | **0** |
+| Contradicciones | 0 |
+| WARNING / SUGGESTION abiertos | 1 follow-up (`CONCURRENTLY`) |
+
+**`PR-02-11` queda habilitado para merge** en lo que respecta a esta revisión.
+
+> **Esto no es un recibo de entrega.** Judgment Day no emite autoridad de entrega y no
+> satisface ninguna puerta de commit, push, PR o release. El push y la PR los sigue gateando el
+> usuario, como todo en esta fase.
+
+## Lo que esta revisión compró, medido
+
+`JD-1` era un defecto de seguridad **real** en la unidad más crítica de la fase: un token vivo
+sobrevivía permanentemente a la revocación de su propia familia. Lo escribió el orquestador y
+no lo vio; lo encontraron dos jueces ciegos razonando por separado sobre semántica MVCC, y un
+test lo convirtió de inferencia en defecto reproducible.
+
+**La ronda 1 falló por un error de análisis del orquestador** — recomendó un índice único
+parcial afirmando que cerraba `JD-1`, cuando un índice parcial es un invariante *dentro* de una
+transacción y `JD-1` es una carrera *entre* dos. Eso costó una de las dos rondas disponibles.

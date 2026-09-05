@@ -183,8 +183,8 @@ Columna **PR**: en qué PR de la cadena entra. Columna **est**: líneas autorada
 | `[x]` `T-02-018` | GREEN — `recovery.go` | PR 10 | ~~90~~ **197** (PR 10: 721 total, entra en los dos presupuestos) |
 | `[x]` `T-02-019` | RED — `session.go` (refresh rotation + reuse detection) tests | PR 11 | ~~170~~ **536** |
 | `[x]` `T-02-020` | GREEN — `session.go` | PR 11 | ~~150~~ **360** (PR 11: 381 impl / 930 total, `size:exception` aceptada 2026-09-04) |
-| `[~]` `T-02-021` | 🔴 **Judgment Day** — adversarial review before the refresh-token rotation logic merges | gate PR 11 | 0 |
-| `[ ]` `T-02-022` | Email port + `LogSender` stub — sequenced here, see the Ordering note above | PR 16 | 70 |
+| `[x]` `T-02-021` | 🔴 **Judgment Day** — adversarial review before the refresh-token rotation logic merges | gate PR 11 | 0 |
+| `[~]` `T-02-022` | Email port + `LogSender` stub — sequenced here, see the Ordering note above | PR 16 | 70 |
 | `[ ]` `T-02-023` | RED — `middleware_auth.go` tests (the F02 success criterion) | PR 12 | 150 |
 | `[ ]` `T-02-024` | GREEN — `middleware_auth.go` | PR 12 | 140 |
 | `[ ]` `T-02-025` | `cors.go` + `csrf.go` — allowlist with credentials, `Origin`/`Sec-Fetch-Site` verification | PR 13 | 160 |

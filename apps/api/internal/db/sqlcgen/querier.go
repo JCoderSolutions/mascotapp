@@ -141,12 +141,12 @@ type Querier interface {
 	// a second time. Judgment Day (T-02-021) found it and a concurrency test
 	// reproduces it.
 	//
-	// Taken after the presented row is read (the family_id is not known before
-	// that) and followed by a RE-READ, which is the half that actually closes the
-	// hole: once this lock is held, the re-read sees the most recent committed
-	// state, so a revocation that already happened is visible and is refused as
-	// reuse, and one that has not started yet cannot begin until this transaction
-	// ends.
+	// Taken after the presented row is read, because the family_id is not known
+	// before that. Once it is held, no other transaction can begin deciding this
+	// family until this one ends, so a concurrent revocation either already
+	// committed (and RevokeRefreshTokenIfLive below then matches zero rows and the
+	// rotation is refused) or cannot start until the successor row is committed and
+	// therefore visible to it.
 	//
 	// `xact` means it releases at COMMIT or ROLLBACK, so no path can leak it.
 	//
