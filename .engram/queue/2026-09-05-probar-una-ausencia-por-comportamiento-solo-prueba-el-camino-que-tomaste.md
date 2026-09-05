@@ -3,7 +3,9 @@ type: convention
 score: 4
 topic_key: mascotapp/convention/structural-vs-behavioural-absence-tests
 task: T-02-022
-status: pendiente-de-aprobacion
+status: aprobado
+observation_id: obs-fb93b875590f191e
+aprobado: 2026-09-05
 relacionado: obs-9e00e3a6413dc7d2
 rationale: "Media docena de requisitos de este proyecto son ausencias: el stub no llama a la red, los logs no llevan PII, el rol público no lee borradores, las variantes de imagen no conservan EXIF. La forma refleja de testear una ausencia es ejercitar el camino y verificar que no pasó nada — y esa forma solo cubre el camino que se te ocurrió. Dentro de tres meses, cuando alguien agregue el adaptador de Resend o el pipeline de imágenes, la pregunta '¿esto lo prueba, o solo lo observó?' decide si el test sirve. La distinción es barata de aplicar y cara de descubrir tarde."
 ---

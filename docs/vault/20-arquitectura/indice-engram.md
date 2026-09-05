@@ -13,8 +13,8 @@ versionado. El `observation_id` es la misma nota dentro de Engram; sirve para
 trazabilidad, no es requisito para leerla.
 
 - Candidatos totales: **93**
-- Aprobados y guardados en Engram: **89**
-- Pendientes de aprobación explícita del usuario: **2**
+- Aprobados y guardados en Engram: **90**
+- Pendientes de aprobación explícita del usuario: **1**
 - Descartados por el pase de curaduría: **2**
 
 ## Pendientes de aprobación
@@ -24,7 +24,6 @@ antes de `mem_save` (§6.6 del plan maestro).
 
 | Tarea | Tipo | Score | Archivo | Qué dice |
 |---|---|---|---|---|
-| `T-02-022` | convention | 4 | [2026-09-05-probar-una-ausencia-por-comportamiento-solo-prueba-el-camino-que-tomaste.md](../../../.engram/queue/2026-09-05-probar-una-ausencia-por-comportamiento-solo-prueba-el-camino-que-tomaste.md) | (T-02-022, MascotApp Fase 02. Relacionado con obs-9e00e3a6413dc7d2.) |
 | `T-02-021` | architecture | 5 | [2026-09-05-un-indice-unico-parcial-no-cierra-una-carrera-entre-transacciones.md](../../../.engram/queue/2026-09-05-un-indice-unico-parcial-no-cierra-una-carrera-entre-transacciones.md) | (T-02-021, Judgment Day de MascotApp Fase 02. Relacionado con obs-a88eecda20bb1bc4.) |
 
 ## Descartados — NO guardar
@@ -54,7 +53,7 @@ exactamente lo que la columna de abajo explica que está mal.
 | `T-02-006` | `…/isolation-probe-must-use-a-writable-column` | 5 | [2026-09-03-ab-probe-must-touch-a-writable-column.md](../../../.engram/queue/2026-09-03-ab-probe-must-touch-a-writable-column.md) | `obs-d88f7a4c0b2d9ee5` | El runner A/B de este proyecto prueba que el tenant B no alcanza la fila del tenant A con un no-op: |
 | `T-02-020` | `…/refusals-with-side-effects` | 5 | [2026-09-04-un-rechazo-que-escribe-no-puede-viajar-como-error.md](../../../.engram/queue/2026-09-04-un-rechazo-que-escribe-no-puede-viajar-como-error.md) | `obs-a88eecda20bb1bc4` | (T-02-020, MascotApp Fase 02. Relacionado con obs-9e00e3a6413dc7d2.) |
 
-### `mascotapp/convention/*` — 45
+### `mascotapp/convention/*` — 46
 
 | Tarea | `topic_key` | Score | Archivo | `observation_id` | Qué dice |
 |---|---|---|---|---|---|
@@ -99,6 +98,7 @@ exactamente lo que la columna de abajo explica que está mal.
 | `T-02-015` | `…/the-layer-that-answers-first` | 4 | [2026-09-04-una-defensa-en-profundidad-nueva-desarma-el-test-de-abajo.md](../../../.engram/queue/2026-09-04-una-defensa-en-profundidad-nueva-desarma-el-test-de-abajo.md) | `obs-9e00e3a6413dc7d2` | Cuarta instancia de obs-9e00e3a6413dc7d2 (*la capa que contesta primero vacía el test de abajo*), y la primera fuera de la base d… |
 | `T-02-016` | `…/every-rls-migration-extends-two-pinned-inventories` | 3 | [2026-09-02-totp-recovery-codes-third-pinned-inventory.md](../../../.engram/queue/2026-09-02-totp-recovery-codes-third-pinned-inventory.md) | `obs-a46dedb3f04d9188` | rlstest/catalog.go's meta-test (TestCatalog_EveryRelationIsClassifiedAndProtected) only asserts that a table has RLS, is FORCEd… |
 | `T-02-018` | `…/the-layer-that-answers-first` | 4 | [2026-09-04-un-rollback-contesta-antes-que-el-orden-de-tu-guarda.md](../../../.engram/queue/2026-09-04-un-rollback-contesta-antes-que-el-orden-de-tu-guarda.md) | `obs-9e00e3a6413dc7d2` | Quinta instancia de obs-9e00e3a6413dc7d2 (*la capa que contesta primero vacía el test de abajo*). (T-02-018, MascotApp Fase 02.) |
+| `T-02-022` | `…/structural-vs-behavioural-absence-tests` | 4 | [2026-09-05-probar-una-ausencia-por-comportamiento-solo-prueba-el-camino-que-tomaste.md](../../../.engram/queue/2026-09-05-probar-una-ausencia-por-comportamiento-solo-prueba-el-camino-que-tomaste.md) | `obs-fb93b875590f191e` | (T-02-022, MascotApp Fase 02. Relacionado con obs-9e00e3a6413dc7d2.) |
 | `fase-02 planning` | `…/recompute-announced-numbers` | 4 | [2026-09-02-un-numero-anunciado-se-recomputa.md](../../../.engram/queue/2026-09-02-un-numero-anunciado-se-recomputa.md) | `obs-99a194c5559106b8` | Un agente cerro la cadena de entrega de la Fase 02 con 23 PRs, 4.875 lineas, ninguno sobre 400. Los tres numeros eran del mismo r… |
 | `fase-02 planning` | `…/spec-must-carry-the-property` | 5 | [2026-09-02-un-requisito-que-el-verificador-no-puede-leer.md](../../../.engram/queue/2026-09-02-un-requisito-que-el-verificador-no-puede-leer.md) | `obs-51c9db2915bb5533` | El diseno de la Fase 02 prohibe que un tenant escriba shelters.storage_bytes_used — el contador contra el que se chequea la cuota… |
 | `handoff multi-agente` | `…/commit-messages` | 3 | [2026-09-02-convencion-de-commits.md](../../../.engram/queue/2026-09-02-convencion-de-commits.md) | `obs-62d33d3023d8afae` | Los commits de MascotApp siguen Conventional Commits, y la convencion esta escrita en dos lugares ejecutables, no en la memoria d… |

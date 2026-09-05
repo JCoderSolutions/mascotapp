@@ -448,7 +448,7 @@ handlers themselves, then the contract and its codegen.
       - **`Purpose` ships with one member,** `PurposeMagicLink` — the only mail Phase 02 sends. Constants get added when a task actually sends that kind.
       - **Branching note.** `PR-02-16` merges at position 16 but its first half lands now, so `feat/pr-02-16-email` branches off `feat/pr-02-11-session` and `PR-02-12`…`PR-02-15` branch off it as **siblings**, not on top of this one. The email package touches nothing else, so nothing in `PR-02-12`…`PR-02-15` needs it. `T-02-030` (the magic-link handler, the second half of `PR-02-16`) rebases onto `PR-02-15` when it is written.
       - verified: full container suite `exit=0` (captured, not piped) with all nine tests named in the output · `golangci-lint` 0 issues · `gofmt` clean · `govulncheck` unchanged · three mutations killed (logging the body, dropping the `ctx` check, adding a `net/http` import) · zero mutation residue
-      - engram: —
+      - engram: `obs-fb93b875590f191e` — *proving an absence by behaviour only proves the path you took* (approved 2026-09-05)
 
 - [ ] **T-02-023** · RED — `middleware_auth.go` tests (the F02 success criterion)
       - spec: authorization-rbac / *Tenant scope derives only from the verified token claim* (all three scenarios)
