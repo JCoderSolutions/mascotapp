@@ -131,14 +131,29 @@ type Querier interface {
 	// Global reference data: readable by both roles, writable by neither.
 	ListSpecies(ctx context.Context) ([]Species, error)
 	ListStatusHistory(ctx context.Context, petID uuid.UUID) ([]PetStatusHistory, error)
-	// The rotation half of the write: the presented token is revoked AND
-	// pointed at its successor, in one statement.
+	// Serialises every transaction that touches one session family.
 	//
-	// `revoked_at IS NULL` is a guard, not decoration: it makes this the write
-	// that loses a concurrent race. Two simultaneous rotations of the same
-	// token both read a live row, and only one can affect a row here -- the
-	// other gets zero and is refused, instead of both minting a session.
-	MarkRefreshTokenRotated(ctx context.Context, arg MarkRefreshTokenRotatedParams) (int64, error)
+	// This exists because READ COMMITTED alone cannot give the family-revocation
+	// guarantee. `RevokeRefreshTokenFamily` below fixes its candidate rows at the
+	// snapshot its own statement takes; a successor row that a CONCURRENT rotation
+	// inserts afterwards is never in that set and survives the revocation of its
+	// own family -- permanently, because nothing revokes an already-revoked family
+	// a second time. Judgment Day (T-02-021) found it and a concurrency test
+	// reproduces it.
+	//
+	// Taken after the presented row is read (the family_id is not known before
+	// that) and followed by a RE-READ, which is the half that actually closes the
+	// hole: once this lock is held, the re-read sees the most recent committed
+	// state, so a revocation that already happened is visible and is refused as
+	// reuse, and one that has not started yet cannot begin until this transaction
+	// ends.
+	//
+	// `xact` means it releases at COMMIT or ROLLBACK, so no path can leak it.
+	//
+	// A hash collision between two different family_ids costs concurrency, never
+	// correctness: the two families would serialise against each other for no
+	// reason, and both still behave correctly.
+	LockRefreshTokenFamily(ctx context.Context, dollar_1 string) error
 	PublishPet(ctx context.Context, id uuid.UUID) (int64, error)
 	// Publishing APPENDS. There is deliberately no query that updates a published
 	// version: 00007's trigger refuses it, and a query that tried would be code
@@ -157,6 +172,20 @@ type Querier interface {
 	// token sharing family_id, not just the one presented. execrows so a caller
 	// can tell "revoked N tokens" apart from "the family was already revoked".
 	RevokeRefreshTokenFamily(ctx context.Context, familyID uuid.UUID) (int64, error)
+	// The FIRST half of a rotation's write, and now the only one that revokes
+	// anything (00017 split what used to be one statement, MarkRefreshTokenRotated,
+	// into this and SetRefreshTokenReplacedBy below).
+	//
+	// This runs BEFORE the successor is inserted, not after: 00017 adds a unique
+	// index enforcing at most one live row per family_id, and the old
+	// insert-then-mark order would transiently hold the presented token AND its
+	// successor live at once, which that index now refuses.
+	//
+	// `revoked_at IS NULL` is a guard, not decoration: it makes this the write
+	// that loses a concurrent race. Two simultaneous rotations of the same
+	// token both read a live row, and only one can affect a row here -- the
+	// other gets zero and is refused, instead of both minting a session.
+	RevokeRefreshTokenIfLive(ctx context.Context, id uuid.UUID) (int64, error)
 	// Containment, which is what the GIN index on `answers` serves. `answers::text
 	// LIKE` would read the same and use no index at all (§4.6).
 	SearchSubmissions(ctx context.Context, answers []byte) ([]FormSubmission, error)
@@ -164,6 +193,11 @@ type Querier interface {
 	// This query moves the status it is given; the caller is what decides whether
 	// the move was allowed.
 	SetApplicationStatus(ctx context.Context, arg SetApplicationStatusParams) (int64, error)
+	// The SECOND half: the back-pointer can only be set once the successor row
+	// exists, because replaced_by is a foreign key into this same table. Split
+	// off from the revoke above so the revoke can run first -- see the note
+	// there.
+	SetRefreshTokenReplacedBy(ctx context.Context, arg SetRefreshTokenReplacedByParams) error
 	SignDocument(ctx context.Context, arg SignDocumentParams) (int64, error)
 	// Soft, because `pet_media` and `documents` reference it with RESTRICT and a
 	// hard delete would be refused by whichever one points at it.

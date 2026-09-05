@@ -22,17 +22,57 @@ SELECT * FROM refresh_tokens WHERE token_hash = $1;
 INSERT INTO refresh_tokens (id, user_id, token_hash, family_id, expires_at)
 VALUES ($1, $2, $3, $4, $5);
 
--- name: MarkRefreshTokenRotated :execrows
--- The rotation half of the write: the presented token is revoked AND
--- pointed at its successor, in one statement.
+-- name: LockRefreshTokenFamily :exec
+-- Serialises every transaction that touches one session family.
+--
+-- This exists because READ COMMITTED alone cannot give the family-revocation
+-- guarantee. `RevokeRefreshTokenFamily` below fixes its candidate rows at the
+-- snapshot its own statement takes; a successor row that a CONCURRENT rotation
+-- inserts afterwards is never in that set and survives the revocation of its
+-- own family -- permanently, because nothing revokes an already-revoked family
+-- a second time. Judgment Day (T-02-021) found it and a concurrency test
+-- reproduces it.
+--
+-- Taken after the presented row is read, because the family_id is not known
+-- before that. Once it is held, no other transaction can begin deciding this
+-- family until this one ends, so a concurrent revocation either already
+-- committed (and RevokeRefreshTokenIfLive below then matches zero rows and the
+-- rotation is refused) or cannot start until the successor row is committed and
+-- therefore visible to it.
+--
+-- `xact` means it releases at COMMIT or ROLLBACK, so no path can leak it.
+--
+-- A hash collision between two different family_ids costs concurrency, never
+-- correctness: the two families would serialise against each other for no
+-- reason, and both still behave correctly.
+SELECT pg_advisory_xact_lock(hashtext($1::text)::bigint);
+
+-- name: RevokeRefreshTokenIfLive :execrows
+-- The FIRST half of a rotation's write, and now the only one that revokes
+-- anything (00017 split what used to be one statement, MarkRefreshTokenRotated,
+-- into this and SetRefreshTokenReplacedBy below).
+--
+-- This runs BEFORE the successor is inserted, not after: 00017 adds a unique
+-- index enforcing at most one live row per family_id, and the old
+-- insert-then-mark order would transiently hold the presented token AND its
+-- successor live at once, which that index now refuses.
 --
 -- `revoked_at IS NULL` is a guard, not decoration: it makes this the write
 -- that loses a concurrent race. Two simultaneous rotations of the same
 -- token both read a live row, and only one can affect a row here -- the
 -- other gets zero and is refused, instead of both minting a session.
 UPDATE refresh_tokens
-SET revoked_at = now(), replaced_by = $2
+SET revoked_at = now()
 WHERE id = $1 AND revoked_at IS NULL;
+
+-- name: SetRefreshTokenReplacedBy :exec
+-- The SECOND half: the back-pointer can only be set once the successor row
+-- exists, because replaced_by is a foreign key into this same table. Split
+-- off from the revoke above so the revoke can run first -- see the note
+-- there.
+UPDATE refresh_tokens
+SET replaced_by = $2
+WHERE id = $1;
 
 -- name: RevokeRefreshTokenFamily :execrows
 -- Reuse detection revokes the whole family in one statement (§5.2): every

@@ -245,6 +245,34 @@ func RotateRefreshToken(
 			"auth: looking up the presented refresh token: %w", err)
 	}
 
+	// Everything above this line was a read that any number of transactions
+	// could be doing at once. Everything below decides the fate of a family, so
+	// from here the family is serialised.
+	//
+	// Judgment Day (T-02-021) found why this is not optional. Without it,
+	// `RevokeRefreshTokenFamily` fixes its candidate rows at its own statement's
+	// snapshot, and a successor inserted by a concurrent rotation afterwards
+	// SURVIVES the revocation of its own family -- permanently, because nothing
+	// revokes an already-revoked family twice. A partial unique index does not
+	// help: that is an invariant WITHIN one transaction, and this is a race
+	// BETWEEN two.
+	if err := queries.LockRefreshTokenFamily(ctx, presented.FamilyID.String()); err != nil {
+		return RotationOutcome{}, fmt.Errorf("auth: locking the token family: %w", err)
+	}
+
+	// NO re-read after the lock. An earlier version of this had one and mutation
+	// testing killed it: removing it changed nothing observable, so it was not
+	// load-bearing and it is gone.
+	//
+	// The reason it is safe to act on the pre-lock read: the only field that a
+	// concurrent transaction can change is `revoked_at`, and a stale NULL there
+	// is caught one statement later -- `RevokeRefreshTokenIfLive` carries
+	// `revoked_at IS NULL`, so a family revoked while this transaction waited
+	// yields zero rows and the rotation is refused. What is lost is only the
+	// CLASSIFICATION: that refusal reads as "lost the race" rather than as
+	// reuse. Benign, because the transaction that detected the reuse already
+	// raised that alarm.
+
 	// THE reuse check. A revoked row means this secret was already spent --
 	// either rotated by its legitimate holder, or burned when its family was
 	// revoked. Both mean a credential is in circulation that should not be, so
@@ -275,38 +303,49 @@ func RotateRefreshToken(
 		return RotationOutcome{Refusal: ErrRefreshTokenInvalid}, nil
 	}
 
-	// The successor is written FIRST because `replaced_by` is a foreign key
-	// into this same table: the row it points at has to exist. The ordering is
-	// the schema's requirement, not a safety property of this function -- if
-	// the mark below fails, the caller's rollback undoes the insert.
+	// The presented token is revoked FIRST, before its successor is inserted
+	// (00017): a unique index now enforces at most one live row per
+	// family_id, and inserting the successor while the presented token was
+	// still live would transiently hold two live rows in this family and be
+	// rejected by that index.
+	//
+	// `revoked_at IS NULL` in this statement is what makes it the write that
+	// loses a concurrent race: two simultaneous rotations of the same token
+	// both read a live row above, and only one can affect a row here.
+	revoked, err := queries.RevokeRefreshTokenIfLive(ctx, presented.ID)
+	if err != nil {
+		return RotationOutcome{}, fmt.Errorf(
+			"auth: revoking the presented refresh token: %w", err)
+	}
+	if revoked == 0 {
+		// Lost the race, and NOTHING has been written yet -- no successor
+		// exists, so this is a real error and the caller's rollback has
+		// nothing to undo. Refused, but NOT called reuse: the other winner
+		// could be the same legitimate user losing a double-clicked refresh,
+		// or a concurrent family revocation that got here first; alarming on
+		// either would fire on a non-event.
+		return RotationOutcome{}, fmt.Errorf("%w: another rotation of this token won the race",
+			ErrRefreshTokenInvalid)
+	}
+
+	// The successor is inserted only now that the presented token is
+	// revoked, so the family never transiently holds two live rows.
 	fresh, freshID, err := issueInFamilyReturningID(ctx, tx,
 		presented.UserID, presented.FamilyID, now)
 	if err != nil {
 		return RotationOutcome{}, err
 	}
 
-	// `revoked_at IS NULL` in this statement is what makes it the write that
-	// loses a concurrent race: two simultaneous rotations of the same token
-	// both read a live row above, and only one can affect a row here.
-	marked, err := queries.MarkRefreshTokenRotated(ctx, sqlcgen.MarkRefreshTokenRotatedParams{
+	// The back-pointer is set LAST because `replaced_by` is a foreign key
+	// into this same table: the row it points at has to exist first. If
+	// this fails, the caller's rollback undoes both the revoke and the
+	// insert above.
+	if err := queries.SetRefreshTokenReplacedBy(ctx, sqlcgen.SetRefreshTokenReplacedByParams{
 		ID:         presented.ID,
 		ReplacedBy: pgtype.UUID{Bytes: freshID, Valid: true},
-	})
-	if err != nil {
+	}); err != nil {
 		return RotationOutcome{}, fmt.Errorf(
-			"auth: marking the presented refresh token rotated: %w", err)
-	}
-	if marked == 0 {
-		// Lost the race. Refused, but NOT called reuse: the other winner is
-		// the same legitimate user, and alarming here would fire on a
-		// double-clicked refresh.
-		//
-		// This is the ONE refusal that must NOT commit — the successor row was
-		// already inserted above and has to go away. A real error is exactly
-		// how to ask for that, so this branch deliberately uses the error
-		// return where its neighbours use Refusal.
-		return RotationOutcome{}, fmt.Errorf("%w: another rotation of this token won the race",
-			ErrRefreshTokenInvalid)
+			"auth: pointing the presented refresh token at its successor: %w", err)
 	}
 
 	return RotationOutcome{Cookie: fresh}, nil

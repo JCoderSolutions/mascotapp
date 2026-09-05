@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -338,6 +339,89 @@ func TestRotateRefreshToken_ATokenValidBeforeTheReuseEventIsRefusedAfterIt(t *te
 	}
 }
 
+// Scenario: reuse detection races a legitimate rotation of the very token
+// reuse is about to revoke -- and neither may win by leaving a live orphan.
+//
+// This is Judgment Day PR-02-11's JD-1. `RevokeRefreshTokenFamily` (00013)
+// is a single `UPDATE ... WHERE family_id = $1 AND revoked_at IS NULL`, and
+// an UPDATE's candidate rows are fixed at the STATEMENT'S OWN snapshot: a
+// successor row inserted by a rotation racing it, if it did not exist yet
+// when that snapshot was taken, is never a candidate and is never revoked
+// by it. Nothing else revokes it afterwards -- the family already reads as
+// "revoked" -- so a token can survive the exact event meant to kill its
+// whole family.
+//
+// **Which layer answers.** Two, together. Migration 00017's unique index
+// makes "at most one live row per family" a constraint the DATABASE
+// enforces across transactions, not just within one. This package answers
+// the other half: RotateRefreshToken now revokes the presented token BEFORE
+// inserting its successor, so an ordinary rotation never asks that index to
+// hold two live rows in one family at once.
+//
+// The assertion is deliberately NOT "which one wins" -- either outcome is
+// fine, and this test does not care which. It is "does a live row survive
+// AT ALL", because that is the one outcome family revocation exists to
+// rule out. Run as many trials as it takes to give the race a real chance:
+// a single attempt proves nothing about a timing-dependent bug.
+func TestRotateRefreshToken_ConcurrentReuseAndRotationLeaveNoLiveTokenInTheFamily(t *testing.T) {
+	env := dbtest.Postgres(t)
+	ctx := context.Background()
+
+	const trials = 25
+	for trial := range trials {
+		now := time.Now()
+		user := uuid.New()
+		seedSessionUser(ctx, t, env, user)
+
+		// stolen is the OLD copy a thief holds. live is the token a
+		// legitimate device is about to spend -- both are real family
+		// members, and the race is between the reuse event stolen triggers
+		// and the rotation live is in the middle of.
+		stolen := issue(ctx, t, env, user, now)
+		live, err := rotate(ctx, env, user, stolen, now.Add(time.Minute))
+		if err != nil {
+			t.Fatalf("trial %d: the legitimate rotation should have succeeded: %v", trial, err)
+		}
+		family := readSession(ctx, t, env, user, live).familyID
+
+		var ready sync.WaitGroup
+		ready.Add(2)
+		start := make(chan struct{})
+		var done sync.WaitGroup
+		done.Add(2)
+
+		go func() {
+			defer done.Done()
+			ready.Done()
+			<-start
+			// The thief, presenting the copy taken before the legitimate
+			// rotation above.
+			_, _ = rotate(ctx, env, user, stolen, now.Add(2*time.Minute))
+		}()
+		go func() {
+			defer done.Done()
+			ready.Done()
+			<-start
+			// The legitimate device, rotating the token that was live a
+			// moment ago.
+			_, _ = rotate(ctx, env, user, live, now.Add(2*time.Minute))
+		}()
+
+		// Both goroutines block on `start` until both have reached it, so
+		// closing the channel releases them as close to simultaneously as
+		// this process can arrange.
+		ready.Wait()
+		close(start)
+		done.Wait()
+
+		if live := countLiveTokensInFamily(ctx, t, env, user, family); live != 0 {
+			t.Fatalf("trial %d: %d live token(s) remain in a family whose reuse was detected "+
+				"concurrently with a legitimate rotation -- family revocation must leave NONE",
+				trial, live)
+		}
+	}
+}
+
 // P2-D2's honest limitation, written as a test so it stays honest.
 //
 // **Which layer answers: RLS.** A client that lies about the `user_id` prefix
@@ -521,6 +605,30 @@ func readSession(
 	}
 
 	return row
+}
+
+// countLiveTokensInFamily is the concurrency test's assertion: read straight
+// off the table with raw SQL, never through the package under test.
+func countLiveTokensInFamily(
+	ctx context.Context,
+	t *testing.T,
+	env *dbtest.Env,
+	scope uuid.UUID,
+	family uuid.UUID,
+) int {
+	t.Helper()
+
+	var count int
+	err := db.WithAuthUser(ctx, env.AuthPool, scope, func(ctx context.Context, tx pgx.Tx) error {
+		return tx.QueryRow(ctx,
+			`SELECT count(*) FROM refresh_tokens WHERE family_id = $1 AND revoked_at IS NULL`,
+			family).Scan(&count)
+	})
+	if err != nil {
+		t.Fatalf("counting live tokens in family %s: %v", family, err)
+	}
+
+	return count
 }
 
 // seedSessionUser creates the user as the OWNER role: `app_auth` reads and
