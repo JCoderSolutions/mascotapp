@@ -496,7 +496,7 @@ handlers themselves, then the contract and its codegen.
       - **CORS refuses server-side**, which is stronger than CORS. Standard CORS is advisory: the server describes, the *browser* enforces, and a non-browser client ignores the headers. The spec asks for a refusal *"before it reaches the handler"*, so this is a control rather than a description. A request with **no** `Origin` still passes through — refusing those would break server-to-server callers, health probes and curl, and protecting state changes is `RequireTrustedOrigin`'s job.
       - `Allows` is **exact string equality**. Every cheaper comparison is a vulnerability with a friendly name: `HasSuffix` matches `https://evil.app.mascotapp.test`, `Contains` matches anything, normalising invents a match the browser never sent. `Vary: Origin` is written **before anything else**, refusals and the no-`Origin` path included — without it a shared cache may serve one origin's `Access-Control-Allow-Origin` to another, turning a correct allowlist into a wrong one at the cache layer.
       - **mutation: seven mutants, seven killed**, zero residue (both files verified byte-identical after restore). The two the `dod` names, plus `HasSuffix`-for-equality, dropping `Vary`, gating safe methods, a disallowed `Origin` falling through, and *"refuse cross-site"*.
-      - **⚠️ `PR-02-13` implementation budget is already over** on its first task: **277 of 250**, with `T-02-026` (`est: 130`) unwritten. Total is 639 of 800 and has room. Unlike the `PR-02-12` warning this one is **not a projection — it is measured**, so the PR needs either a `size:exception` or the `PR-02-16` treatment (split `cors.go`/`csrf.go` from `config.go`; they have no dependency on each other). **The user's call, and it is asked before `T-02-026` starts, not after.**
+      - ~~**⚠️ `PR-02-13` implementation budget is already over** on its first task: 277 of 250, with `T-02-026` (`est: 130`) unwritten.~~ **RESOLVED by splitting the PR** (user's decision, 2026-09-06) — `PR-02-13a` = `cors.go` + `csrf.go`, `PR-02-13b` = `config.go`. They have no dependency on each other: `config.go` only reads `WEB_ORIGINS` and hands it to `NewOriginAllowlist`, which now exists and is tested. **Both halves fit both budgets with no exception**, where the unsplit PR would have needed one on each. Second split of the phase after `PR-02-16`, same reasoning, and it is becoming the default answer over `size:exception`: **a PR that overruns is usually a PR carrying two units of review, not a PR that is merely large.**
       - verified: full container suite `exit=0` (captured), all 14 tests named in the container's `-v` output · `golangci-lint` 0 issues · `gofmt` clean · `govulncheck` 0 vulnerabilities
       - **not wired into the router here.** `router.go` mounting is `T-02-040`, last in the phase.
       - engram: —
@@ -724,7 +724,8 @@ the pure-Go rows behave differently from the database rows.
 | `PR-02-11` | 320 | 755 | **measured 930 — OVER both budgets (impl 381/250), `size:exception` ACCEPTED 2026-09-04** |
 | `PR-02-22` | 300 | 708 | no |
 | `PR-02-15` | 290 | 684 | no |
-| `PR-02-13` | 290 | 684 | **implementation already over** — `T-02-025` alone is 277 of 250 with `T-02-026` unwritten. Total 639/800 has room. Measured, not projected |
+| `PR-02-13a` | 160 | 378 | **measured 277 impl / 639 total** — fits both. The projection missed by 69%: `est:` counts surface, and this package exports four names |
+| `PR-02-13b` | 130 | 307 | no |
 | `PR-02-12` | 290 | 684 | no — **measured 227 impl / 675 total, fits both.** The projection was accurate to 1.3% even though the test/implementation split was nothing like predicted |
 | `PR-02-21` | 230 | 543 | no |
 | `PR-02-09` | 220 | 519 | **measured 935 — OVER both budgets, `size:exception` accepted 2026-09-04** |
@@ -1030,7 +1031,8 @@ labels move, no task's content or dependency changed.
 | `PR-02-10` | `recovery.go` — RED+GREEN | T-02-017, T-02-018 | ~~190~~ **197 impl / 721 total** — fits both, no exception | `PR-02-04` (needs `totp_recovery_codes`) |
 | `PR-02-11` | `session.go` — rotation + reuse detection, RED+GREEN | T-02-019, T-02-020 | ~~320~~ **381 impl / 930 total** `size:exception` | `PR-02-02` (needs the `refresh_tokens` access path) · **gated by Judgment Day (`T-02-021`) before merge — see constraint 2** |
 | `PR-02-12` | `middleware_auth.go` — the F02 tenant-scope boundary, RED+GREEN | T-02-023 ✅, T-02-024 ✅ | ~~290~~ **227 impl / 675 total** — fits both, no exception | `PR-02-09` (bearer verification needs `token.go`) · branch `feat/pr-02-12-middleware` on `feat/pr-02-16-email` |
-| `PR-02-13` | Cross-cutting HTTP security config — `cors.go` + `csrf.go` + `config.go` | T-02-025 ✅, T-02-026 | ~~290~~ **277 impl / 639 total for `T-02-025` alone — impl budget ALREADY over** | — (independent; placed here for review sequencing) · branch `feat/pr-02-13-http-security` on `feat/pr-02-12-middleware` |
+| `PR-02-13a` | `cors.go` + `csrf.go` — origin allowlist and Origin-based CSRF | T-02-025 ✅ | ~~290~~ **277 impl / 639 total** — fits both, no exception | — (independent) · branch `feat/pr-02-13a-cors-csrf` on `feat/pr-02-12-middleware` |
+| `PR-02-13b` | `config.go` — auth DSN, secrets, origins, same-site boot refusal | T-02-026 | 130 | `PR-02-13a` (calls `NewOriginAllowlist`) |
 | `PR-02-14` | Registration handler | T-02-027 | 140 | `PR-02-02` (`WithAuthUser`), `PR-02-07` (`password.go`) |
 | `PR-02-15` | Login handler — core + TOTP/recovery paths (one handler, two tasks) | T-02-028, T-02-029 | 290 | `PR-02-07`, `PR-02-08`, `PR-02-09`, `PR-02-10`, `PR-02-11` |
 | `PR-02-16a` | Email port + `LogSender` stub | T-02-022 ✅ | ~~190~~ **158 impl / 469 total** — fits both, no exception | `PR-02-11` · branch `feat/pr-02-16-email`; **merges at position 12**, right after `PR-02-11` |
@@ -1108,15 +1110,16 @@ labels move, no task's content or dependency changed.
 11. `PR-02-11` *(was blocked on Judgment Day, `T-02-021` — **APPROVED**)*
 12. `PR-02-16a` *(the email port — moved up from 16 when `PR-02-16` was split; depends on nothing below it, and nothing below it depends on it)*
 13. `PR-02-12`
-14. `PR-02-13`
-15. `PR-02-14`
-16. `PR-02-15`
-17. `PR-02-16b` *(the magic-link handler — needs `auth_handlers.go` from `PR-02-14`/`PR-02-15`)*
-18. `PR-02-17`
-19. `PR-02-18`
-20. `PR-02-19`
-21. `PR-02-20`
-22. `PR-02-21`
-23. `PR-02-22`
-24. `PR-02-23` *(last functional PR)*
-25. `PR-02-24` *(blocked on the user; does not gate anything above it)*
+14. `PR-02-13a` *(`cors.go` + `csrf.go`)*
+15. `PR-02-13b` *(`config.go` — split from `PR-02-13`; see the `T-02-025` note)*
+16. `PR-02-14`
+17. `PR-02-15`
+18. `PR-02-16b` *(the magic-link handler — needs `auth_handlers.go` from `PR-02-14`/`PR-02-15`)*
+19. `PR-02-17`
+20. `PR-02-18`
+21. `PR-02-19`
+22. `PR-02-20`
+23. `PR-02-21`
+24. `PR-02-22`
+25. `PR-02-23` *(last functional PR)*
+26. `PR-02-24` *(blocked on the user; does not gate anything above it)*
