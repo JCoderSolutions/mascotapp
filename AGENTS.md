@@ -48,11 +48,15 @@ Contexto completo: [`docs/vault/10-propuesta/analisis-y-plan.md`](docs/vault/10-
    y en los ADRs de la misma carpeta.
 6. Confirmar la tarea al usuario en una línea. **Entonces** empezar.
 
-> **Si tu herramienta tiene el MCP de Engram** (Claude Code lo tiene; Kiro y
-> OpenCode no), agregá `mem_context` + `mem_search` sobre la fase actual entre
-> los pasos 1 y 2. **Si no lo tiene, no te falta nada crítico**: el texto
-> completo de cada decisión está versionado en `.engram/queue/*.md` y el índice
-> del paso 5 los enumera todos.
+> **Si tu herramienta tiene el MCP de Engram**, agregá `mem_context` +
+> `mem_search` sobre la fase actual entre los pasos 1 y 2. **Si no lo tiene, no
+> te falta nada crítico**: el texto completo de cada decisión está versionado en
+> `docs/vault/70-conocimiento/*.md` y el índice del paso 5 los enumera todos.
+>
+> Engram tampoco es exclusivo de Claude Code. Corre un servidor HTTP local en
+> `127.0.0.1:7437` (`GET /context?project=<nombre>`), así que cualquier
+> herramienta que pueda hacer una petición HTTP lo alcanza. Lo que cambia entre
+> agentes no es la capacidad, es el cableado.
 
 ---
 
@@ -166,6 +170,8 @@ en el juicio del modelo.
 5. Evaluar candidatos de memoria contra [`.engram/RUBRIC.md`](.engram/RUBRIC.md)
    (puntaje 0–5; solo entra ≥ 3) y escribirlos a `.engram/queue/`.
    **Nada se guarda en Engram sin el sí explícito del usuario.**
+   Tras el sí y el `mem_save`, el archivo **se mueve** a
+   `docs/vault/70-conocimiento/`: la cola es sala de espera, el vault es archivo.
    Después, regenerar el índice: `make engram-index`.
 6. Commit convencional.
 
@@ -208,7 +214,8 @@ feat(auth): T-02-004 tenant resolution middleware
 | `docs/vault/40-bitacora/` | Log diario de los agentes |
 | `openspec/changes/<change>/` | Artefactos SDD de la fase activa |
 | `openspec/specs/` | Specs fusionadas de las fases ya archivadas |
-| `.engram/queue/` | Candidatos de memoria, versionados. Texto completo |
+| `docs/vault/70-conocimiento/` | Conocimiento aprobado. Texto completo, enlazado con `[[wiki]]` |
+| `.engram/queue/` | Sala de espera: candidatos sin aprobar todavía |
 | `api/openapi.yaml` | **Contrato único** de la API. Genera Go y TS |
 | `apps/api/internal/domain/` | Dominio puro en Go, sin I/O |
 | `apps/api/internal/db/migrations/` | Migraciones `goose`, RLS incluida |

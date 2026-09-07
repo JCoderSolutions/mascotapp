@@ -22,4 +22,4 @@ agente: <nombre>
 
 ## Candidatos a memoria
 
-- `.engram/queue/<archivo>` — score N
+- `.engram/queue/<archivo>` — score N *(pasa a `70-conocimiento/` al aprobarse)*

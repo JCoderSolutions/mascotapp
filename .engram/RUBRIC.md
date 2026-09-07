@@ -21,7 +21,8 @@ no pertenece a la memoria.
 2. **En pre-commit**, el hook falla si quedan elementos sin revisar en la cola. Nada se sube en silencio.
 3. **El pase de curaduría** descarta `score < 3`, fusiona duplicados y **presenta los supervivientes al usuario para aprobación explícita**.
 4. Solo tras el "sí" se llama `mem_save` con `capture_prompt: false` y su `topic_key`.
-5. El `observation_id` devuelto se escribe de vuelta en la línea de la tarea, en el tablero de la fase.
+5. El `observation_id` devuelto se escribe de vuelta en la línea de la tarea, en el tablero de la fase, y en el frontmatter del candidato.
+6. **El archivo se mueve de `.engram/queue/` a `docs/vault/70-conocimiento/`.** Esta carpeta es una sala de espera, no un archivo: lo aprobado vive dentro del vault, donde Obsidian lo indexa y sus enlaces `[[wiki]]` resuelven. Un archivo que sigue acá es un candidato que sigue esperando.
 
 ## Formato del candidato
 

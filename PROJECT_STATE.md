@@ -35,7 +35,7 @@ next_action: "T-02-025 CERRADA el 2026-09-06 (RED+GREEN en la misma tarea, dos c
 2. `mem_context` + `mem_search` sobre `current_phase`. **Si tu herramienta no
    tiene el MCP de Engram** (Kiro, OpenCode), reemplazar este paso por
    [docs/vault/20-arquitectura/indice-engram.md](docs/vault/20-arquitectura/indice-engram.md):
-   el texto completo de cada decisión está versionado en `.engram/queue/`.
+   el texto completo de cada decisión está versionado en `docs/vault/70-conocimiento/`.
 3. Abrir `docs/vault/30-fases/FASE-<current_phase>.md`. Buscar el primer `[~]`; si no hay, el primer `[ ]`.
 4. Leer el spec enlazado y la última entrada de `docs/vault/40-bitacora/`.
 5. Confirmar la tarea al usuario en una línea. **Entonces** empezar.
@@ -46,7 +46,7 @@ next_action: "T-02-025 CERRADA el 2026-09-06 (RED+GREEN en la misma tarea, dos c
 2. Marcar `[x]`; mover el `[~]` a la siguiente tarea.
 3. Actualizar este archivo, incluido `next_action`.
 4. Añadir entrada a `docs/vault/40-bitacora/<fecha>.md`.
-5. Evaluar candidatos de memoria contra `.engram/RUBRIC.md` → escribir a `.engram/queue/` → `make engram-index`.
+5. Evaluar candidatos contra `.engram/RUBRIC.md` → escribir a `.engram/queue/` → tras el sí del usuario y el `mem_save`, mover a `docs/vault/70-conocimiento/` → `make engram-index`.
 6. Commit convencional: `feat(<area>): T-00-005 <descripción en inglés>`.
    Convención completa: [docs/vault/99-plantillas/plantilla-commit.md](docs/vault/99-plantillas/plantilla-commit.md).
 

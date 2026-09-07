@@ -93,8 +93,10 @@ entre sesiones**. Eso es una restricción de arquitectura, y se resuelve con est
   qué la bloquea y la acción siguiente. Fuente única de "dónde vamos".
 - `docs/vault/30-fases/` — tablero de tareas con IDs estables (`T-<fase>-<n>`), nunca
   reutilizados. Invariante duro: **como máximo una tarea en `[~]`** en todo el tablero.
-- `.engram/queue/` — cola de candidatos a memoria persistente, con rúbrica de puntuación y
+- `.engram/queue/` — sala de espera de candidatos a memoria, con rúbrica de puntuación y
   aprobación humana explícita. Nada entra a la memoria de largo plazo sin que un humano diga sí.
+- `docs/vault/70-conocimiento/` — lo aprobado, ya versionado. Una nota por decisión, con la
+  regla, la trampa que la hace no obvia, y cómo se descubrió.
 
 El objetivo es que un agente en frío retome la última tarea sin adivinar. Si sos un agente y
 esta es tu primera sesión: **empezá por [`PROJECT_STATE.md`](PROJECT_STATE.md)**.

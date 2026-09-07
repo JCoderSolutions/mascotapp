@@ -2,8 +2,9 @@
 
 // Command engram-index generates the vault index of Engram memory candidates.
 //
-// It reads the frontmatter of every file in `.engram/queue/` and writes
-// `docs/vault/20-arquitectura/indice-engram.md`.
+// It reads the frontmatter of the approved notes in
+// `docs/vault/70-conocimiento/` plus the candidates still awaiting approval in
+// `.engram/queue/`, and writes `docs/vault/20-arquitectura/indice-engram.md`.
 //
 // Why this exists: Engram is a semantic index that only Claude Code can reach.
 // Any other agent (Kiro, OpenCode, a cold session without MCP) sees the
@@ -39,6 +40,10 @@ type entry struct {
 	fields  map[string]string
 	file    string
 	summary string
+	// link is the path from the generated index to this note. Approved notes
+	// live inside the vault and queue candidates do not, so the prefix cannot
+	// be a constant.
+	link string
 }
 
 func (e entry) get(key string) string {
@@ -54,27 +59,50 @@ func main() {
 		fail(err)
 	}
 
-	queueDir := filepath.Join(root, ".engram", "queue")
-	paths, err := filepath.Glob(filepath.Join(queueDir, "*.md"))
-	if err != nil {
-		fail(err)
+	// Two sources, two lifecycles. Approved knowledge lives in the vault so
+	// Obsidian indexes it and its [[wiki]] links resolve; `.engram/queue/` is
+	// only the staging area for candidates the user has not approved yet.
+	// Each prefix is relative to the generated index, not to the repo root.
+	sources := []struct {
+		dir        string
+		linkPrefix string
+	}{
+		{filepath.Join(root, "docs", "vault", "70-conocimiento"), "../70-conocimiento/"},
+		{filepath.Join(root, ".engram", "queue"), "../../../.engram/queue/"},
 	}
-	if len(paths) == 0 {
-		fail(fmt.Errorf("no queue files found under %s", queueDir))
-	}
-	sort.Strings(paths)
 
-	entries := make([]entry, 0, len(paths))
-	for _, path := range paths {
-		parsed, ok, err := parse(path)
-		if err != nil {
-			fail(err)
+	var entries []entry
+	for _, src := range sources {
+		paths, globErr := filepath.Glob(filepath.Join(src.dir, "*.md"))
+		if globErr != nil {
+			fail(globErr)
 		}
-		if !ok {
-			fmt.Fprintf(os.Stderr, "warning: no frontmatter in %s\n", filepath.Base(path))
-			continue
+		sort.Strings(paths)
+		for _, path := range paths {
+			parsed, ok, parseErr := parse(path, src.linkPrefix)
+			if parseErr != nil {
+				fail(parseErr)
+			}
+			if !ok {
+				fmt.Fprintf(os.Stderr, "warning: no frontmatter in %s, skipped", filepath.Base(path))
+				fmt.Fprintln(os.Stderr)
+				continue
+			}
+			// A vault note with neither an observation_id nor a disposition
+			// would render under "awaiting approval", which is wrong: the queue
+			// is the only place a candidate waits. Say so rather than file it
+			// under the wrong heading.
+			if src.linkPrefix == "../70-conocimiento/" &&
+				parsed.fields["observation_id"] == "" && parsed.fields["disposition"] == "" {
+				fmt.Fprintf(os.Stderr, "warning: %s is in the vault with neither observation_id nor disposition, skipped", parsed.file)
+				fmt.Fprintln(os.Stderr)
+				continue
+			}
+			entries = append(entries, parsed)
 		}
-		entries = append(entries, parsed)
+	}
+	if len(entries) == 0 {
+		fail(fmt.Errorf("no notes found under docs/vault/70-conocimiento or .engram/queue"))
 	}
 
 	output := filepath.Join(root, "docs", "vault", "20-arquitectura", "indice-engram.md")
@@ -112,7 +140,7 @@ func repoRoot() (string, error) {
 	}
 }
 
-func parse(path string) (entry, bool, error) {
+func parse(path, linkPrefix string) (entry, bool, error) {
 	content, err := os.ReadFile(path)
 	if err != nil {
 		return entry{}, false, err
@@ -131,7 +159,13 @@ func parse(path string) (entry, bool, error) {
 		}
 	}
 
-	return entry{fields: fields, file: filepath.Base(path), summary: summarize(string(match[2]))}, true, nil
+	base := filepath.Base(path)
+	return entry{
+		fields:  fields,
+		file:    base,
+		summary: summarize(string(match[2])),
+		link:    linkPrefix + base,
+	}, true, nil
 }
 
 // summarize returns the first paragraph of the body, unwrapped and flattened to
@@ -190,14 +224,14 @@ func render(entries []entry) string {
 	var b strings.Builder
 	fmt.Fprint(&b, "# Índice de memoria — Engram\n\n")
 	fmt.Fprint(&b, "> **Generado por `make engram-index`. No editar a mano.**\n")
-	fmt.Fprint(&b, "> Fuente: el frontmatter de `.engram/queue/*.md`.\n\n")
-	fmt.Fprint(&b, "Engram es un índice semántico al que **solo llega Claude Code por MCP**.\n")
-	fmt.Fprint(&b, "Cualquier otro agente —Kiro, OpenCode, una sesión fría sin MCP— ve el\n")
-	fmt.Fprint(&b, "repositorio y nada más. Este archivo proyecta esa capa dentro del vault para\n")
-	fmt.Fprint(&b, "que el repositorio siga siendo la verdad operativa (regla IA-4 del plan maestro).\n\n")
-	fmt.Fprint(&b, "**El texto completo de cada decisión vive en su archivo de cola**, que está\n")
-	fmt.Fprint(&b, "versionado. El `observation_id` es la misma nota dentro de Engram; sirve para\n")
-	fmt.Fprint(&b, "trazabilidad, no es requisito para leerla.\n\n")
+	fmt.Fprint(&b, "> Fuente: `docs/vault/70-conocimiento/*.md` (aprobadas) y `.engram/queue/*.md` (pendientes).\n\n")
+	fmt.Fprint(&b, "Engram es un índice semántico que vive **fuera del repositorio**, en una base\n")
+	fmt.Fprint(&b, "SQLite local (`~/.engram/`). No viaja con un clone: quien clone este repo\n")
+	fmt.Fprint(&b, "obtiene **cero** observaciones. Este archivo y las notas que enumera son lo que\n")
+	fmt.Fprint(&b, "hace que el conocimiento viaje — regla IA-4: el repositorio es la verdad operativa.\n\n")
+	fmt.Fprint(&b, "**El texto completo de cada decisión vive en `70-conocimiento/`**, dentro del\n")
+	fmt.Fprint(&b, "vault, con enlaces [[wiki]] que resuelven en el grafo. El `observation_id` nombra\n")
+	fmt.Fprint(&b, "la misma nota dentro de Engram: es trazabilidad, no un requisito para leerla.\n\n")
 	fmt.Fprintf(&b, "- Candidatos totales: **%d**\n", len(entries))
 	fmt.Fprintf(&b, "- Aprobados y guardados en Engram: **%d**\n", len(saved))
 	fmt.Fprintf(&b, "- Pendientes de aprobación explícita del usuario: **%d**\n", len(pending))
@@ -212,8 +246,8 @@ func render(entries []entry) string {
 
 		sort.Slice(pending, func(i, j int) bool { return pending[i].file < pending[j].file })
 		for _, e := range pending {
-			fmt.Fprintf(&b, "| `%s` | %s | %s | [%s](../../../.engram/queue/%s) | %s |\n",
-				e.get("task"), e.get("type"), e.get("score"), e.file, e.file, e.summary)
+			fmt.Fprintf(&b, "| `%s` | %s | %s | [%s](%s) | %s |\n",
+				e.get("task"), e.get("type"), e.get("score"), e.file, e.link, e.summary)
 		}
 		fmt.Fprint(&b, "\n")
 	}
@@ -236,8 +270,8 @@ func render(entries []entry) string {
 			if replacement == "" {
 				replacement = "—"
 			}
-			fmt.Fprintf(&b, "| `%s` | [%s](../../../.engram/queue/%s) | %s | `%s` |\n",
-				e.get("task"), e.file, e.file, e.get("disposition"), replacement)
+			fmt.Fprintf(&b, "| `%s` | [%s](%s) | %s | `%s` |\n",
+				e.get("task"), e.file, e.link, e.get("disposition"), replacement)
 		}
 		fmt.Fprint(&b, "\n")
 	}
@@ -277,8 +311,8 @@ func render(entries []entry) string {
 		for _, e := range group {
 			segments := strings.Split(e.get("topic_key"), "/")
 			leaf := segments[len(segments)-1]
-			fmt.Fprintf(&b, "| `%s` | `…/%s` | %s | [%s](../../../.engram/queue/%s) | `%s` | %s |\n",
-				e.get("task"), leaf, e.get("score"), e.file, e.file,
+			fmt.Fprintf(&b, "| `%s` | `…/%s` | %s | [%s](%s) | `%s` | %s |\n",
+				e.get("task"), leaf, e.get("score"), e.file, e.link,
 				e.fields["observation_id"], e.summary)
 		}
 		fmt.Fprint(&b, "\n")
