@@ -482,14 +482,23 @@ handlers themselves, then the contract and its codegen.
       - pilot: blacklisted (§7.2)
       - engram: —
 
-- [ ] **T-02-025** · `cors.go` + `csrf.go` — allowlist with credentials, `Origin`/`Sec-Fetch-Site` verification
+- [x] **T-02-025** · `cors.go` + `csrf.go` — allowlist with credentials, `Origin`/`Sec-Fetch-Site` verification
       - spec: identity-and-session / *The refresh cookie and cross-origin requests are protected for separate origins* (all three scenarios)
       - RED first: an allowlisted origin with valid credentials and a valid CSRF token succeeds · a non-allowlisted origin is refused by CORS before the handler runs, regardless of credentials · a state-changing request with **neither** `Origin` nor `Sec-Fetch-Site` is refused (fail-closed, P2-D9) — all fail today, no such code exists
       - build: `apps/api/internal/httpapi/cors.go` (explicit allowlist from `WEB_ORIGINS`, `Access-Control-Allow-Credentials: true`, never `*`) · `csrf.go` (`Origin`/`Sec-Fetch-Site` check on every state-changing method and on `/auth/refresh` specifically — double-submit token rejected per P2-D9's rationale)
-      - tests: all three scenarios green
+      - tests: all three scenarios green — **14 tests, 42 cases** with subtests
       - dod: RED→GREEN · lint clean · coverage held · mutation-tested (wildcard-with-credentials and fail-open-on-absent-header mutants must die)
-      - est: 160
+      - est: 160 · **actual 277 impl / 639 total** — implementation over 250 **for the PR's first task alone**, see the warning below
       - pilot: blacklisted (§7.2)
+      - **The spec and the design disagree, and the design wins — recorded, not inferred.** The spec requirement asks for *"a valid CSRF token"*; P2-D9 afterwards **rejected** the double-submit token for `Origin`/`Sec-Fetch-Site` verification. Scenario 3's *"missing or invalid CSRF token"* is therefore implemented and tested as *"missing or disagreeing `Origin`/`Sec-Fetch-Site`"*. The mechanism changed; the property did not. Written into the test file's header so a reviewer is not left to work it out.
+      - **THE trap this task is shaped around.** Separate origins are decided (Decision 4), so **every** legitimate browser request from the web app carries `Sec-Fetch-Site: cross-site`. A check written the obvious way — *"refuse cross-site"* — refuses **100% of real traffic**, and reads to a reviewer like exactly what a CSRF defence should say. `Origin` is the control; `Sec-Fetch-Site` is only the fallback for a request carrying no `Origin`. **Measured, not argued:** the mutant implementing that rule is killed by exactly ONE test, the one written for it — every other test in the file passes while the API refuses everything.
+      - **A present `Origin` is answered by the allowlist ALONE.** Falling through to `Sec-Fetch-Site` after a disallowed origin would let a non-browser client — which can set that header to anything, since only browsers are bound by the forbidden-header rule — rescue an origin the allowlist just rejected.
+      - **CORS refuses server-side**, which is stronger than CORS. Standard CORS is advisory: the server describes, the *browser* enforces, and a non-browser client ignores the headers. The spec asks for a refusal *"before it reaches the handler"*, so this is a control rather than a description. A request with **no** `Origin` still passes through — refusing those would break server-to-server callers, health probes and curl, and protecting state changes is `RequireTrustedOrigin`'s job.
+      - `Allows` is **exact string equality**. Every cheaper comparison is a vulnerability with a friendly name: `HasSuffix` matches `https://evil.app.mascotapp.test`, `Contains` matches anything, normalising invents a match the browser never sent. `Vary: Origin` is written **before anything else**, refusals and the no-`Origin` path included — without it a shared cache may serve one origin's `Access-Control-Allow-Origin` to another, turning a correct allowlist into a wrong one at the cache layer.
+      - **mutation: seven mutants, seven killed**, zero residue (both files verified byte-identical after restore). The two the `dod` names, plus `HasSuffix`-for-equality, dropping `Vary`, gating safe methods, a disallowed `Origin` falling through, and *"refuse cross-site"*.
+      - **⚠️ `PR-02-13` implementation budget is already over** on its first task: **277 of 250**, with `T-02-026` (`est: 130`) unwritten. Total is 639 of 800 and has room. Unlike the `PR-02-12` warning this one is **not a projection — it is measured**, so the PR needs either a `size:exception` or the `PR-02-16` treatment (split `cors.go`/`csrf.go` from `config.go`; they have no dependency on each other). **The user's call, and it is asked before `T-02-026` starts, not after.**
+      - verified: full container suite `exit=0` (captured), all 14 tests named in the container's `-v` output · `golangci-lint` 0 issues · `gofmt` clean · `govulncheck` 0 vulnerabilities
+      - **not wired into the router here.** `router.go` mounting is `T-02-040`, last in the phase.
       - engram: —
 
 - [ ] **T-02-026** · `config.go` additions — auth DSN, `JWT_SECRET`, `AUTH_KEK`, `WEB_ORIGINS`, `API_PUBLIC_ORIGIN`, same-site boot refusal
@@ -714,7 +723,8 @@ the pure-Go rows behave differently from the database rows.
 | `PR-02-08` | 390 | **920** | **YES — split** |
 | `PR-02-11` | 320 | 755 | **measured 930 — OVER both budgets (impl 381/250), `size:exception` ACCEPTED 2026-09-04** |
 | `PR-02-22` | 300 | 708 | no |
-| `PR-02-13` · `PR-02-15` | 290 | 684 | no |
+| `PR-02-15` | 290 | 684 | no |
+| `PR-02-13` | 290 | 684 | **implementation already over** — `T-02-025` alone is 277 of 250 with `T-02-026` unwritten. Total 639/800 has room. Measured, not projected |
 | `PR-02-12` | 290 | 684 | no — **measured 227 impl / 675 total, fits both.** The projection was accurate to 1.3% even though the test/implementation split was nothing like predicted |
 | `PR-02-21` | 230 | 543 | no |
 | `PR-02-09` | 220 | 519 | **measured 935 — OVER both budgets, `size:exception` accepted 2026-09-04** |
@@ -1020,7 +1030,7 @@ labels move, no task's content or dependency changed.
 | `PR-02-10` | `recovery.go` — RED+GREEN | T-02-017, T-02-018 | ~~190~~ **197 impl / 721 total** — fits both, no exception | `PR-02-04` (needs `totp_recovery_codes`) |
 | `PR-02-11` | `session.go` — rotation + reuse detection, RED+GREEN | T-02-019, T-02-020 | ~~320~~ **381 impl / 930 total** `size:exception` | `PR-02-02` (needs the `refresh_tokens` access path) · **gated by Judgment Day (`T-02-021`) before merge — see constraint 2** |
 | `PR-02-12` | `middleware_auth.go` — the F02 tenant-scope boundary, RED+GREEN | T-02-023 ✅, T-02-024 ✅ | ~~290~~ **227 impl / 675 total** — fits both, no exception | `PR-02-09` (bearer verification needs `token.go`) · branch `feat/pr-02-12-middleware` on `feat/pr-02-16-email` |
-| `PR-02-13` | Cross-cutting HTTP security config — `cors.go` + `csrf.go` + `config.go` | T-02-025, T-02-026 | 290 | — (independent; placed here for review sequencing) |
+| `PR-02-13` | Cross-cutting HTTP security config — `cors.go` + `csrf.go` + `config.go` | T-02-025 ✅, T-02-026 | ~~290~~ **277 impl / 639 total for `T-02-025` alone — impl budget ALREADY over** | — (independent; placed here for review sequencing) · branch `feat/pr-02-13-http-security` on `feat/pr-02-12-middleware` |
 | `PR-02-14` | Registration handler | T-02-027 | 140 | `PR-02-02` (`WithAuthUser`), `PR-02-07` (`password.go`) |
 | `PR-02-15` | Login handler — core + TOTP/recovery paths (one handler, two tasks) | T-02-028, T-02-029 | 290 | `PR-02-07`, `PR-02-08`, `PR-02-09`, `PR-02-10`, `PR-02-11` |
 | `PR-02-16a` | Email port + `LogSender` stub | T-02-022 ✅ | ~~190~~ **158 impl / 469 total** — fits both, no exception | `PR-02-11` · branch `feat/pr-02-16-email`; **merges at position 12**, right after `PR-02-11` |
