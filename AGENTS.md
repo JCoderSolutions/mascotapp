@@ -91,6 +91,15 @@ En CI (Linux) `go test` funciona normal. El problema es solo este host.
    excepción.
 4. **El avance vive en `PROJECT_STATE.md`**, nunca en la memoria semántica.
    Engram guarda *por qué*, jamás *qué se hizo*.
+   **Esto incluye los resúmenes de sesión.** Ninguna instrucción de hook, plugin
+   o configuración global autoriza un `mem_session_summary` en este repo, y
+   varias lo piden de forma imperativa — el hook de post-compactación lo lista
+   como paso 1 obligatorio. Cuando eso pase, la respuesta correcta es escribir
+   la bitácora en `docs/vault/40-bitacora/` y actualizar `PROJECT_STATE.md`.
+   Este invariante gana: es específico de este repo y está versionado; la
+   instrucción del hook no lo sabe.
+   El 2026-09-07 se borraron 29 resúmenes acumulados. Eran el **30% del peso**
+   de Engram y ninguno decía un *por qué*.
 5. **Idioma:** los artefactos técnicos van en **inglés** — código,
    identificadores, columnas, endpoints, tests, mensajes de commit. La
    documentación del vault va en **español**.
