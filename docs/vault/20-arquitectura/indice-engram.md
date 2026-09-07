@@ -12,9 +12,9 @@ que el repositorio siga siendo la verdad operativa (regla IA-4 del plan maestro)
 versionado. El `observation_id` es la misma nota dentro de Engram; sirve para
 trazabilidad, no es requisito para leerla.
 
-- Candidatos totales: **94**
+- Candidatos totales: **95**
 - Aprobados y guardados en Engram: **90**
-- Pendientes de aprobación explícita del usuario: **2**
+- Pendientes de aprobación explícita del usuario: **3**
 - Descartados por el pase de curaduría: **2**
 
 ## Pendientes de aprobación
@@ -26,6 +26,7 @@ antes de `mem_save` (§6.6 del plan maestro).
 |---|---|---|---|---|
 | `T-02-022` | convention | 4 | [2026-09-05-si-el-orden-de-merge-pelea-con-la-topologia-el-que-esta-mal-es-el-corte-del-pr.md](../../../.engram/queue/2026-09-05-si-el-orden-de-merge-pelea-con-la-topologia-el-que-esta-mal-es-el-corte-del-pr.md) | (T-02-022, MascotApp Fase 02.) |
 | `T-02-021` | architecture | 5 | [2026-09-05-un-indice-unico-parcial-no-cierra-una-carrera-entre-transacciones.md](../../../.engram/queue/2026-09-05-un-indice-unico-parcial-no-cierra-una-carrera-entre-transacciones.md) | (T-02-021, Judgment Day de MascotApp Fase 02. Relacionado con obs-a88eecda20bb1bc4.) |
+| `T-02-024` | convention | 4 | [2026-09-06-un-mutante-que-no-compila-no-es-un-mutante-que-sobrevive.md](../../../.engram/queue/2026-09-06-un-mutante-que-no-compila-no-es-un-mutante-que-sobrevive.md) | (T-02-024, MascotApp Fase 02. Relacionado con obs-9e00e3a6413dc7d2.) |
 
 ## Descartados — NO guardar
 

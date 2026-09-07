@@ -462,15 +462,23 @@ handlers themselves, then the contract and its codegen.
       - **The API the RED pins**, for `T-02-024` to satisfy: `RequireAuth(*auth.TokenIssuer, func() time.Time) func(http.Handler) http.Handler` · `RequireTenant(TenantScoper) func(http.Handler) http.Handler` · `TenantScoper = func(ctx, uuid.UUID, func(context.Context, pgx.Tx) error) error` (a closure over `db.WithTenant` + the tenant pool — a seam that exists so the spy can assert *"never invoked"* exactly) · `ClaimsFromContext` / `TxFromContext` · `ShelterIDPathParam`. **Order of checks is part of the contract:** verify (401) → require a non-`nil`, non-zero `shelter_id` claim (403) → compare path/query/header (403) → *then* `WithTenant`.
       - **Two tests exist because the obvious ones cannot tell the two sources apart.** (1) Scope on a route with **no** shelter segment in the path: on a matching request a middleware reading the claim and one parsing the path produce the same uuid, so only a route without the segment distinguishes them — an implementation taking scope from the path passes every other test in the file. (2) The **zero uuid** is refused: it is non-`nil` in Go, so a presence check written as `claims.ShelterID != nil` over a decode that defaulted the field passes it through to `WithTenant`, which refuses it one layer too late.
       - both spies fail the test **on contact**, so *"never invoked"* is the default and being reached has to be opted into. Every refusal is asserted twice — the status the client sees, and that neither the scoper nor the handler ran. Tokens are real and really signed; a stubbed verifier would keep the file green over a middleware that never verifies anything.
-      - **⚠️ budget warning for `PR-02-12`:** `est:` 290, projected 684. `T-02-023` alone is **445** with `T-02-024` (`est: 140`) unwritten. The total limit (800) is at real risk and the implementation limit (250) depends entirely on how `T-02-024` lands. Flagged now, before there is no alternative left.
+      - ~~**⚠️ budget warning for `PR-02-12`:** `est:` 290, projected 684. `T-02-023` alone is **445** with `T-02-024` (`est: 140`) unwritten. The total limit (800) is at real risk and the implementation limit (250) depends entirely on how `T-02-024` lands.~~ **Did not come true** — `T-02-024` landed at 227 and `PR-02-12` closes at **227 / 675**, inside both budgets. Left struck through rather than deleted: the warning was reasonable on the evidence available and the record of a *false* alarm is what keeps the next one honest. The lesson is narrower than "stop warning" — **a RED that is 3× its `est:` says nothing about the GREEN**, because `est:` counts surface and the two halves overshoot for unrelated reasons.
       - engram: —
 
-- [ ] **T-02-024** · GREEN — `middleware_auth.go`
+- [x] **T-02-024** · GREEN — `middleware_auth.go`
       - spec: same as T-02-023
       - build: `apps/api/internal/httpapi/middleware_auth.go` — bearer verification (`token.go`), `Claims` into request context, tenant middleware, the explicit-403-on-mismatch rule (design: *"not a silent preference for the claim... Silently ignoring the mismatch would let a client bug, or a probe, look like success"*)
       - tests: T-02-023 turns green
       - dod: mutation-tested — the mismatch-is-403 branch and the "WithTenant only from the claim" branch are the two guarantees that must survive every mutant
-      - est: 140
+      - est: 140 · **actual 227** (1.6×)
+      - **`PR-02-12` FITS BOTH BUDGETS — the warning on `T-02-023` did not come true.** Implementation **227** of 250, total **675** of 800. No `size:exception`. The `est:`-based projection (684 total) was accurate to 1.3% even though the split between test and implementation was nothing like predicted.
+      - **The split is deliberate.** `RequireAuth` verifies and puts claims in context; `RequireTenant` resolves scope and opens the transaction. Two middlewares rather than one, so an unscoped route — choosing a shelter, reading your own profile — can authenticate without inventing a tenant.
+      - **`authContextKey` is its own type**, not `contextKey` from `clientip.go`. Two `iota` blocks over one type share values silently, and the collision would hand one middleware's value to another's reader.
+      - an **unparseable** shelter identifier is a *disagreement*, never a fall-through to "none supplied" — that would turn a malformed path into a bypass of the whole check. **403 not 404**, because hiding the resource makes this boundary an existence oracle for callers who guess right while still leaking to those who guess wrong. **500 when `RequireTenant` is mounted without `RequireAuth`**: answering 403 would hide a wiring bug behind a plausible refusal on every request.
+      - **A test fixture was wrong, not the implementation.** The forged token was built with an empty `amr`, which `Issue` refuses (`T-02-014`). A forgery has to be wrong in exactly ONE way — the signature — or the test passes for the wrong reason. Fixed in the test.
+      - **mutation: six mutants, six killed**, zero residue (restored file verified byte-identical). Two are worth naming: (1) *scope taken only from the path* is killed **only** by the no-shelter-in-the-path test — **every other test in the file passed under it**, which is the RED's claim confirmed by measurement rather than by argument; (2) *opening the transaction before the mismatch check* is killed by the **"never invoked" assertion**, not by any status code — the difference between a refusal and an apology. A seventh attempt (accepting any `Authorization` scheme) **did not compile** — `scheme` unused — so it was never a mutant; rewritten with `_` it was killed by the `wrong_scheme` case.
+      - verified: full container suite `exit=0` (captured), all eight tests named in the container's `-v` output · `golangci-lint` 0 issues · `gofmt` clean · `govulncheck` unchanged
+      - **not wired into the router here.** `router.go` mounting is `T-02-040`, last in the phase, exactly where the design puts it.
       - pilot: blacklisted (§7.2)
       - engram: —
 
@@ -706,7 +714,8 @@ the pure-Go rows behave differently from the database rows.
 | `PR-02-08` | 390 | **920** | **YES — split** |
 | `PR-02-11` | 320 | 755 | **measured 930 — OVER both budgets (impl 381/250), `size:exception` ACCEPTED 2026-09-04** |
 | `PR-02-22` | 300 | 708 | no |
-| `PR-02-12` · `PR-02-13` · `PR-02-15` | 290 | 684 | no |
+| `PR-02-13` · `PR-02-15` | 290 | 684 | no |
+| `PR-02-12` | 290 | 684 | no — **measured 227 impl / 675 total, fits both.** The projection was accurate to 1.3% even though the test/implementation split was nothing like predicted |
 | `PR-02-21` | 230 | 543 | no |
 | `PR-02-09` | 220 | 519 | **measured 935 — OVER both budgets, `size:exception` accepted 2026-09-04** |
 | `PR-02-16a` | 70 | 165 | **measured 158 impl / 469 total** — fits both budgets. The ×2.36 factor missed badly here (projected 165, actual 469) because the task's own `est: 70` counted surface, and the overshoot is comment density on a package that exports six names |
@@ -1010,7 +1019,7 @@ labels move, no task's content or dependency changed.
 | `PR-02-09` | `token.go` (JWT) — RED+GREEN | T-02-014, T-02-015 | ~~220~~ **289 impl / 935 total** `size:exception` (both budgets) | — (pure Go, parallel-eligible) |
 | `PR-02-10` | `recovery.go` — RED+GREEN | T-02-017, T-02-018 | ~~190~~ **197 impl / 721 total** — fits both, no exception | `PR-02-04` (needs `totp_recovery_codes`) |
 | `PR-02-11` | `session.go` — rotation + reuse detection, RED+GREEN | T-02-019, T-02-020 | ~~320~~ **381 impl / 930 total** `size:exception` | `PR-02-02` (needs the `refresh_tokens` access path) · **gated by Judgment Day (`T-02-021`) before merge — see constraint 2** |
-| `PR-02-12` | `middleware_auth.go` — the F02 tenant-scope boundary, RED+GREEN | T-02-023, T-02-024 | 290 | `PR-02-09` (bearer verification needs `token.go`) |
+| `PR-02-12` | `middleware_auth.go` — the F02 tenant-scope boundary, RED+GREEN | T-02-023 ✅, T-02-024 ✅ | ~~290~~ **227 impl / 675 total** — fits both, no exception | `PR-02-09` (bearer verification needs `token.go`) · branch `feat/pr-02-12-middleware` on `feat/pr-02-16-email` |
 | `PR-02-13` | Cross-cutting HTTP security config — `cors.go` + `csrf.go` + `config.go` | T-02-025, T-02-026 | 290 | — (independent; placed here for review sequencing) |
 | `PR-02-14` | Registration handler | T-02-027 | 140 | `PR-02-02` (`WithAuthUser`), `PR-02-07` (`password.go`) |
 | `PR-02-15` | Login handler — core + TOTP/recovery paths (one handler, two tasks) | T-02-028, T-02-029 | 290 | `PR-02-07`, `PR-02-08`, `PR-02-09`, `PR-02-10`, `PR-02-11` |
