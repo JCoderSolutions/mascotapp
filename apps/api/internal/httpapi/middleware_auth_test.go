@@ -332,7 +332,10 @@ func TestRequireAuth_AMissingOrInvalidTokenIsRefusedAndWithTenantIsNeverInvoked(
 		t.Fatalf("building the forging issuer: %v", err)
 	}
 	forged, err := forger.Issue(auth.AccessClaims{
-		Subject: uuid.New(), ShelterID: &shelterA, Role: "owner",
+		// A complete, well-formed set of claims -- `amr` included, which Issue
+		// requires. The forgery has to be wrong in exactly ONE way, the
+		// signature, or the test would pass for the wrong reason.
+		Subject: uuid.New(), ShelterID: &shelterA, Role: "owner", AMR: []string{"pwd", "otp"},
 	}, now)
 	if err != nil {
 		t.Fatalf("issuing the forged token: %v", err)
