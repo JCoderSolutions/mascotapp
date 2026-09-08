@@ -501,18 +501,21 @@ handlers themselves, then the contract and its codegen.
       - **not wired into the router here.** `router.go` mounting is `T-02-040`, last in the phase.
       - engram: —
 
-- [ ] **T-02-026** · `config.go` additions — auth DSN, `JWT_SECRET`, `AUTH_KEK`, `WEB_ORIGINS`, `API_PUBLIC_ORIGIN`, same-site boot refusal
+- [x] **T-02-026** · `config.go` additions — auth DSN, `JWT_SECRET`, `AUTH_KEK`, `WEB_ORIGINS`, `API_PUBLIC_ORIGIN`, same-site boot refusal
       - spec: (design P2-D9's config-enforced revisit condition; no dedicated capability requirement)
       - **Not blocked** — every test below uses synthetic env values (`t.Setenv`), not `.env.example`
       - RED first: a table of origin pairs — `config.Load` refuses to start with `SameSite=None` when `WEB_ORIGINS` and `API_PUBLIC_ORIGIN` share one registrable domain (computed via `golang.org/x/net/publicsuffix`) · a `JWT_SECRET` under 32 bytes is refused at boot · an `AUTH_KEK` that does not base64-decode to exactly 32 bytes is refused
       - build: `apps/api/internal/config/config.go` additions. **Fallback stated in the design, carried here**: if `golang.org/x/net/publicsuffix` cannot be promoted from indirect to direct cleanly, the fallback is an explicit `REGISTRABLE_DOMAINS_DIFFER=true` assertion in config with the same boot refusal — the check stays, the mechanism degrades. Try the real dependency first; only fall back if it fails.
       - tests: all RED cases turn green
       - dod: RED→GREEN · lint clean · coverage held · **does not touch `.env.example`** — see `T-02-035`
-      - est: 130
+      - est: 130 · **measured 153 implementation / 454 total** (1.18x the estimate, inside both budgets)
+      - **`golang.org/x/net` promoted to a direct dependency**, approved by the user under the supply-chain rule. It was already in the module graph as a transitive requirement, so this promotes a listed module rather than admitting a new one, and only `publicsuffix` is compiled in. The documented `REGISTRABLE_DOMAINS_DIFFER=true` fallback was **not** needed.
+      - **the mutation run corrected the test's own comment.** Swapping the public suffix list for a hand-rolled "last two labels" comparison fails exactly two cases, and both are the SAME direction: it OVER-MERGES, reading `pages.dev` and `com.mx` as registrable domains, so unrelated tenants collapse into one owner and the server refuses to boot on a correct configuration. It never misses a real sharing. The comment had claimed both directions; it now says what was measured.
+      - **7 mutants, 7 killed**, zero residue verified by diff against a pristine copy
       - pilot: blacklisted (§7.2)
       - engram: —
 
-- [ ] **T-02-027** · Registration handler
+- [~] **T-02-027** · Registration handler
       - spec: identity-and-session / *Shelter registration is open and lands pending_verification*
       - RED first: registering with valid input creates the shelter with `status = pending_verification` **regardless of any `status` field submitted by the caller** · the two-transaction flow (P2-D6): `WithAuthUser` inserts `users` (idempotent on the `citext UNIQUE` email), then `WithTenant` inserts `shelters` **and** the founder's `owner` membership atomically · if the second transaction fails, the compensation is "do nothing" — re-running registration resolves it, asserted directly
       - build: `apps/api/internal/httpapi/auth_handlers.go` — the registration handler
