@@ -515,17 +515,22 @@ handlers themselves, then the contract and its codegen.
       - pilot: blacklisted (§7.2)
       - engram: —
 
-- [~] **T-02-027** · Registration handler
+- [x] **T-02-027** · Registration handler
       - spec: identity-and-session / *Shelter registration is open and lands pending_verification*
       - RED first: registering with valid input creates the shelter with `status = pending_verification` **regardless of any `status` field submitted by the caller** · the two-transaction flow (P2-D6): `WithAuthUser` inserts `users` (idempotent on the `citext UNIQUE` email), then `WithTenant` inserts `shelters` **and** the founder's `owner` membership atomically · if the second transaction fails, the compensation is "do nothing" — re-running registration resolves it, asserted directly
       - build: `apps/api/internal/httpapi/auth_handlers.go` — the registration handler
       - tests: all of the above green, `httptest` + container
       - dod: RED→GREEN · lint clean · coverage held
-      - est: 140
+      - est: 140 · **measured 270 implementation / 772 total**
+      - **`size:exception` accepted by the user, 2026-09-08.** 270 of 250 is an 8% overrun on ONE unit of review: a single handler plus the two queries only it uses. 27% of `auth_handlers.go` is comment, and the lines that would have to go are the ones explaining why `accepted_at` stays NULL and why the user id is re-read — the two things the mutation run proved load-bearing. Splitting would leave a first half nobody calls: queries that are dead code until the handler lands, and that reviewing in isolation cannot tell you are correct. **This is the case the split default does NOT cover** — a PR that overruns is usually carrying two units of review, and this one measurably is not.
+      - **two queries had to be written first**: no statement in this repository inserted a `users` or a `shelters` row. `InsertUser` (auth.sql, `ON CONFLICT DO NOTHING`) and `CreateShelter` (shelters.sql, `status` absent).
+      - **the first GREEN run was refused by the schema, and the schema was right.** `42501` on `memberships`: 00015 grants `app_tenant` INSERT on `(id, user_id, shelter_id, role, invited_by, status)` and grants `accepted_at` on UPDATE instead, because that column belongs to the invite-then-accept flow. The fix went in the handler — a founder accepted no invitation, so NULL is honest, and widening a grant to fit a handler is how a boundary erodes. This is the exact grant B1 was raised about.
+      - **`status` is refused twice over**: the handler has no such field, and `app_tenant` holds no INSERT privilege on `shelters.status` (00015), so a statement naming it would be refused by the grant before any policy ran.
+      - **7 mutants, 6 killed on the first pass; M6 SURVIVED** — returning the driver's error text instead of a fixed message. Every test asserted what was written and none read the body of a failure, so the enumeration oracle the handler's comment claimed to close had nothing checking it. A test was added and M6 dies. **7/7**, zero residue verified by diff against a pristine copy.
       - pilot: blacklisted (§7.2)
       - engram: —
 
-- [ ] **T-02-028** · Login handler — password path, token + cookie issuance
+- [~] **T-02-028** · Login handler — password path, token + cookie issuance
       - spec: identity-and-session / *Password-based registration and login use Argon2id* (both scenarios) · *JWT access tokens are short-lived and carry the tenant claim*
       - RED first: correct password → credential check passes, issuance proceeds · wrong password → no session issued · on success: `Set-Cookie: __Secure-mascotapp_refresh` with `HttpOnly; Secure; SameSite=None; Path=/api/v1/auth` (P2-D9) and a 15-minute access token in the body
       - build: `auth_handlers.go` — login handler's password-only path, wiring `password.go` + `token.go` + `session.go`

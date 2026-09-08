@@ -12,9 +12,9 @@ hace que el conocimiento viaje — regla IA-4: el repositorio es la verdad opera
 vault, con enlaces [[wiki]] que resuelven en el grafo. El `observation_id` nombra
 la misma nota dentro de Engram: es trazabilidad, no un requisito para leerla.
 
-- Candidatos totales: **97**
+- Candidatos totales: **98**
 - Aprobados y guardados en Engram: **90**
-- Pendientes de aprobación explícita del usuario: **5**
+- Pendientes de aprobación explícita del usuario: **6**
 - Descartados por el pase de curaduría: **2**
 
 ## Pendientes de aprobación
@@ -29,6 +29,7 @@ antes de `mem_save` (§6.6 del plan maestro).
 | `T-02-024` | convention | 4 | [2026-09-06-un-mutante-que-no-compila-no-es-un-mutante-que-sobrevive.md](../../../.engram/queue/2026-09-06-un-mutante-que-no-compila-no-es-un-mutante-que-sobrevive.md) | (T-02-024, MascotApp Fase 02. Relacionado con obs-9e00e3a6413dc7d2.) |
 | `T-02-025` | architecture | 5 | [2026-09-06-una-defensa-csrf-correcta-en-general-puede-rechazar-el-100-por-ciento-de-tu-trafico.md](../../../.engram/queue/2026-09-06-una-defensa-csrf-correcta-en-general-puede-rechazar-el-100-por-ciento-de-tu-trafico.md) | (T-02-025, MascotApp Fase 02.) |
 | `T-02-026` | architecture | 4 | [2026-09-07-que-compra-la-lista-de-sufijos-publicos-no-es-lo-que-parece.md](../../../.engram/queue/2026-09-07-que-compra-la-lista-de-sufijos-publicos-no-es-lo-que-parece.md) | (T-02-026, MascotApp Fase 02.) |
+| `T-02-027` | architecture | 5 | [2026-09-08-un-mensaje-de-error-devuelto-al-cliente-es-una-superficie-de-seguridad.md](../../../.engram/queue/2026-09-08-un-mensaje-de-error-devuelto-al-cliente-es-una-superficie-de-seguridad.md) | (T-02-027, MascotApp Fase 02.) |
 
 ## Descartados — NO guardar
 
