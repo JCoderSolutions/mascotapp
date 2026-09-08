@@ -91,7 +91,7 @@ limitarse a "devuelve `ErrRefreshTokenReused`".
 Un test que solo aserta el error habría pasado con el bug puesto. La aserción que lo mató es
 la del **estado después**, y estaba ahí porque el spec la pedía como escenario propio.
 
-## La otra cara de `obs-9e00e3a6413dc7d2`
+## La otra cara de [[2026-09-04-un-rollback-contesta-antes-que-el-orden-de-tu-guarda]]
 
 Un PR antes, en `recovery.go`, **el mismo rollback volvió equivalente a un mutante**: mover
 una guarda debajo de un `DELETE` no cambiaba nada, porque el rollback preservaba las filas.

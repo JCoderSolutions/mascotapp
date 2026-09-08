@@ -77,3 +77,12 @@ la versión anterior afirmaba de más.
 
 Un comentario que le atribuye a un test una garantía que no da es peor que no tener
 comentario: el próximo que lo lea no va a volver a correr la mutación, va a creerle.
+
+## La otra cara
+
+Ver [[2026-09-04-un-rechazo-que-escribe-no-puede-viajar-como-error]]: ahí el mismo rollback
+**destruye** una contención de seguridad en vez de salvarla. Un rechazo que revoca una familia
+de tokens y después devuelve `error` pierde la revocación, y el ladrón conserva su sesión.
+
+Misma capa, efecto opuesto. La pregunta útil es siempre la misma: *¿qué sobrevive al final de
+esta transacción, y quién lo decidió?*
