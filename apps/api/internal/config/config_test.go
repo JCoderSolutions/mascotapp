@@ -246,12 +246,19 @@ func TestLoad_RefusesAnAuthKEKThatIsNotThirtyTwoDecodedBytes(t *testing.T) {
 // choice is no longer justified, and the server has to say so on boot instead of
 // waiting for someone to remember a comment.
 //
-// The pairs are chosen so that a hand-rolled "last two labels" comparison fails
-// at least twice, in both directions. `.com.mx` is a two-part public suffix such
-// a check reads as a registrable domain, so it would MISS a real sharing;
-// `pages.dev` is a public suffix it would read as one shared owner, so it would
-// INVENT one. Both are this project's real deployment shapes: Cloudflare Pages,
-// and the Mexican region the plan assumes.
+// The last two pairs are what the public suffix list buys, and the mutation run
+// measured which ones instead of assuming: replacing it with a hand-rolled
+// "last two labels" comparison fails exactly `one public suffix, two owners` and
+// `two owners under a two-part public suffix`, and nothing else.
+//
+// Both are the same failure direction, and that is the whole finding: the naive
+// check OVER-MERGES. It reads `pages.dev` and `com.mx` as registrable domains,
+// so two unrelated tenants collapse into one owner and the server refuses to
+// boot on a configuration that is correct. It cannot fail the other way, because
+// everything under a suffix looks shared to it, so it never misses a real
+// sharing. The cost of getting this wrong is a deployment that will not start,
+// not a silent hole -- and both shapes are this project's real ones: Cloudflare
+// Pages, and the Mexican region the plan assumes.
 func TestLoad_RefusesToBootWhenWebAndAPIShareARegistrableDomain(t *testing.T) {
 	for _, tt := range []struct {
 		name        string
@@ -313,6 +320,68 @@ func TestLoad_RefusesToBootWhenWebAndAPIShareARegistrableDomain(t *testing.T) {
 					tt.webOrigins, tt.apiOrigin)
 			}
 			if !tt.wantRefusal && err != nil {
+				t.Fatalf("Load() with WEB_ORIGINS=%q and API_PUBLIC_ORIGIN=%q: unexpected refusal: %v",
+					tt.webOrigins, tt.apiOrigin, err)
+			}
+		})
+	}
+}
+
+// TestLoad_RefusesAnOriginItCannotEvaluate closes the escape hatch in the check
+// above. If an origin whose registrable domain cannot be computed were skipped,
+// the comparison would silently stop running for it, and the config would boot
+// reporting nothing -- an exemption nobody checks, drifting in the permissive
+// direction. Failing closed keeps the revisit condition honest: a value this
+// check cannot evaluate is a value it refuses.
+//
+// A bare public suffix is in the table because it parses perfectly well as a URL
+// and still has no registrable domain: nobody owns `pages.dev`.
+func TestLoad_RefusesAnOriginItCannotEvaluate(t *testing.T) {
+	for _, tt := range []struct {
+		name       string
+		webOrigins string
+		apiOrigin  string
+	}{
+		{"web origin is not a URL", "not-a-url", "https://api.mascotapp.org"},
+		{"api origin is not a URL", "https://app.mascotapp.org", "not-a-url"},
+		{"web origin has no host", "https:///path", "https://api.mascotapp.org"},
+		{"web origin is a bare public suffix", "https://pages.dev", "https://api.mascotapp.org"},
+		{"api origin is a bare public suffix", "https://app.mascotapp.org", "https://com.mx"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			clearConfigEnv(t)
+			t.Setenv("WEB_ORIGINS", tt.webOrigins)
+			t.Setenv("API_PUBLIC_ORIGIN", tt.apiOrigin)
+
+			if _, err := Load(); err == nil {
+				t.Fatalf("Load() with WEB_ORIGINS=%q and API_PUBLIC_ORIGIN=%q: expected a refusal, got nil",
+					tt.webOrigins, tt.apiOrigin)
+			}
+		})
+	}
+}
+
+// TestLoad_SkipsTheDomainCheckWhenEitherSideIsUnset is the counterpart: the
+// comparison needs both sides, so with one missing there is nothing to compare
+// and nothing to refuse. Without this case, "refuse what you cannot evaluate"
+// would grow to cover "unset", and every command that loads configuration
+// without serving HTTP would stop booting.
+func TestLoad_SkipsTheDomainCheckWhenEitherSideIsUnset(t *testing.T) {
+	for _, tt := range []struct {
+		name       string
+		webOrigins string
+		apiOrigin  string
+	}{
+		{"neither side set", "", ""},
+		{"only web origins set", "https://app.mascotapp.org", ""},
+		{"only the api origin set", "", "https://api.mascotapp.org"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			clearConfigEnv(t)
+			t.Setenv("WEB_ORIGINS", tt.webOrigins)
+			t.Setenv("API_PUBLIC_ORIGIN", tt.apiOrigin)
+
+			if _, err := Load(); err != nil {
 				t.Fatalf("Load() with WEB_ORIGINS=%q and API_PUBLIC_ORIGIN=%q: unexpected refusal: %v",
 					tt.webOrigins, tt.apiOrigin, err)
 			}
