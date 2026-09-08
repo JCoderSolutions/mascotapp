@@ -31,30 +31,27 @@ func loginHandler(t *testing.T, env *dbtest.Env) http.Handler {
 	if err != nil {
 		t.Fatalf("building the token issuer: %v", err)
 	}
-	return httpapi.LoginHandler(env.AuthPool, issuer, time.Now)
+	envelope, err := auth.NewEnvelope(testKEK)
+	if err != nil {
+		t.Fatalf("building the envelope: %v", err)
+	}
+	return httpapi.LoginHandler(env.AuthPool, issuer, time.Now, envelope)
 }
 
-// seedAccount registers one so login has something to find. Registration is
-// already tested; using it here rather than inserting rows by hand means these
-// tests break if the two handlers ever disagree about how a credential is
-// stored, which is a disagreement no unit test on either side would catch.
+// seedAccount creates a user who can complete login with a password alone.
+//
+// It deliberately does NOT register a shelter. Registration makes the caller an
+// `owner`, and T-02-029 made a second factor mandatory for that role -- so a
+// fixture built on registration would refuse every password-only login in this
+// file, and the tests about cookies and claims would be asserting a 401.
+//
+// That is the requirement working, not a fixture problem: an adopter has no
+// membership, browses the catalog, and applies. This is that shape.
+// The privileged shape lives in login_totp_test.go, where it is the subject
+// rather than the setup.
 func seedAccount(t *testing.T, env *dbtest.Env, email, password string) {
 	t.Helper()
-
-	body := `{
-		"email": "` + email + `",
-		"password": "` + password + `",
-		"full_name": "Login Fixture",
-		"shelter_name": "Refugio Login ` + email + `",
-		"shelter_slug": "refugio-login-` + strings.Split(email, "@")[0] + `"
-	}`
-	rec := httptest.NewRecorder()
-	httpapi.RegisterHandler(env.AuthPool, env.TenantPool).
-		ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/api/v1/auth/register", strings.NewReader(body)))
-
-	if rec.Code != http.StatusCreated {
-		t.Fatalf("seeding %s: status = %d, want %d: %s", email, rec.Code, http.StatusCreated, rec.Body.String())
-	}
+	seedAdopter(t, env, email, password)
 }
 
 func postLogin(t *testing.T, handler http.Handler, email, password string) *httptest.ResponseRecorder {

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
 	"github.com/gentleman/mascotapp/apps/api/internal/auth"
@@ -58,9 +59,27 @@ const dummyHashForTiming = "$argon2id$v=19$m=65536,t=3,p=1$" +
 	"c29tZS1zYWx0LXZhbHVl$" +
 	"ZG8gbm90IG1hdGNoIGFueXRoaW5nIGF0IGFsbCB3aGF0ZXY"
 
+// rolesRequiringTOTP is §5.2's list, and membership in it is decided across ALL
+// of a user's active memberships rather than one.
+//
+// A user can be `owner` of one shelter and `volunteer` in another. Asking for a
+// second factor per shelter would let them log in without one and then exchange
+// that session for the privileged shelter — the exchange verifies an active
+// membership, not how the session was authenticated. So the question is "does
+// this person hold a privileged role ANYWHERE", asked once, at the door.
+var rolesRequiringTOTP = map[string]bool{
+	"owner": true,
+	"admin": true,
+}
+
 type loginRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
+
+	// TOTPCode and RecoveryCode are alternatives, not a pair. A recovery code
+	// exists for the login where the authenticator is gone.
+	TOTPCode     string `json:"totp_code"`
+	RecoveryCode string `json:"recovery_code"`
 }
 
 type loginResponse struct {
@@ -80,7 +99,7 @@ type loginResponse struct {
 // the sole input to tenant resolution (ADR-0008), and `uuid.Nil` would pass a
 // presence check and land in `WithTenant`. Login asserts WHO you are; which
 // tenant you act as is a separate assertion after an explicit choice.
-func LoginHandler(authPool db.Beginner, issuer *auth.TokenIssuer, now func() time.Time) http.Handler {
+func LoginHandler(authPool db.Beginner, issuer *auth.TokenIssuer, now func() time.Time, envelope *auth.Envelope) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req loginRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -131,6 +150,58 @@ func LoginHandler(authPool db.Beginner, issuer *auth.TokenIssuer, now func() tim
 			return
 		}
 
+		// The second factor. `amr` records what was actually EXERCISED, which is
+		// the distinction that makes the claim worth carrying: a route asking
+		// whether a second factor was used cannot read "enrolled" as "used".
+		amr := []string{"pwd"}
+
+		needsSecondFactor, err := requiresSecondFactor(ctx, authPool, credentials.ID)
+		if err != nil {
+			serverError(w, r, "reading the caller's memberships", err)
+			return
+		}
+
+		switch {
+		case req.RecoveryCode != "":
+			// Checked before TOTP because a caller who sends one has lost the
+			// authenticator; falling through to TOTP would refuse them for
+			// having no code they could possibly produce.
+			if err := spendRecoveryCode(ctx, authPool, credentials.ID, req.RecoveryCode); err != nil {
+				if !errors.Is(err, auth.ErrRecoveryCodeInvalid) {
+					serverError(w, r, "redeeming the recovery code", err)
+					return
+				}
+				unauthorizedLogin(w)
+				return
+			}
+			amr = append(amr, "otp")
+
+		case req.TOTPCode != "":
+			secret, err := envelope.Open(credentials.TotpSecretEnc, credentials.ID)
+			if err != nil {
+				// Either nothing is enrolled, or the column is unreadable. Both
+				// are a refused login: a caller who submitted a code and hears
+				// "you have no second factor" learns the account exists AND
+				// that it is unprotected.
+				unauthorizedLogin(w)
+				return
+			}
+			if !auth.VerifyTOTP(secret, req.TOTPCode, now()) {
+				unauthorizedLogin(w)
+				return
+			}
+			amr = append(amr, "otp")
+
+		case needsSecondFactor:
+			// A privileged role with no second factor presented. This also
+			// catches the owner who never enrolled one, and refusing them is
+			// deliberate: the other reading makes the requirement opt-in by
+			// inaction, and exempts every owner created before enrolment
+			// existed. Enrolment is what unblocks them, not an exception here.
+			unauthorizedLogin(w)
+			return
+		}
+
 		// Every login starts its own family, so revoking one device's session
 		// leaves the others alone.
 		var cookieValue string
@@ -147,7 +218,7 @@ func LoginHandler(authPool db.Beginner, issuer *auth.TokenIssuer, now func() tim
 		accessToken, err := issuer.Issue(auth.AccessClaims{
 			Subject: credentials.ID,
 			Role:    RoleUnscoped,
-			AMR:     []string{"pwd"},
+			AMR:     amr,
 		}, now())
 		if err != nil {
 			// The refresh token is already committed. That is survivable: it is
@@ -207,6 +278,48 @@ func findCredentials(ctx context.Context, authPool db.Beginner, email string) (s
 		return sqlcgen.GetUserCredentialsByEmailRow{}, false, err
 	}
 	return row, true, nil
+}
+
+// requiresSecondFactor reports whether the user holds a privileged role in ANY
+// shelter.
+//
+// It reads through `app_auth`, whose policy on `memberships` narrows to
+// `user_id = app.user_id` — so this cannot see another user's rows even if the
+// query forgot to filter, and it does not filter, on purpose (§3 layer 3).
+//
+// Only ACTIVE memberships count. An invitation not yet accepted grants nothing,
+// and a revoked one grants less than nothing; letting either demand a second
+// factor would lock out a user over a role they do not hold.
+func requiresSecondFactor(ctx context.Context, authPool db.Beginner, userID uuid.UUID) (bool, error) {
+	var privileged bool
+
+	err := db.WithAuthUser(ctx, authPool, userID, func(ctx context.Context, tx pgx.Tx) error {
+		memberships, err := sqlcgen.New(tx).ListOwnMemberships(ctx, userID)
+		if err != nil {
+			return err
+		}
+		for _, membership := range memberships {
+			if membership.Status == "active" && rolesRequiringTOTP[membership.Role] {
+				privileged = true
+				return nil
+			}
+		}
+		return nil
+	})
+
+	return privileged, err
+}
+
+// spendRecoveryCode redeems one code, atomically, and reports whether it was
+// valid.
+//
+// The redemption is a qualified UPDATE matching only `used_at IS NULL`, so a
+// code presented twice — or twice at once — affects zero rows the second time.
+// Single use is enforced by the statement, not by a read followed by a write.
+func spendRecoveryCode(ctx context.Context, authPool db.Beginner, userID uuid.UUID, plaintext string) error {
+	return db.WithAuthUser(ctx, authPool, userID, func(ctx context.Context, tx pgx.Tx) error {
+		return auth.RedeemRecoveryCode(ctx, tx, plaintext)
+	})
 }
 
 // unauthorizedLogin is ONE refusal for every reason a login can fail: no such
