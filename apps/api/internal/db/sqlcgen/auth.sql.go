@@ -162,6 +162,42 @@ func (q *Queries) InsertRefreshToken(ctx context.Context, arg InsertRefreshToken
 	return err
 }
 
+const insertUser = `-- name: InsertUser :exec
+INSERT INTO users (id, email, password_hash, full_name, phone)
+VALUES ($1, $2, $3, $4, $5)
+ON CONFLICT (email) DO NOTHING
+`
+
+type InsertUserParams struct {
+	ID           uuid.UUID
+	Email        string
+	PasswordHash pgtype.Text
+	FullName     pgtype.Text
+	Phone        pgtype.Text
+}
+
+// Registration's first transaction (P2-D6). Runs as `app_auth`, whose INSERT
+// grant on `users` names exactly these five columns (00013): `status`,
+// `email_verified_at` and the credential columns beyond `password_hash` all
+// have defaults, so registration writes a row without ever holding a privilege
+// on them.
+//
+// ON CONFLICT DO NOTHING makes it idempotent on the `citext UNIQUE` email,
+// which is what lets the compensation for a failed second transaction be "do
+// nothing": re-running registration finds the user already there and carries
+// on. `password_hash` is NOT overwritten on conflict -- an existing account's
+// credentials are not a registration form's to replace.
+func (q *Queries) InsertUser(ctx context.Context, arg InsertUserParams) error {
+	_, err := q.db.Exec(ctx, insertUser,
+		arg.ID,
+		arg.Email,
+		arg.PasswordHash,
+		arg.FullName,
+		arg.Phone,
+	)
+	return err
+}
+
 const listOwnMemberships = `-- name: ListOwnMemberships :many
 SELECT id, user_id, shelter_id, role, status FROM memberships WHERE user_id = $1
 `

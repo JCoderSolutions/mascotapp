@@ -12,6 +12,49 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const createShelter = `-- name: CreateShelter :exec
+INSERT INTO shelters (id, slug, display_name, legal_name, country, state, city,
+                      contact_email)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+`
+
+type CreateShelterParams struct {
+	ID           uuid.UUID
+	Slug         string
+	DisplayName  string
+	LegalName    pgtype.Text
+	Country      pgtype.Text
+	State        pgtype.Text
+	City         pgtype.Text
+	ContactEmail pgtype.Text
+}
+
+// Registration's second transaction (P2-D6), as `app_tenant` inside WithTenant.
+//
+// `status` is absent on purpose, and its absence is enforced twice over: the
+// column defaults to 'pending_verification' (LT-2), and 00015 does not grant
+// `app_tenant` INSERT on it at all. A caller who submits a status cannot reach
+// this statement with it, and a statement that named it would be refused by the
+// grant. The handler drops it at the edge because an API that silently ignores
+// a field is friendlier than one that 500s -- but the database is what makes
+// that a guarantee rather than a habit.
+//
+// `id` is supplied rather than defaulted because WITH CHECK compares it against
+// app.shelter_id, which the caller has already set on this transaction.
+func (q *Queries) CreateShelter(ctx context.Context, arg CreateShelterParams) error {
+	_, err := q.db.Exec(ctx, createShelter,
+		arg.ID,
+		arg.Slug,
+		arg.DisplayName,
+		arg.LegalName,
+		arg.Country,
+		arg.State,
+		arg.City,
+		arg.ContactEmail,
+	)
+	return err
+}
+
 const getCurrentShelter = `-- name: GetCurrentShelter :one
 
 SELECT id, slug, legal_name, display_name, country, state, city, status, verified_at, verified_by, mission, vision, about, logo_media_id, cover_media_id, contact_email, contact_phone, website, socials, donation_links, storage_bytes_used, storage_quota_bytes, created_at, updated_at FROM shelters LIMIT 1

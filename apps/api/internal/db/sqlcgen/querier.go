@@ -31,6 +31,19 @@ type Querier interface {
 	CreateApplication(ctx context.Context, arg CreateApplicationParams) (AdoptionApplication, error)
 	// The catalog core and its three children.
 	CreatePet(ctx context.Context, arg CreatePetParams) (Pet, error)
+	// Registration's second transaction (P2-D6), as `app_tenant` inside WithTenant.
+	//
+	// `status` is absent on purpose, and its absence is enforced twice over: the
+	// column defaults to 'pending_verification' (LT-2), and 00015 does not grant
+	// `app_tenant` INSERT on it at all. A caller who submits a status cannot reach
+	// this statement with it, and a statement that named it would be refused by the
+	// grant. The handler drops it at the edge because an API that silently ignores
+	// a field is friendlier than one that 500s -- but the database is what makes
+	// that a guarantee rather than a habit.
+	//
+	// `id` is supplied rather than defaulted because WITH CHECK compares it against
+	// app.shelter_id, which the caller has already set on this transaction.
+	CreateShelter(ctx context.Context, arg CreateShelterParams) error
 	CreateTemplate(ctx context.Context, arg CreateTemplateParams) (FormTemplate, error)
 	// Regeneration starts by clearing the previous set, all ten in one
 	// statement, in the same transaction as the ten inserts above.
@@ -101,6 +114,18 @@ type Querier interface {
 	// a default here would silently make every rotation start a new family and
 	// quietly disable family-wide revocation.
 	InsertRefreshToken(ctx context.Context, arg InsertRefreshTokenParams) error
+	// Registration's first transaction (P2-D6). Runs as `app_auth`, whose INSERT
+	// grant on `users` names exactly these five columns (00013): `status`,
+	// `email_verified_at` and the credential columns beyond `password_hash` all
+	// have defaults, so registration writes a row without ever holding a privilege
+	// on them.
+	//
+	// ON CONFLICT DO NOTHING makes it idempotent on the `citext UNIQUE` email,
+	// which is what lets the compensation for a failed second transaction be "do
+	// nothing": re-running registration finds the user already there and carries
+	// on. `password_hash` is NOT overwritten on conflict -- an existing account's
+	// credentials are not a registration form's to replace.
+	InsertUser(ctx context.Context, arg InsertUserParams) error
 	// Supplying `shelter_id` is not filtering by it: the column is NOT NULL and
 	// `WITH CHECK` is what verifies the value.
 	InviteMember(ctx context.Context, arg InviteMemberParams) error

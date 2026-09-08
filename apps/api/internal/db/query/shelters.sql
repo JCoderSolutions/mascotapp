@@ -21,3 +21,20 @@ SET display_name = $2,
     about        = $5,
     updated_at   = now()
 WHERE id = $1;
+
+-- name: CreateShelter :exec
+-- Registration's second transaction (P2-D6), as `app_tenant` inside WithTenant.
+--
+-- `status` is absent on purpose, and its absence is enforced twice over: the
+-- column defaults to 'pending_verification' (LT-2), and 00015 does not grant
+-- `app_tenant` INSERT on it at all. A caller who submits a status cannot reach
+-- this statement with it, and a statement that named it would be refused by the
+-- grant. The handler drops it at the edge because an API that silently ignores
+-- a field is friendlier than one that 500s -- but the database is what makes
+-- that a guarantee rather than a habit.
+--
+-- `id` is supplied rather than defaulted because WITH CHECK compares it against
+-- app.shelter_id, which the caller has already set on this transaction.
+INSERT INTO shelters (id, slug, display_name, legal_name, country, state, city,
+                      contact_email)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8);

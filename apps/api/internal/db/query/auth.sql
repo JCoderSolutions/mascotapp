@@ -123,3 +123,19 @@ SELECT * FROM totp_recovery_codes WHERE code_hash = $1;
 UPDATE totp_recovery_codes
 SET used_at = now()
 WHERE code_hash = $1 AND used_at IS NULL;
+
+-- name: InsertUser :exec
+-- Registration's first transaction (P2-D6). Runs as `app_auth`, whose INSERT
+-- grant on `users` names exactly these five columns (00013): `status`,
+-- `email_verified_at` and the credential columns beyond `password_hash` all
+-- have defaults, so registration writes a row without ever holding a privilege
+-- on them.
+--
+-- ON CONFLICT DO NOTHING makes it idempotent on the `citext UNIQUE` email,
+-- which is what lets the compensation for a failed second transaction be "do
+-- nothing": re-running registration finds the user already there and carries
+-- on. `password_hash` is NOT overwritten on conflict -- an existing account's
+-- credentials are not a registration form's to replace.
+INSERT INTO users (id, email, password_hash, full_name, phone)
+VALUES ($1, $2, $3, $4, $5)
+ON CONFLICT (email) DO NOTHING;
