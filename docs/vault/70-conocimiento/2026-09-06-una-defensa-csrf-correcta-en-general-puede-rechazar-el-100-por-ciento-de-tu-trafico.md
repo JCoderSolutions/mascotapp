@@ -3,7 +3,9 @@ type: architecture
 score: 5
 topic_key: mascotapp/security/origin-is-the-control-not-sec-fetch-site
 task: T-02-025
-status: pendiente-de-aprobacion
+status: guardado
+aprobado: 2026-09-08 por el usuario
+observation_id: obs-68a543ce690f6cea
 rationale: "Este es el error que MENOS se detecta en revisión, porque la regla incorrecta suena mejor que la correcta. 'Rechazá cross-site' es lo que cualquiera esperaría leer en una defensa CSRF, y en esta arquitectura rechaza el 100% del tráfico legítimo. Va a volver a aparecer cada vez que alguien toque csrf.go, agregue un endpoint que cambie estado, o revise este código sin recordar que los orígenes están separados por decisión. Y aplica más allá de este proyecto: toda regla de seguridad escrita sobre 'lo que hace un atacante' hay que verificarla contra lo que hace el tráfico normal PRIMERO."
 ---
 

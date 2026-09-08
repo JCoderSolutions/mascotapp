@@ -3,7 +3,9 @@ type: convention
 score: 4
 topic_key: mascotapp/convention/pr-cut-owns-the-merge-order
 task: T-02-022
-status: pendiente-de-aprobacion
+status: guardado
+aprobado: 2026-09-08 por el usuario
+observation_id: obs-9fed14abdab8aa95
 rationale: "Esta fase entrega 24 PRs encadenados y las siguientes van por el mismo camino. La tentación de resolver un conflicto de orden con topología de ramas va a volver, y la segunda vez va a parecer razonable otra vez. El costo de equivocarse no es un rebase molesto: es que PROJECT_STATE.md —el contrato de continuidad del que depende todo agente en frío— pasa a tener dos respuestas contradictorias según en qué rama estés parado. Eso es exactamente el riesgo IA-4 del plan, fabricado por proteger el orden de una lista."
 ---
 

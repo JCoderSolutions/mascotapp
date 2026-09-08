@@ -3,7 +3,9 @@ type: architecture
 score: 4
 topic_key: mascotapp/arch/public-suffix-list-buys-false-positives
 task: T-02-026
-status: pendiente-de-aprobacion
+status: guardado
+aprobado: 2026-09-08 por el usuario
+observation_id: obs-58bc47c9eff9156c
 rationale: "La justificación de una dependencia es lo que se cita cuando alguien propone sacarla, y una justificación equivocada pierde esa discusión aunque la dependencia sea correcta. Acá la razón intuitiva —'sin esto se nos escapa un riesgo de seguridad'— es falsa, y la mutación lo midió: el modo de falla es el opuesto. Aplica cada vez que se compare la propiedad de dos hosts, que es un patrón que reaparece en cookies, CORS, redirecciones y verificación de webhooks. Y el método vale más que el caso: la mutación no solo mide si un test alcanza, mide si el COMENTARIO dice la verdad."
 ---
 

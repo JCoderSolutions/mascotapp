@@ -3,7 +3,9 @@ type: architecture
 score: 5
 topic_key: mascotapp/arch/intra-vs-inter-transaction-invariants
 task: T-02-021
-status: pendiente-de-aprobacion
+status: guardado
+aprobado: 2026-09-08 por el usuario
+observation_id: obs-877abd8e46e0924a
 relacionado: obs-a88eecda20bb1bc4
 rationale: "Un índice único parcial y un lock consultivo se ven como la misma clase de herramienta —'poné una restricción en la base y listo'— y no lo son. Uno hace cumplir un invariante DENTRO de una transacción; el otro serializa DOS. Confundirlos me costó una de las dos rondas de corrección de Judgment Day, sobre la unidad más crítica de seguridad de la fase, y el error no lo detectó ninguna revisión: lo detectó un test de concurrencia que el actor de corrección escribió porque se lo pedí. Dentro de tres meses cualquiera que lea 'agregamos un índice único para la carrera' va a repetirlo, porque la frase suena bien."
 ---

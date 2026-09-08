@@ -3,7 +3,9 @@ type: architecture
 score: 5
 topic_key: mascotapp/security/error-text-is-an-enumeration-oracle
 task: T-02-027
-status: pendiente-de-aprobacion
+status: guardado
+aprobado: 2026-09-08 por el usuario
+observation_id: obs-0873734ada88dedb
 rationale: "Es un defecto que ninguna revisión encuentra leyendo, porque el código correcto y el incorrecto se ven igual de razonables — devolver `err.Error()` parece útil, no peligroso. Y la clase de test que lo atrapa es la que casi nunca se escribe: todo test de handler afirma lo que se escribió, y el fallo se prueba mirando solo el código de estado. Aplica a cada endpoint que se agregue de acá en adelante, y a los tres que la Fase 02 todavía no escribió: login, magic link y refresh. Además enseña que un comentario que declara una propiedad de seguridad es una afirmación verificable, no una nota."
 ---
 

@@ -13,23 +13,9 @@ vault, con enlaces [[wiki]] que resuelven en el grafo. El `observation_id` nombr
 la misma nota dentro de Engram: es trazabilidad, no un requisito para leerla.
 
 - Candidatos totales: **98**
-- Aprobados y guardados en Engram: **90**
-- Pendientes de aprobación explícita del usuario: **6**
+- Aprobados y guardados en Engram: **96**
+- Pendientes de aprobación explícita del usuario: **0**
 - Descartados por el pase de curaduría: **2**
-
-## Pendientes de aprobación
-
-Nada de esto está en Engram todavía. Requiere el sí explícito del usuario
-antes de `mem_save` (§6.6 del plan maestro).
-
-| Tarea | Tipo | Score | Archivo | Qué dice |
-|---|---|---|---|---|
-| `T-02-022` | convention | 4 | [2026-09-05-si-el-orden-de-merge-pelea-con-la-topologia-el-que-esta-mal-es-el-corte-del-pr.md](../../../.engram/queue/2026-09-05-si-el-orden-de-merge-pelea-con-la-topologia-el-que-esta-mal-es-el-corte-del-pr.md) | (T-02-022, MascotApp Fase 02.) |
-| `T-02-021` | architecture | 5 | [2026-09-05-un-indice-unico-parcial-no-cierra-una-carrera-entre-transacciones.md](../../../.engram/queue/2026-09-05-un-indice-unico-parcial-no-cierra-una-carrera-entre-transacciones.md) | (T-02-021, Judgment Day de MascotApp Fase 02. Relacionado con obs-a88eecda20bb1bc4.) |
-| `T-02-024` | convention | 4 | [2026-09-06-un-mutante-que-no-compila-no-es-un-mutante-que-sobrevive.md](../../../.engram/queue/2026-09-06-un-mutante-que-no-compila-no-es-un-mutante-que-sobrevive.md) | (T-02-024, MascotApp Fase 02. Relacionado con obs-9e00e3a6413dc7d2.) |
-| `T-02-025` | architecture | 5 | [2026-09-06-una-defensa-csrf-correcta-en-general-puede-rechazar-el-100-por-ciento-de-tu-trafico.md](../../../.engram/queue/2026-09-06-una-defensa-csrf-correcta-en-general-puede-rechazar-el-100-por-ciento-de-tu-trafico.md) | (T-02-025, MascotApp Fase 02.) |
-| `T-02-026` | architecture | 4 | [2026-09-07-que-compra-la-lista-de-sufijos-publicos-no-es-lo-que-parece.md](../../../.engram/queue/2026-09-07-que-compra-la-lista-de-sufijos-publicos-no-es-lo-que-parece.md) | (T-02-026, MascotApp Fase 02.) |
-| `T-02-027` | architecture | 5 | [2026-09-08-un-mensaje-de-error-devuelto-al-cliente-es-una-superficie-de-seguridad.md](../../../.engram/queue/2026-09-08-un-mensaje-de-error-devuelto-al-cliente-es-una-superficie-de-seguridad.md) | (T-02-027, MascotApp Fase 02.) |
 
 ## Descartados — NO guardar
 
@@ -44,7 +30,7 @@ exactamente lo que la columna de abajo explica que está mal.
 
 ## Guardadas
 
-### `mascotapp/arch/*` — 9
+### `mascotapp/arch/*` — 11
 
 | Tarea | `topic_key` | Score | Archivo | `observation_id` | Qué dice |
 |---|---|---|---|---|---|
@@ -57,8 +43,10 @@ exactamente lo que la columna de abajo explica que está mal.
 | `T-02-004` | `…/policy-lands-at-version-aware-exemption` | 5 | [2026-09-02-policylandsat-version-aware-catalog-exemption.md](../70-conocimiento/2026-09-02-policylandsat-version-aware-catalog-exemption.md) | `obs-d88a3730b74fb389` | Sacar una tabla de NoPolicy puede romper un test que la tarea que la escribio no menciona, si esa tabla existio (con RLS, sin pol… |
 | `T-02-006` | `…/isolation-probe-must-use-a-writable-column` | 5 | [2026-09-03-ab-probe-must-touch-a-writable-column.md](../70-conocimiento/2026-09-03-ab-probe-must-touch-a-writable-column.md) | `obs-d88f7a4c0b2d9ee5` | El runner A/B de este proyecto prueba que el tenant B no alcanza la fila del tenant A con un no-op: |
 | `T-02-020` | `…/refusals-with-side-effects` | 5 | [2026-09-04-un-rechazo-que-escribe-no-puede-viajar-como-error.md](../70-conocimiento/2026-09-04-un-rechazo-que-escribe-no-puede-viajar-como-error.md) | `obs-a88eecda20bb1bc4` | (T-02-020, MascotApp Fase 02. Relacionado con obs-9e00e3a6413dc7d2.) |
+| `T-02-021` | `…/intra-vs-inter-transaction-invariants` | 5 | [2026-09-05-un-indice-unico-parcial-no-cierra-una-carrera-entre-transacciones.md](../70-conocimiento/2026-09-05-un-indice-unico-parcial-no-cierra-una-carrera-entre-transacciones.md) | `obs-877abd8e46e0924a` | (T-02-021, Judgment Day de MascotApp Fase 02. Relacionado con obs-a88eecda20bb1bc4.) |
+| `T-02-026` | `…/public-suffix-list-buys-false-positives` | 4 | [2026-09-07-que-compra-la-lista-de-sufijos-publicos-no-es-lo-que-parece.md](../70-conocimiento/2026-09-07-que-compra-la-lista-de-sufijos-publicos-no-es-lo-que-parece.md) | `obs-58bc47c9eff9156c` | (T-02-026, MascotApp Fase 02.) |
 
-### `mascotapp/convention/*` — 46
+### `mascotapp/convention/*` — 48
 
 | Tarea | `topic_key` | Score | Archivo | `observation_id` | Qué dice |
 |---|---|---|---|---|---|
@@ -104,6 +92,8 @@ exactamente lo que la columna de abajo explica que está mal.
 | `T-02-016` | `…/every-rls-migration-extends-two-pinned-inventories` | 3 | [2026-09-02-totp-recovery-codes-third-pinned-inventory.md](../70-conocimiento/2026-09-02-totp-recovery-codes-third-pinned-inventory.md) | `obs-a46dedb3f04d9188` | rlstest/catalog.go's meta-test (TestCatalog_EveryRelationIsClassifiedAndProtected) only asserts that a table has RLS, is FORCEd… |
 | `T-02-018` | `…/the-layer-that-answers-first` | 4 | [2026-09-04-un-rollback-contesta-antes-que-el-orden-de-tu-guarda.md](../70-conocimiento/2026-09-04-un-rollback-contesta-antes-que-el-orden-de-tu-guarda.md) | `obs-9e00e3a6413dc7d2` | Quinta instancia de obs-9e00e3a6413dc7d2 (*la capa que contesta primero vacía el test de abajo*). (T-02-018, MascotApp Fase 02.) |
 | `T-02-022` | `…/structural-vs-behavioural-absence-tests` | 4 | [2026-09-05-probar-una-ausencia-por-comportamiento-solo-prueba-el-camino-que-tomaste.md](../70-conocimiento/2026-09-05-probar-una-ausencia-por-comportamiento-solo-prueba-el-camino-que-tomaste.md) | `obs-fb93b875590f191e` | (T-02-022, MascotApp Fase 02. Relacionado con obs-9e00e3a6413dc7d2.) |
+| `T-02-022` | `…/pr-cut-owns-the-merge-order` | 4 | [2026-09-05-si-el-orden-de-merge-pelea-con-la-topologia-el-que-esta-mal-es-el-corte-del-pr.md](../70-conocimiento/2026-09-05-si-el-orden-de-merge-pelea-con-la-topologia-el-que-esta-mal-es-el-corte-del-pr.md) | `obs-9fed14abdab8aa95` | (T-02-022, MascotApp Fase 02.) |
+| `T-02-024` | `…/mutation-runs-need-a-positive-signal` | 4 | [2026-09-06-un-mutante-que-no-compila-no-es-un-mutante-que-sobrevive.md](../70-conocimiento/2026-09-06-un-mutante-que-no-compila-no-es-un-mutante-que-sobrevive.md) | `obs-296d31be8cc336f7` | (T-02-024, MascotApp Fase 02. Relacionado con obs-9e00e3a6413dc7d2.) |
 | `fase-02 planning` | `…/recompute-announced-numbers` | 4 | [2026-09-02-un-numero-anunciado-se-recomputa.md](../70-conocimiento/2026-09-02-un-numero-anunciado-se-recomputa.md) | `obs-99a194c5559106b8` | Un agente cerro la cadena de entrega de la Fase 02 con 23 PRs, 4.875 lineas, ninguno sobre 400. Los tres numeros eran del mismo r… |
 | `fase-02 planning` | `…/spec-must-carry-the-property` | 5 | [2026-09-02-un-requisito-que-el-verificador-no-puede-leer.md](../70-conocimiento/2026-09-02-un-requisito-que-el-verificador-no-puede-leer.md) | `obs-51c9db2915bb5533` | El diseno de la Fase 02 prohibe que un tenant escriba shelters.storage_bytes_used — el contador contra el que se chequea la cuota… |
 | `handoff multi-agente` | `…/commit-messages` | 3 | [2026-09-02-convencion-de-commits.md](../70-conocimiento/2026-09-02-convencion-de-commits.md) | `obs-62d33d3023d8afae` | Los commits de MascotApp siguen Conventional Commits, y la convencion esta escrita en dos lugares ejecutables, no en la memoria d… |
@@ -132,7 +122,7 @@ exactamente lo que la columna de abajo explica que está mal.
 | `T-02-005` | `…/gentle-ai-pinned-until-phase-02-closes` | 4 | [2026-09-03-gentle-ai-pinned-to-1-49-0.md](../70-conocimiento/2026-09-03-gentle-ai-pinned-to-1-49-0.md) | `obs-7b890b7ace39e1e4` | Decisión del usuario, 2026-09-03. gentle-ai update reporta latest: 2.5.0 — no se sube. |
 | `fase-02 planning` | `…/failed-report-is-not-lost-work` | 3 | [2026-09-02-un-agente-que-falla-al-reportar-no-fallo-al-escribir.md](../70-conocimiento/2026-09-02-un-agente-que-falla-al-reportar-no-fallo-al-escribir.md) | `obs-216cdb370cd7e725` | sdd-design se cayo por limite de sesion de proveedor. Su ultimo texto era *"Now I have the full picture. Writing the design."*, y… |
 
-### `mascotapp/security/*` — 22
+### `mascotapp/security/*` — 24
 
 | Tarea | `topic_key` | Score | Archivo | `observation_id` | Qué dice |
 |---|---|---|---|---|---|
@@ -156,6 +146,8 @@ exactamente lo que la columna de abajo explica que está mal.
 | `T-02-003` | `…/column-grants-are-not-table-privileges` | 4 | [2026-09-02-has-table-privilege-no-ve-columnas.md](../70-conocimiento/2026-09-02-has-table-privilege-no-ve-columnas.md) | `obs-eb0d04da21d94427` | Verificado en vivo contra PostgreSQL 17, no asumido: |
 | `T-02-011` | `…/aead-aad-must-cover-the-unencrypted-header` | 5 | [2026-09-03-aad-must-cover-the-header-not-just-the-owner.md](../70-conocimiento/2026-09-03-aad-must-cover-the-header-not-just-the-owner.md) | `obs-5899d1ed7c1b5256` | El formato at-rest de users.totp_secret_enc (P2-D8) es: |
 | `T-02-013` | `…/three-conditions-to-override-never-hand-roll-crypto` | 5 | [2026-09-04-when-hand-rolling-crypto-beats-a-dependency.md](../70-conocimiento/2026-09-04-when-hand-rolling-crypto-beats-a-dependency.md) | `obs-bf6fea41522ee496` | P2-D8 eligió github.com/pquerna/otp para TOTP y rechazó el HMAC propio con el argumento estándar: *"crypto you write is crypto yo… |
+| `T-02-025` | `…/origin-is-the-control-not-sec-fetch-site` | 5 | [2026-09-06-una-defensa-csrf-correcta-en-general-puede-rechazar-el-100-por-ciento-de-tu-trafico.md](../70-conocimiento/2026-09-06-una-defensa-csrf-correcta-en-general-puede-rechazar-el-100-por-ciento-de-tu-trafico.md) | `obs-68a543ce690f6cea` | (T-02-025, MascotApp Fase 02.) |
+| `T-02-027` | `…/error-text-is-an-enumeration-oracle` | 5 | [2026-09-08-un-mensaje-de-error-devuelto-al-cliente-es-una-superficie-de-seguridad.md](../70-conocimiento/2026-09-08-un-mensaje-de-error-devuelto-al-cliente-es-una-superficie-de-seguridad.md) | `obs-0873734ada88dedb` | (T-02-027, MascotApp Fase 02.) |
 | `phase-01-domain-and-data (sdd-design, D5)` | `…/fk-checks-bypass-rls` | 5 | [2026-08-29-fk-checks-bypass-rls.md](../70-conocimiento/2026-08-29-fk-checks-bypass-rls.md) | `obs-f97019216916c800` | Las comprobaciones de integridad referencial de PostgreSQL se saltan RLS. Siempre. |
 | `phase-01-domain-and-data (sdd-propose)` | `…/neon-rls-bypass` | 5 | [2026-08-29-neon-bypassrls-defeats-policies.md](../70-conocimiento/2026-08-29-neon-bypassrls-defeats-policies.md) | `obs-ff9448b3c1505e50` | En Neon, crear el rol de aplicación desde la consola, el CLI o la API desactiva todas las políticas RLS, en silencio. |
 

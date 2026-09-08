@@ -3,7 +3,9 @@ type: convention
 score: 4
 topic_key: mascotapp/convention/mutation-runs-need-a-positive-signal
 task: T-02-024
-status: pendiente-de-aprobacion
+status: guardado
+aprobado: 2026-09-08 por el usuario
+observation_id: obs-296d31be8cc336f7
 relacionado: obs-9e00e3a6413dc7d2
 rationale: "La mutación es la herramienta que más veces me corrigió a mí en esta fase — cuatro veces en tres días. Su valor entero descansa en que un mutante que sobrevive significa algo. Un mutante que no compila produce exactamente la misma salida que un filtro mal escrito, y si lo contás como sobreviviente sacás la conclusión opuesta a la verdadera: 'el test no cubre esto' cuando en realidad el código nunca corrió. Estuve a un renglón de cometerlo. La regla es de tres palabras y evita invalidar toda una campaña de mutación."
 ---
