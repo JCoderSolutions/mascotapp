@@ -3,7 +3,9 @@ type: convention
 score: 5
 topic_key: mascotapp/convention/relational-assertions-need-a-content-assertion
 task: T-02-028
-status: pendiente-de-aprobacion
+status: guardado
+aprobado: 2026-09-08 por el usuario
+observation_id: obs-fb6503b1977f61ad
 rationale: "Es un modo de falla de los TESTS, no del código, así que se cuela por debajo de toda revisión que mire la implementación. Y aparece justo donde más duele: en las propiedades que se enuncian como igualdad — indistinguibilidad, idempotencia, determinismo, round-trips — que son casi siempre propiedades de seguridad. Este proyecto tiene por delante tres endpoints más que la necesitan (magic link, refresh, rate limiting), y en el magic link la indistinguibilidad es requisito explícito del spec. La lección se aplica al escribir el test, que es cuando todavía es gratis."
 ---
 
