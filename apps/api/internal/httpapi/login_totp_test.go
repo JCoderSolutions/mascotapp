@@ -390,6 +390,111 @@ func TestLogin_APrivilegedUserWithoutTOTPEnrolledIsRefused(t *testing.T) {
 	}
 }
 
+// TestLogin_AnAdminIsAsPrivilegedAsAnOwner covers the second half of §5.2's
+// rule, which the mutation run found untested: every case above uses `owner`,
+// so removing `admin` from the privileged set changed nothing.
+//
+// The spec names both roles, and an admin is not a lesser risk — they administer
+// the shelter's animals, applications and members. A rule enforced for one of
+// the two roles it names is a rule with a hole exactly where the second name is.
+func TestLogin_AnAdminIsAsPrivilegedAsAnOwner(t *testing.T) {
+	env := dbtest.Postgres(t)
+	handler := totpLoginHandler(t, env)
+
+	const email, password = "admin-notenough@refugio.test", "a-long-enough-password"
+	userID := seedAdopter(t, env, email, password)
+	grantMembership(t, env, userID, "admin", "active")
+	enrolTOTP(t, env, userID)
+
+	rec := postLoginWith(t, handler, `{"email":"`+email+`","password":"`+password+`"}`)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want %d -- an admin completed login with a password alone: %s",
+			rec.Code, http.StatusUnauthorized, rec.Body.String())
+	}
+	if cookie := rec.Header().Get("Set-Cookie"); cookie != "" {
+		t.Errorf("a refused login set a session cookie: %s", cookie)
+	}
+}
+
+// TestLogin_AVolunteerNeedsNoSecondFactor is what keeps the rule from being
+// "every membership is privileged". A volunteer walks dogs; demanding an
+// authenticator app of them would cost adoption more than it protects.
+func TestLogin_AVolunteerNeedsNoSecondFactor(t *testing.T) {
+	env := dbtest.Postgres(t)
+	handler := totpLoginHandler(t, env)
+
+	const email, password = "volunteer@refugio.test", "a-long-enough-password"
+	userID := seedAdopter(t, env, email, password)
+	grantMembership(t, env, userID, "volunteer", "active")
+
+	rec := postLoginWith(t, handler, `{"email":"`+email+`","password":"`+password+`"}`)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d -- a volunteer was asked for a second factor: %s",
+			rec.Code, http.StatusOK, rec.Body.String())
+	}
+}
+
+// TestLogin_AnUnacceptedInvitationDoesNotDemandASecondFactor pins the `active`
+// half of the privileged check, which the mutation run found unasserted.
+//
+// An `invited` membership grants nothing yet — the person has not accepted, and
+// until they do they hold no role in that shelter. Counting it would lock a user
+// out of their own account over a role somebody else offered them, which is a
+// denial of service anyone can trigger by sending an invitation.
+//
+// A revoked membership is the same shape from the other end: the role is gone,
+// and demanding its second factor is demanding one for nothing.
+func TestLogin_AnUnacceptedInvitationDoesNotDemandASecondFactor(t *testing.T) {
+	env := dbtest.Postgres(t)
+	handler := totpLoginHandler(t, env)
+
+	for _, tt := range []struct {
+		name   string
+		status string
+	}{
+		{"an invitation not yet accepted", "invited"},
+		{"a membership that was revoked", "revoked"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			email := "invitee-" + tt.status + "@refugio.test"
+			const password = "a-long-enough-password"
+
+			userID := seedAdopter(t, env, email, password)
+			// An `owner` membership in the state under test. The role is the
+			// privileged one on purpose: if status were ignored, this would
+			// demand a second factor.
+			grantMembership(t, env, userID, "owner", tt.status)
+
+			rec := postLoginWith(t, handler, `{"email":"`+email+`","password":"`+password+`"}`)
+
+			if rec.Code != http.StatusOK {
+				t.Fatalf("status = %d, want %d -- a %s membership demanded a second factor: %s",
+					rec.Code, http.StatusOK, tt.status, rec.Body.String())
+			}
+		})
+	}
+}
+
+// grantMembership gives the user a membership in a fresh shelter, with the role
+// and status the caller asks for.
+//
+// It writes as the OWNER role because seeding a shelter outside registration is
+// not something the tenant role does — and because the point of these tests is
+// what LOGIN decides about a membership, not how the membership got there.
+func grantMembership(t *testing.T, env *dbtest.Env, userID uuid.UUID, role, status string) {
+	t.Helper()
+
+	shelterID := uuid.New()
+	dbtest.MustExec(t, env.OwnerPool,
+		`INSERT INTO shelters (id, slug, display_name) VALUES ($1, $2, $3)`,
+		shelterID, "seeded-"+shelterID.String()[:8], "Refugio Sembrado")
+	dbtest.MustExec(t, env.OwnerPool,
+		`INSERT INTO memberships (id, user_id, shelter_id, role, status) VALUES ($1, $2, $3, $4, $5)`,
+		uuid.New(), userID, shelterID, role, status)
+}
+
 // TestLogin_AWrongTOTPCodeIsRefusedLikeAWrongPassword keeps the second factor
 // from becoming its own oracle. If a bad code answered differently from a bad
 // password, the refusal would tell a caller that the password was right.
