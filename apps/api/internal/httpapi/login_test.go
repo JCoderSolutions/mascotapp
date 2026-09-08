@@ -316,6 +316,59 @@ func TestLogin_DoesNotCarryATenantClaimBeforeAShelterIsChosen(t *testing.T) {
 	}
 }
 
+// TestLogin_NamesTheUnscopedRoleRatherThanBorrowingATenantRole pins the way out
+// of a real tension, so the next reader does not resolve it the other way.
+//
+// `AccessClaims.validate` refuses an empty role, correctly: RBAC reads that
+// claim, and "" evaluates as "no permissions" in one reading and "unset, fall
+// through" in another. But a role is a property of a MEMBERSHIP, and a
+// membership belongs to one shelter — so a token with no `shelter_id` cannot
+// honestly carry `owner` either.
+//
+// The tempting shortcut is to look up the founder's single membership and copy
+// its role in. That produces a token asserting `owner` with no shelter named,
+// which is exactly the shape the exchange step exists to prevent.
+func TestLogin_NamesTheUnscopedRoleRatherThanBorrowingATenantRole(t *testing.T) {
+	env := dbtest.Postgres(t)
+	handler := loginHandler(t, env)
+
+	const email, password = "unscoped@refugio.test", "a-long-enough-password"
+	seedAccount(t, env, email, password)
+
+	rec := postLogin(t, handler, email, password)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d: %s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+
+	var got struct {
+		AccessToken string `json:"access_token"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("decoding the response: %v", err)
+	}
+
+	issuer, err := auth.NewTokenIssuer([]byte(testJWTSecret), testJWTIssuer, testJWTAudienc)
+	if err != nil {
+		t.Fatalf("building the verifier: %v", err)
+	}
+	claims, err := issuer.Verify(got.AccessToken, time.Now())
+	if err != nil {
+		t.Fatalf("the issued token does not verify: %v", err)
+	}
+
+	if claims.Role != httpapi.RoleUnscoped {
+		t.Errorf("role = %q, want %q -- the founder IS an owner, and this token must not say so before a shelter is chosen",
+			claims.Role, httpapi.RoleUnscoped)
+	}
+	// Named explicitly: these are the values a shortcut would produce, and each
+	// would sail through an RBAC check that only asks whether the role matches.
+	for _, borrowed := range []string{"owner", "admin", "staff", "volunteer"} {
+		if claims.Role == borrowed {
+			t.Errorf("the login token borrowed the tenant role %q with no shelter_id to scope it", borrowed)
+		}
+	}
+}
+
 // TestLogin_RecordsThatOnlyAPasswordWasUsed pins `amr`. It is what lets a later
 // route demand a second factor was actually EXERCISED rather than merely
 // enrolled — the distinction T-02-029 turns into the phase's E2E criterion.
