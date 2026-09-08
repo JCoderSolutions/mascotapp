@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -201,6 +202,77 @@ func TestLogin_IsIndistinguishableBetweenAnUnknownEmailAndAWrongPassword(t *test
 			t.Errorf("header %s differs: %q vs %q",
 				name, wrongPassword.Header().Get(name), unknownEmail.Header().Get(name))
 		}
+	}
+
+	// Comparing the two refusals to EACH OTHER is only half the property, and
+	// the mutation run proved it: both paths go through one function, so a
+	// message changed to "no account with that email" changes both at once and
+	// stays perfectly identical. The test passed while the handler told every
+	// caller which check failed.
+	//
+	// So the content is asserted too. Each of these is a word that would answer
+	// "is this address registered?" for a caller who only reads the body.
+	body := strings.ToLower(wrongPassword.Body.String())
+	for _, leak := range []string{"email", "account", "password", "user", "exist", "found", "unknown", "incorrect", "wrong"} {
+		if strings.Contains(body, leak) {
+			t.Errorf("the refusal body names %q, which says which check failed: %s", leak, wrongPassword.Body.String())
+		}
+	}
+}
+
+// TestLogin_SpendsTheSameWorkOnAnUnknownEmailAsOnAWrongPassword closes the
+// channel the response body cannot show.
+//
+// Returning early when the address is not found makes an unknown email cost
+// almost nothing while a known one costs a full Argon2id derivation — 64 MiB
+// and three passes, about a tenth of a second. Both replies are byte-identical,
+// and a caller with a stopwatch still reads the difference. Enumeration does not
+// need a response body.
+//
+// The mutation run is why this exists: adding an early return SURVIVED every
+// other test in this file, including the one that compares the two refusals.
+//
+// The assertion is a RATIO with wide tolerance, not a fixed budget. What it
+// pins is the presence of the work, not how long the work takes — a floor in
+// milliseconds would fail on a slower CI box and get "fixed" by loosening until
+// it means nothing. The known-account path is the baseline, so both sides move
+// together with the machine.
+func TestLogin_SpendsTheSameWorkOnAnUnknownEmailAsOnAWrongPassword(t *testing.T) {
+	env := dbtest.Postgres(t)
+	handler := loginHandler(t, env)
+
+	const email, password = "timing@refugio.test", "a-long-enough-password"
+	seedAccount(t, env, email, password)
+
+	// Median of several attempts each. A single measurement on a shared CI
+	// machine is a coin flip; the median discards the outlier that scheduling
+	// produces without needing a statistics library.
+	measure := func(email, password string) time.Duration {
+		t.Helper()
+		const attempts = 5
+		samples := make([]time.Duration, 0, attempts)
+		for range attempts {
+			start := time.Now()
+			rec := postLogin(t, handler, email, password)
+			samples = append(samples, time.Since(start))
+			if rec.Code != http.StatusUnauthorized {
+				t.Fatalf("expected %d, got %d: %s", http.StatusUnauthorized, rec.Code, rec.Body.String())
+			}
+		}
+		slices.Sort(samples)
+		return samples[attempts/2]
+	}
+
+	knownAccount := measure(email, "not-the-right-password")
+	unknownAccount := measure("nobody-here@refugio.test", password)
+
+	// Ten percent of the known-account cost. An early return lands near zero
+	// against a ~100ms Argon2id derivation, so this catches it with two orders
+	// of magnitude to spare while tolerating any ordinary scheduling noise.
+	floor := knownAccount / 10
+	if unknownAccount < floor {
+		t.Errorf("an unknown email took %v against %v for a known one (floor %v): the handler is returning before it hashes, which is a timing oracle over the user table",
+			unknownAccount, knownAccount, floor)
 	}
 }
 
