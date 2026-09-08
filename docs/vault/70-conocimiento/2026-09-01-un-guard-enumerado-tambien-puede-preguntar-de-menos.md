@@ -42,5 +42,5 @@ que fallo, mientras que un `EXISTS` en falso solo puede decir que no encontro na
 perdiera *todas* sus claves pasaria el bucle por no tener nada que recorrer. Las dos aserciones
 van juntas.
 
-Ver [[la-conformidad-de-d5-se-pregunta-desde-el-hijo]] e
-[[inventario-por-enumeracion-no-por-lista]].
+Ver [[2026-09-01-la-conformidad-de-d5-se-pregunta-desde-el-hijo]] e
+[[2026-08-31-una-lista-a-mano-en-un-inventario-excluye-en-silencio]].

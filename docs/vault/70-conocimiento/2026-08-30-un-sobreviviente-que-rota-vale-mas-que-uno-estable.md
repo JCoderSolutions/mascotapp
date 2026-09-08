@@ -36,5 +36,5 @@ Después de cerrar un sobreviviente, **volvé a correr la ronda entera**, no sol
 el mutante que arreglaste. Y si el sobreviviente rota, mirá la precondición
 compartida antes que la cobertura.
 
-Corolario de [[el-harness-de-mutacion-que-medía-el-host]]: la ronda de mutación
+Corolario de [[2026-08-30-el-harness-de-mutacion-que-medía-el-host]]: la ronda de mutación
 es un instrumento, y los instrumentos también se calibran.

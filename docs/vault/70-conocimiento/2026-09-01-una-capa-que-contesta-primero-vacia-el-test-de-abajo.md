@@ -41,5 +41,5 @@ El corolario incomodo: **agregar una capa puede vaciar un test que ya existia y 
 La foreign key de 00008 no rompio nada; desactivo la asercion del trigger de 00007 sin tocarla.
 Por eso la ronda de mutacion se corre por tarea y no una sola vez al final.
 
-Ver [[truncate-es-la-escritura-que-ninguna-politica-ve]] y
-[[cuando-dos-capas-devuelven-el-mismo-sqlstate]].
+Ver [[2026-08-31-truncate-es-la-escritura-que-ninguna-politica-ve]] y
+[[2026-08-31-dos-capas-un-solo-sqlstate]].

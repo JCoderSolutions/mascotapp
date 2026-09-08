@@ -35,7 +35,7 @@ Las dos formas garantizan **unicidad** insensible a mayúsculas. Difieren en la 
   de escritura y en la de lectura.
 - Con `citext` la propiedad vive en el tipo de la columna, donde no se puede olvidar.
 
-Eso es exactamente lo que dice [[ADR-0002]]: *"la base es la última línea de defensa y no
+Eso es exactamente lo que dice [[ADR-0002-multi-tenancy]]: *"la base es la última línea de defensa y no
 depende de la disciplina de quien escribe el SQL."* El mismo criterio que eligió RLS sobre
 `WHERE shelter_id = ?` elige `citext` sobre `lower()`.
 

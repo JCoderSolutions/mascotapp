@@ -48,5 +48,5 @@ Preguntá siempre: *¿qué cambio en el código hace fallar esto?* Si la respues
 "ninguno", implementalo igual para trazabilidad — y escribí al lado el que sí
 muerde, diciendo por qué.
 
-Misma familia que [[un-suite-verde-sobre-cero-tablas]]: verde sobre un sujeto que
+Misma familia que [[2026-08-30-un-suite-verde-sobre-cero-tablas]]: verde sobre un sujeto que
 no está.

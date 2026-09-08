@@ -31,4 +31,4 @@ autenticado, la fila de cada adoptante — nombre, teléfono, mail — sería vi
 para todos los refugios de la plataforma.
 
 Un spec enumera escenarios; el caso peligroso suele ser el que no enumera. Ver
-[[una-tabla-rota-no-alcanza]]: misma forma, un nivel más arriba.
+[[2026-08-30-una-tabla-rota-no-alcanza]]: misma forma, un nivel más arriba.

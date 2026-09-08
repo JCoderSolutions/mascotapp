@@ -58,5 +58,5 @@ pregunta.
 Un mutante que mata todo no distingue nada; un mutante que mata exactamente lo que su caso
 afirma es lo que prueba que la cobertura está donde dice estar.
 
-Relacionado: [[isolation-probe-must-use-a-writable-column]] — la otra cara, donde una sonda
+Relacionado: [[2026-09-03-ab-probe-must-touch-a-writable-column]] — la otra cara, donde una sonda
 medía una capa distinta de la que creía.

@@ -37,4 +37,4 @@ posterior".
 
 Corolario: la ausencia de política también es contrato. `refresh_tokens` aparece
 en el test por lo que **no** tiene, porque RLS encendida sin política es lo que
-niega a todo el mundo. Ver [[dos-reglas-un-centinela]].
+niega a todo el mundo. Ver [[2026-08-30-dos-reglas-un-centinela]].

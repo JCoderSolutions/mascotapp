@@ -54,5 +54,5 @@ La regla general, que es lo transferible: **no se cambia de major una herramient
 estado de la unidad de trabajo en curso.** Se cambia entre unidades, con el store
 verificado, o no se cambia.
 
-Relacionado: [[tool-absence-must-fail-at-session-start]] — la otra mitad de la misma
+Relacionado: [[2026-09-03-tool-absence-must-fail-loudly]] — la otra mitad de la misma
 lección, que la salud de las herramientas se chequea ejecutándolas al inicio de la sesión.

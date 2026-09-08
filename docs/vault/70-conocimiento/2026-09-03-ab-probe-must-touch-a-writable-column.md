@@ -70,6 +70,6 @@ Dos instancias de la misma familia aparecieron en la misma tarea:
 
 Al agregar o cambiar un grant, preguntar: **¿qué sondas existentes dependían de ese privilegio
 para llegar a la capa que están midiendo?** Ver también
-[[has-table-privilege-no-ve-los-grants-por-columna]] y
-[[policy-lands-at-version-aware-exemption]], que son la misma familia: una declaración con más
+[[2026-09-02-has-table-privilege-no-ve-columnas]] y
+[[2026-09-02-policylandsat-version-aware-catalog-exemption]], que son la misma familia: una declaración con más
 de un consumidor, y un consumidor que dejó de medir lo que creía.

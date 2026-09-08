@@ -25,7 +25,7 @@ muere ruidoso, en **tres** tests:
 
 1. **T-01-013** — el harness contaba cualquier exit no-cero como kill, así que un
    bloqueo de Windows Defender (que ni corre el test) se acreditaba como mutante
-   cazado. Ver [[el-harness-de-mutacion-que-medía-el-host]].
+   cazado. Ver [[2026-08-30-el-harness-de-mutacion-que-medía-el-host]].
 2. **T-01-015** — un pool de una sola conexión compartido en un loop por tabla
    hacía que solo la primera tabla tuviera conexión virgen.
 3. **T-01-017** — el paquete objetivo no observaba al mutante.

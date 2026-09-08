@@ -39,6 +39,6 @@ Reglas que se derivan:
   producción.
 - Los runbooks de despliegue deben decirlo explícitamente.
 
-Esto amplía la trampa que ya documentaba [[ADR-0002]] ("RLS no aplica a
+Esto amplía la trampa que ya documentaba [[ADR-0002-multi-tenancy]] ("RLS no aplica a
 superusuarios") con un giro que nadie adivina: en Neon la trampa la dispara **cómo
 creaste el rol**, no cuál rol elegiste.

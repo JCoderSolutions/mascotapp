@@ -39,7 +39,7 @@ derivada que no lo mire empieza a mostrar de mas **sin cambiar una linea**.
 1. ¿Cual es la fila que causa la visibilidad?
 2. ¿Que la termina — un borrado, un cambio de estado, un vencimiento?
 3. ¿La policy MIRA eso?
-4. ¿Quien puede ESCRIBIR esa fila? (ver [[una-capa-que-contesta-primero-vacia-el-test-de-abajo]]
+4. ¿Quien puede ESCRIBIR esa fila? (ver [[2026-09-01-una-capa-que-contesta-primero-vacia-el-test-de-abajo]]
    y la regla de D6: permiso de escritura sobre el puente es permiso de lectura sobre la tabla)
 
 Las cuatro se contestan con un test. La 3 es la que nadie escribe, porque la policy se lee

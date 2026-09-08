@@ -26,7 +26,7 @@ poder ejecutar.**
 Una sonda de treinta líneas contra la base real los convirtió:
 
 - uno resultó **más grave** que su propio reporte (un grant de lectura
-  self-service sobre PII, ver [[una-membership-invitada-es-un-grant-de-lectura]]);
+  self-service sobre PII, ver [[2026-08-30-una-membership-invitada-es-un-grant-de-lectura]]);
 - otro quedó **confirmado y diferido** con prueba, en vez de como sospecha;
 - y un tercero quedó **refutado** con evidencia de fuera del alcance del juez.
 

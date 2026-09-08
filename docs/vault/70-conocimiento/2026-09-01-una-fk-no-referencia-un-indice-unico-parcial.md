@@ -47,4 +47,4 @@ refugio"*), pero **no puede acotar un ESTADO de esa relacion** (*"y sigue vigent
 regla incluye un estado, la clave llega hasta la mitad y hay que decir en voz alta donde vive la
 otra mitad.
 
-Ver [[una-clave-compuesta-a-memberships-encierra-la-asignacion]].
+Ver [[2026-09-01-una-clave-compuesta-a-memberships-encierra-la-asignacion]].

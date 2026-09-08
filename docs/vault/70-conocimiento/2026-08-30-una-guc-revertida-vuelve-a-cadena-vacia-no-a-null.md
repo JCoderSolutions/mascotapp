@@ -50,4 +50,4 @@ Un test que **separa los dos estados de conexión** y usa un pool con
 una coincidencia de scheduling. Con el pool por defecto esto pasa de casualidad
 la mayoría de las veces, que es peor que no tenerlo.
 
-Ver [[el-scope-no-sobrevive-a-su-transaccion]].
+Ver [[ADR-0008-withtenant-es-la-unica-puerta]].

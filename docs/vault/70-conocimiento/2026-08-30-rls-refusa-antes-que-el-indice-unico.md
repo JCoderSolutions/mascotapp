@@ -33,5 +33,5 @@ sin probar nada.
 
 Por eso el test primero **prueba que la colisión es real** — un duplicado desde
 el scope del propio tenant A, donde la política no puede ser lo que rechaza — y
-recién después afirma el orden. Misma forma que [[un-suite-verde-sobre-cero-tablas]]:
+recién después afirma el orden. Misma forma que [[2026-08-30-un-suite-verde-sobre-cero-tablas]]:
 antes de afirmar algo sobre un sujeto, probá que el sujeto está ahí.

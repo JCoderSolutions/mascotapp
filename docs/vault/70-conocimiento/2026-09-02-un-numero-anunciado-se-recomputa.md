@@ -32,4 +32,4 @@ original, porque `00015` y `00016` son **dos migraciones** y la propia regla del
 *"una migracion es un PR"*.
 
 Aplica igual a: conteos de cobertura, cantidad de tests, filas de un catalogo, requisitos y
-escenarios en un merge de specs. Ver [[mascotapp/convention/enumerate-dont-list]].
+escenarios en un merge de specs. Ver [[2026-08-31-una-lista-a-mano-en-un-inventario-excluye-en-silencio]].

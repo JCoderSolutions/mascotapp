@@ -43,4 +43,4 @@ quedó corregido en vez de en pie.
 Es el segundo diagnóstico de este proyecto que resultó falso y se corrigió en el
 lugar donde estaba escrito, no en un changelog. El otro es el bloqueo de
 Application Control, que sigue abierto: ver
-[[el-harness-de-mutacion-que-medía-el-host]].
+[[2026-08-30-el-harness-de-mutacion-que-medía-el-host]].

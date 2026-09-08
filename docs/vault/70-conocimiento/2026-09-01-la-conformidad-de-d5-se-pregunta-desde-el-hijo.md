@@ -40,5 +40,5 @@ child. Un guard manejado por la declaracion no vale nada si la declaracion esta 
 que cerrar el hueco fue arreglar las dos mitades — el test y el set, mas el conteo y la tabla
 de la spec.
 
-Ver [[rechazar-no-es-la-propiedad-rechazar-igual-si]] y
-[[inventario-por-enumeracion-no-por-lista]].
+Ver [[2026-08-31-rechazar-no-alcanza-tienen-que-rechazar-igual]] y
+[[2026-08-31-una-lista-a-mano-en-un-inventario-excluye-en-silencio]].

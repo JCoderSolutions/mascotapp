@@ -19,7 +19,7 @@ microchip_id text UNIQUE
 Eso es el modelado correcto del dominio y **una fuga entre tenants**.
 
 La unicidad se chequea **antes que cualquier política** — lo mismo que ya se
-probó para el insert forjado en [[rls-refusa-antes-que-el-indice-unico]]. Así que
+probó para el insert forjado en [[2026-08-30-rls-refusa-antes-que-el-indice-unico]]. Así que
 con una clave global, cada `INSERT` se vuelve un oráculo:
 
 > El refugio B escribe un número de chip, recibe **23505**, y acaba de aprender

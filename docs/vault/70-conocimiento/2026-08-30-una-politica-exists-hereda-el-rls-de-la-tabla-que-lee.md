@@ -44,5 +44,5 @@ que no está cerca de ese archivo.
 Con `EXISTS` a través de otra tabla, **el aislamiento de la tabla es una
 conjunción, y la mitad vive en otra tabla.** El test de esta tabla no puede
 probarla entera: la otra mitad la prueba el caso A/B de la tabla referenciada.
-Ver [[contar-politicas-no-dice-para-quien-son]] — el mismo tipo de ceguera: la
+Ver [[2026-08-30-contar-politicas-no-dice-para-quien-son]] — el mismo tipo de ceguera: la
 aserción parece local y no lo es.

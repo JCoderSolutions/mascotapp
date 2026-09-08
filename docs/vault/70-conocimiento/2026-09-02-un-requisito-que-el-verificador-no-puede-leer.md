@@ -22,7 +22,7 @@ podia salir sin esa columna y **todo pasaba en verde**.
 **La division de trabajo que esto revela.** El diseno dice **como** y **por que**; el spec dice
 **que tiene que ser cierto**. Una propiedad de seguridad que solo vive en el diseno esta apoyada
 en que la persona que implementa lea el diseno entero y no se saltee un renglon de una tabla —
-que es correccion apoyada en disciplina, el modo de falla que [[ADR-0002]] existe para eliminar.
+que es correccion apoyada en disciplina, el modo de falla que [[ADR-0002-multi-tenancy]] existe para eliminar.
 
 **La pregunta que lo detecta, y se hace en el gatekeeping:** *por cada propiedad que el diseno
 promete, hay un escenario del spec que se pone rojo si desaparece?* Si la respuesta es no, la

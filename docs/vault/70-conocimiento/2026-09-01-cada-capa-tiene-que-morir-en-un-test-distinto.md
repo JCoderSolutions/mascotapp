@@ -40,5 +40,5 @@ KILLED las tapa.
 distinto a proposito del `42501` del grant. Un test que solo afirma *"algo lo rechazo"* deja que
 una capa cubra a la otra y no lo vas a notar nunca.
 
-Ver [[una-capa-que-contesta-primero-vacia-el-test-de-abajo]] — el modo de falla inverso, donde una
+Ver [[2026-09-01-una-capa-que-contesta-primero-vacia-el-test-de-abajo]] — el modo de falla inverso, donde una
 capa que contesta ANTES vacia el test de la capa de abajo.

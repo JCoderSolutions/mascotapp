@@ -37,6 +37,6 @@ silenciosamente incorrecto el dia que aparezca un `/* */` o un `--` dentro de un
 que **declara ese limite** es lo que impide que una simplificacion deliberada se convierta en un
 bug accidental.
 
-Ver [[una-lista-a-mano-en-un-inventario-excluye-en-silencio]] y
-[[un-guard-enumerado-tambien-puede-preguntar-de-menos]]: la misma familia de fallas, donde el test
+Ver [[2026-08-31-una-lista-a-mano-en-un-inventario-excluye-en-silencio]] y
+[[2026-09-01-un-guard-enumerado-tambien-puede-preguntar-de-menos]]: la misma familia de fallas, donde el test
 se lee correcto y mide otra cosa.

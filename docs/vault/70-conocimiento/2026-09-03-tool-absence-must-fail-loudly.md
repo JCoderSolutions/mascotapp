@@ -50,4 +50,4 @@ It was removed rather than special-cased. **A check that is permanently red on a
 machine teaches its reader to skim past warnings**, which is the exact habit the program
 exists to break. Only check something whose absence means something.
 
-Related: [[a-pipe-eats-the-exit-code]], [[makefile-tool-provenance]].
+Related: [[2026-09-02-un-pipe-se-come-el-codigo-de-salida]], [[2026-09-02-un-target-que-corre-en-tu-maquina-no-es-un-target]].

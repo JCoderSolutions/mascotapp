@@ -55,6 +55,6 @@ Corolario práctico: un caso de tampering tiene que tocar **cada región** del b
 nonce, ciphertext, tag—, no solo el ciphertext. Un test que solo edita el ciphertext pasa con
 una cabecera completamente desprotegida.
 
-Relacionado: [[isolation-probe-must-use-a-writable-column]] y
-[[trigger-when-guard-covers-the-common-case-not-the-edge]] — la misma familia: el alcance real
+Relacionado: [[2026-09-03-ab-probe-must-touch-a-writable-column]] y
+[[2026-09-03-when-guard-kills-the-feature-not-just-the-edge-case]] — la misma familia: el alcance real
 de una protección se mide, no se deduce de lo que su autor creyó estar cubriendo.

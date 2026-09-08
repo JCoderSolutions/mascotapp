@@ -32,4 +32,4 @@ si existe una tabla que ya relacione ese valor con el shelter. Si existe y tiene
 la referencia compuesta es gratis y convierte una regla de aplicacion en una invariante de base.
 Si no existe, la regla queda en el dominio y hay que decirlo, no suponerlo.
 
-Ver [[la-conformidad-de-d5-se-pregunta-desde-el-hijo]].
+Ver [[2026-09-01-la-conformidad-de-d5-se-pregunta-desde-el-hijo]].

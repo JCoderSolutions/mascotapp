@@ -43,5 +43,5 @@ lee cada columna concedida y se comprueba que las no concedidas dan `42501`.
 
 **Y el recordatorio de siempre:** el mensaje de la denegacion por columna dice
 `permission denied for TABLE users` -- dice TABLE, no column. Se asierta el SQLSTATE `42501`,
-nunca el texto. Ver [[mascotapp/convention/recompute-announced-numbers]] para la misma
+nunca el texto. Ver [[2026-09-02-un-numero-anunciado-se-recomputa]] para la misma
 familia de error: una afirmacion que nadie chequeo.

@@ -41,7 +41,7 @@ un TODO, no es un comentario, no es una línea comentada — es un test que fall
 
 ## La forma general
 
-Es la misma idea que el ledger `Pending` de [[un-suite-verde-sobre-cero-tablas]],
+Es la misma idea que el ledger `Pending` de [[2026-08-30-un-suite-verde-sobre-cero-tablas]],
 aplicada a build wiring en vez de a schema. Las dos responden a la misma
 pregunta: *¿cómo dejo constancia de algo que todavía no se puede hacer, sin que
 la constancia sea un comentario que nadie lee?*

@@ -16,7 +16,7 @@ Los tests de T-01-012 no ejercitan código Go: leen `sqlc.yaml`, el `Makefile` y
 Mutar **el test** ahí no prueba nada útil — borrar una assertion de un test hoja
 siempre lo deja en verde, sin importar qué tan buena era. Es la limitación
 irreducible de todo test hoja, y ya la registré como sobreviviente aceptado en
-[[un-round-trip-no-ve-el-medio-del-camino]].
+[[2026-08-30-un-round-trip-no-ve-el-medio-del-camino]].
 
 El sujeto real de estos tests es **el archivo de configuración**. Así que la
 ronda de mutación cambia `sql_package: pgx/v5` por `database/sql`, borra el

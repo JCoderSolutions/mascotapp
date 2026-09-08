@@ -32,7 +32,7 @@ sino **"¿por qué nada se rompió?"**. Las tres respuestas posibles:
 2. **El código es inalcanzable** → borralo, no lo cubras.
 3. **El código es alcanzable pero el efecto es correcto** → dejalo y documentá
    por qué, como pasó con la verificación de UPDATE en
-   [[delete-sin-where-esquiva-la-politica-select]].
+   [[2026-08-30-delete-sin-where-esquiva-la-politica-select]].
 
 La corrección acá fue colapsar los dos chequeos en uno, con un mensaje que
 distingue las dos formas ("listado dos veces en Tenant" vs "declarado en Tenant
@@ -40,4 +40,4 @@ y NonTenantModel") en vez del ilegible "declarado en Tenant y Tenant".
 `duplicates()` quedó cubriendo solo `TenantChildren`, que el mapa `seen` no
 visita — ahí sí es alcanzable, y ahí sí lleva su caso.
 
-Ver [[testear-un-check-no-es-testear-que-corre]].
+Ver [[2026-08-30-testear-un-check-no-es-testear-que-corre]].

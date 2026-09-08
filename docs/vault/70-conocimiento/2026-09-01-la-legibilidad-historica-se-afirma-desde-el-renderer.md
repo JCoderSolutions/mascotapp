@@ -37,5 +37,5 @@ en vez de `ON id = s.template_version_id`. Renderiza preguntas que el adoptante 
 
 Y todo esto es legible solo mientras la version **siga existiendo**: la durabilidad la dan el
 trigger de inmutabilidad de 00007 (para las publicadas) y `ON DELETE RESTRICT` (para un draft
-que junto respuestas). Ver [[una-capa-que-contesta-primero-vacia-el-test-de-abajo]] — de esas
+que junto respuestas). Ver [[2026-09-01-una-capa-que-contesta-primero-vacia-el-test-de-abajo]] — de esas
 dos capas, solo una se estaba ejercitando.

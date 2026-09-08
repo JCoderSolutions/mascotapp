@@ -25,7 +25,7 @@ en una pagina dedicada, y `postgres:17-alpine` trae `citext 1.6` de fabrica — 
 Con el indice sobre `lower(email)`, un `WHERE email = $1` **falla en silencio** contra una
 direccion escrita distinto, salvo que **cada** call site se acuerde de normalizar al leer y al
 escribir. O sea, correccion apoyada en disciplina — que es exactamente el modo de falla que
-[[ADR-0002]] existe para eliminar. La regla no verificada estaba a punto de reintroducir el
+[[ADR-0002-multi-tenancy]] existe para eliminar. La regla no verificada estaba a punto de reintroducir el
 problema que la arquitectura entera trata de sacar.
 
 **La forma general:** una restriccion heredada —de un ADR anterior, de un README, de "ya sabemos

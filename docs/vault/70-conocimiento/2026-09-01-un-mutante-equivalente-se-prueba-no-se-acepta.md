@@ -41,5 +41,5 @@ mano, que es proteccion para tres tablas. Se agrego un test que enumera el catal
 de aplicacion tiene `TRUNCATE` sobre ninguna tabla, nunca. El mutante equivalente no revelaba
 un bug, pero revelaba **donde la proteccion dependia de que alguien se acordara**.
 
-Ver [[inventario-por-enumeracion-no-por-lista]] y
-[[truncate-es-la-escritura-que-ninguna-politica-ve]].
+Ver [[2026-08-31-una-lista-a-mano-en-un-inventario-excluye-en-silencio]] y
+[[2026-08-31-truncate-es-la-escritura-que-ninguna-politica-ve]].

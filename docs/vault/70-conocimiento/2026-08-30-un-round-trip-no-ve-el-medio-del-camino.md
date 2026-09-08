@@ -18,7 +18,7 @@ principio. Un `Down` en el medio que dropea una política y deja su tabla, o que
 dropea un padre y huerfaniza un hijo, **no aparece**: el `down-to 0` siguiente
 borra la evidencia y el `up` la reconstruye.
 
-Es la misma familia que [[m10-un-round-trip-que-vuelve-al-inicio]] de T-01-007,
+Es la misma familia que [[2026-08-30-un-round-trip-no-ve-el-medio-del-camino]] de T-01-007,
 un nivel más arriba: ahí el ciclo tapaba lo que un `Down` destruía; acá tapa lo
 que un `Down` **deja mal**.
 

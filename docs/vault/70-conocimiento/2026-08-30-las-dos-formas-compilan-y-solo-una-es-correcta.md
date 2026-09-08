@@ -52,5 +52,5 @@ Esa clave se ve redundante al lado de la primary key, y no lo es: es **la clave
 referenciada** de toda FK compuesta de tenant. Alguien que la "limpie" hace
 imposible declararlas. Por eso se afirma directo, no implícitamente.
 
-Ver [[una-membership-invitada-es-un-grant-de-lectura]] — misma familia: el
+Ver [[2026-08-30-una-membership-invitada-es-un-grant-de-lectura]] — misma familia: el
 mecanismo que saltea la política.

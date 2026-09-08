@@ -24,7 +24,7 @@ viva.
 Es la tercera aparición del mismo error en esta fase:
 
 1. **T-01-009**: una tabla rota dispara varias verificaciones a la vez → el test
-   solo pedía `err != nil`. Ver [[una-tabla-rota-no-alcanza]].
+   solo pedía `err != nil`. Ver [[2026-08-30-una-tabla-rota-no-alcanza]].
 2. **T-01-010**: dos ramas del mismo `Validate` producían errores distintos → el
    test solo pedía `err != nil`.
 3. **T-01-011**: dos reglas distintas producen el **mismo centinela** → el test

@@ -53,6 +53,6 @@ PII.
 
 Por cada carve-out `EXISTS`: **¿quién puede escribir filas en la tabla puente, y
 qué le habilita eso a leer?** Ver
-[[una-politica-exists-hereda-el-rls-de-la-tabla-que-lee]] — es la otra mitad de
+[[2026-08-30-una-politica-exists-hereda-el-rls-de-la-tabla-que-lee]] — es la otra mitad de
 la misma idea: esa nota dice que hereda el *filtro* de B, esta dice que hereda
 sus *permisos de escritura*.

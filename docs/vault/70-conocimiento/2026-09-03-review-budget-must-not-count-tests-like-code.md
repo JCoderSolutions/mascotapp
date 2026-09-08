@@ -76,6 +76,6 @@ con siete mediciones no se re-fija con una cuenta; si el próximo PR lo excede, 
 conversación real con un número real. Medir, no predecir — la misma disciplina que produjo
 el diagnóstico.
 
-Relacionado: [[recompute-announced-numbers]] — la medición contra `git` también corrigió un
+Relacionado: [[2026-09-02-un-numero-anunciado-se-recomputa]] — la medición contra `git` también corrigió un
 número anunciado (un PR reportado en 314 que era 359, porque se midió antes de un agregado
 posterior).

@@ -42,5 +42,5 @@ alguien pueda revisar.
 ## Lo que lo encontró
 
 El round-trip escalonado de T-01-011 — el que baja **un paso a la vez** en vez de
-ir directo a 0. Ver [[un-round-trip-no-ve-el-medio-del-camino]]. Ningún review
+ir directo a 0. Ver [[2026-08-30-un-round-trip-no-ve-el-medio-del-camino]]. Ningún review
 humano de este SQL iba a ver la arista.

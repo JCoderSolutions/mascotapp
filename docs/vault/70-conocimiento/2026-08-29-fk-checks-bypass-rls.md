@@ -61,6 +61,6 @@ Requisito de test que sale de esto: por cada tabla hija, como B, insertar una fi
 referencie al padre de A y **exigir violación de FK (`23503`)**. Sin esa aserción, la FK
 compuesta se puede caer en un refactor y ningún test de lectura se entera.
 
-Complementa [[ADR-0002]] y la trampa de Neon en
+Complementa [[ADR-0002-multi-tenancy]] y la trampa de Neon en
 [[2026-08-29-neon-bypassrls-defeats-policies]]: aquella era "cómo creaste el rol", esta es
 "RLS no cubre la ruta que usa el planner para validar constraints".

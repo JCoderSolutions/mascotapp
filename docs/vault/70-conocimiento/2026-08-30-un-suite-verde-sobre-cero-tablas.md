@@ -43,5 +43,5 @@ lea como prueba**, y forzar que cada tarea de migración toque el archivo del
 meta-test. El costo es una línea por tabla. El beneficio es que nadie confunde
 "no encontré nada mal" con "verifiqué que todo está bien".
 
-Ver [[testear-un-check-no-es-testear-que-corre]] y
-[[una-tabla-rota-no-alcanza]].
+Ver [[2026-08-30-testear-un-check-no-es-testear-que-corre]] y
+[[2026-08-30-una-tabla-rota-no-alcanza]].

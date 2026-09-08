@@ -35,4 +35,4 @@ que la que estabas probando, el test sigue verde y deja de probar lo que decia p
 la cascada de T-01-020 y que `published_at` en T-01-023 — el agujero nunca esta en lo que estabas
 mirando.
 
-Ver [[truncate-es-la-escritura-que-ninguna-politica-ve]].
+Ver [[2026-08-31-truncate-es-la-escritura-que-ninguna-politica-ve]].
