@@ -12,9 +12,9 @@ hace que el conocimiento viaje — regla IA-4: el repositorio es la verdad opera
 vault, con enlaces [[wiki]] que resuelven en el grafo. El `observation_id` nombra
 la misma nota dentro de Engram: es trazabilidad, no un requisito para leerla.
 
-- Candidatos totales: **99**
+- Candidatos totales: **100**
 - Aprobados y guardados en Engram: **96**
-- Pendientes de aprobación explícita del usuario: **1**
+- Pendientes de aprobación explícita del usuario: **2**
 - Descartados por el pase de curaduría: **2**
 
 ## Pendientes de aprobación
@@ -24,6 +24,7 @@ antes de `mem_save` (§6.6 del plan maestro).
 
 | Tarea | Tipo | Score | Archivo | Qué dice |
 |---|---|---|---|---|
+| `T-02-029` | convention | 5 | [2026-09-08-la-fixture-es-el-limite-de-lo-que-un-test-puede-decir.md](../../../.engram/queue/2026-09-08-la-fixture-es-el-limite-de-lo-que-un-test-puede-decir.md) | (T-02-029, MascotApp Fase 02.) |
 | `T-02-028` | convention | 5 | [2026-09-08-un-test-que-compara-dos-salidas-entre-si-no-fija-ninguna-de-las-dos.md](../../../.engram/queue/2026-09-08-un-test-que-compara-dos-salidas-entre-si-no-fija-ninguna-de-las-dos.md) | (T-02-028, MascotApp Fase 02.) |
 
 ## Descartados — NO guardar

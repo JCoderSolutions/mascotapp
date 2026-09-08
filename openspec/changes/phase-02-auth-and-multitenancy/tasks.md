@@ -546,17 +546,22 @@ handlers themselves, then the contract and its codegen.
       - pilot: blacklisted (§7.2)
       - engram: —
 
-- [~] **T-02-029** · Login handler — TOTP-mandatory and recovery-code fallback
+- [x] **T-02-029** · Login handler — TOTP-mandatory and recovery-code fallback
       - spec: identity-and-session / *TOTP is mandatory for owner and admin roles* (all three scenarios) · *A recovery code can complete login in place of TOTP* (both scenarios)
       - RED first: an owner with TOTP enrolled submitting only the correct password gets **no session** · the same owner with a valid current TOTP code gets a session · a non-privileged role (adopter, no role requiring TOTP) gets a session with no TOTP code at all · an owner with unused recovery codes logs in with one instead of TOTP and gets a session · an admin with TOTP enrolled and only the correct password (no TOTP, no recovery code) gets **no session** — this is the E2E success criterion: *"owner/admin cannot complete login without TOTP"*
       - build: `auth_handlers.go` — extends the login handler with the TOTP/recovery branch, wiring `totp.go` + `recovery.go`; sets `amr` claim to `["pwd","otp"]` when TOTP or recovery was used
       - tests: all five scenarios green
       - dod: RED→GREEN · lint clean · coverage held
-      - est: 140
+      - est: 140 · **measured 115 implementation / 662 total**, inside both budgets
+      - **THE PHASE'S E2E CRITERION IS GREEN**: an owner with TOTP enrolled and the CORRECT password gets no session, no cookie, no token.
+      - **the privileged check asks across ALL active memberships, not one.** A user can be `owner` of one shelter and `volunteer` in another; asking per shelter would let them log in with no second factor and then exchange that session for the privileged shelter, since the exchange verifies an active membership and not how the session was authenticated.
+      - **an owner who never enrolled TOTP is REFUSED**, a question the contract left open. The other reading makes the requirement opt-in by inaction and exempts forever every owner created before enrolment existed.
+      - **five older login tests broke, and the code was right**: they registered a shelter, which makes the caller an `owner`, then expected a password-only login to succeed. That is the criterion working. The FIXTURE changed rather than the assertions — `seedAccount` now creates a user with no membership, which is what those tests always meant.
+      - **2 of 7 mutants survived the first pass, and both were conditions written in the code, stated in the comment, and asserted nowhere.** `admin` removed from the privileged set changed nothing, because every case used an owner — a rule enforced for one of the two roles it names. And the `active` check was untested, so an `invited` membership counting would lock a user out over a role somebody else offered them: a denial of service anyone can trigger by sending an invitation. Both closed, **7/7**, zero residue.
       - pilot: blacklisted (§7.2)
       - engram: —
 
-- [ ] **T-02-030** · Magic-link handler
+- [~] **T-02-030** · Magic-link handler
       - spec: identity-and-session / *Magic-link responses are indistinguishable by account existence*
       - RED first: a request for an address with an account and one for an address with none get the **same** HTTP status and body shape, response times within the same bounded tolerance · only the existing account's address receives an email (asserted through the `LogSender` stub from `T-02-022`)
       - build: `auth_handlers.go` — magic-link handler
