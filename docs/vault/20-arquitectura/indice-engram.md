@@ -13,8 +13,8 @@ vault, con enlaces [[wiki]] que resuelven en el grafo. El `observation_id` nombr
 la misma nota dentro de Engram: es trazabilidad, no un requisito para leerla.
 
 - Candidatos totales: **100**
-- Aprobados y guardados en Engram: **96**
-- Pendientes de aprobación explícita del usuario: **2**
+- Aprobados y guardados en Engram: **97**
+- Pendientes de aprobación explícita del usuario: **1**
 - Descartados por el pase de curaduría: **2**
 
 ## Pendientes de aprobación
@@ -24,7 +24,6 @@ antes de `mem_save` (§6.6 del plan maestro).
 
 | Tarea | Tipo | Score | Archivo | Qué dice |
 |---|---|---|---|---|
-| `T-02-029` | convention | 5 | [2026-09-08-la-fixture-es-el-limite-de-lo-que-un-test-puede-decir.md](../../../.engram/queue/2026-09-08-la-fixture-es-el-limite-de-lo-que-un-test-puede-decir.md) | (T-02-029, MascotApp Fase 02.) |
 | `T-02-028` | convention | 5 | [2026-09-08-un-test-que-compara-dos-salidas-entre-si-no-fija-ninguna-de-las-dos.md](../../../.engram/queue/2026-09-08-un-test-que-compara-dos-salidas-entre-si-no-fija-ninguna-de-las-dos.md) | (T-02-028, MascotApp Fase 02.) |
 
 ## Descartados — NO guardar
@@ -56,7 +55,7 @@ exactamente lo que la columna de abajo explica que está mal.
 | `T-02-021` | `…/intra-vs-inter-transaction-invariants` | 5 | [2026-09-05-un-indice-unico-parcial-no-cierra-una-carrera-entre-transacciones.md](../70-conocimiento/2026-09-05-un-indice-unico-parcial-no-cierra-una-carrera-entre-transacciones.md) | `obs-877abd8e46e0924a` | (T-02-021, Judgment Day de MascotApp Fase 02. Relacionado con obs-a88eecda20bb1bc4.) |
 | `T-02-026` | `…/public-suffix-list-buys-false-positives` | 4 | [2026-09-07-que-compra-la-lista-de-sufijos-publicos-no-es-lo-que-parece.md](../70-conocimiento/2026-09-07-que-compra-la-lista-de-sufijos-publicos-no-es-lo-que-parece.md) | `obs-58bc47c9eff9156c` | (T-02-026, MascotApp Fase 02.) |
 
-### `mascotapp/convention/*` — 48
+### `mascotapp/convention/*` — 49
 
 | Tarea | `topic_key` | Score | Archivo | `observation_id` | Qué dice |
 |---|---|---|---|---|---|
@@ -104,6 +103,7 @@ exactamente lo que la columna de abajo explica que está mal.
 | `T-02-022` | `…/structural-vs-behavioural-absence-tests` | 4 | [2026-09-05-probar-una-ausencia-por-comportamiento-solo-prueba-el-camino-que-tomaste.md](../70-conocimiento/2026-09-05-probar-una-ausencia-por-comportamiento-solo-prueba-el-camino-que-tomaste.md) | `obs-fb93b875590f191e` | (T-02-022, MascotApp Fase 02. Relacionado con obs-9e00e3a6413dc7d2.) |
 | `T-02-022` | `…/pr-cut-owns-the-merge-order` | 4 | [2026-09-05-si-el-orden-de-merge-pelea-con-la-topologia-el-que-esta-mal-es-el-corte-del-pr.md](../70-conocimiento/2026-09-05-si-el-orden-de-merge-pelea-con-la-topologia-el-que-esta-mal-es-el-corte-del-pr.md) | `obs-9fed14abdab8aa95` | (T-02-022, MascotApp Fase 02.) |
 | `T-02-024` | `…/mutation-runs-need-a-positive-signal` | 4 | [2026-09-06-un-mutante-que-no-compila-no-es-un-mutante-que-sobrevive.md](../70-conocimiento/2026-09-06-un-mutante-que-no-compila-no-es-un-mutante-que-sobrevive.md) | `obs-296d31be8cc336f7` | (T-02-024, MascotApp Fase 02. Relacionado con obs-9e00e3a6413dc7d2.) |
+| `T-02-029` | `…/fixtures-bound-what-tests-can-assert` | 5 | [2026-09-08-la-fixture-es-el-limite-de-lo-que-un-test-puede-decir.md](../70-conocimiento/2026-09-08-la-fixture-es-el-limite-de-lo-que-un-test-puede-decir.md) | `obs-2e0880f4d065d81a` | (T-02-029, MascotApp Fase 02.) |
 | `fase-02 planning` | `…/recompute-announced-numbers` | 4 | [2026-09-02-un-numero-anunciado-se-recomputa.md](../70-conocimiento/2026-09-02-un-numero-anunciado-se-recomputa.md) | `obs-99a194c5559106b8` | Un agente cerro la cadena de entrega de la Fase 02 con 23 PRs, 4.875 lineas, ninguno sobre 400. Los tres numeros eran del mismo r… |
 | `fase-02 planning` | `…/spec-must-carry-the-property` | 5 | [2026-09-02-un-requisito-que-el-verificador-no-puede-leer.md](../70-conocimiento/2026-09-02-un-requisito-que-el-verificador-no-puede-leer.md) | `obs-51c9db2915bb5533` | El diseno de la Fase 02 prohibe que un tenant escriba shelters.storage_bytes_used — el contador contra el que se chequea la cuota… |
 | `handoff multi-agente` | `…/commit-messages` | 3 | [2026-09-02-convencion-de-commits.md](../70-conocimiento/2026-09-02-convencion-de-commits.md) | `obs-62d33d3023d8afae` | Los commits de MascotApp siguen Conventional Commits, y la convencion esta escrita en dos lugares ejecutables, no en la memoria d… |

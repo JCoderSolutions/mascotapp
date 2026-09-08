@@ -3,7 +3,9 @@ type: convention
 score: 5
 topic_key: mascotapp/convention/fixtures-bound-what-tests-can-assert
 task: T-02-029
-status: pendiente-de-aprobacion
+status: guardado
+aprobado: 2026-09-08 por el usuario
+observation_id: obs-2e0880f4d065d81a
 rationale: "Explica por qué una suite puede verse completa y tener huecos sistemáticos, y da la forma de encontrarlos sin leer todos los tests. Los dos mutantes que sobrevivieron en T-02-029 no eran descuidos independientes: eran la misma causa —un helper que solo construía una forma— y ninguna revisión los habría visto, porque cada test individual está bien escrito. Aplica a cada archivo de tests que se agregue de acá en adelante, y la pregunta que propone (¿qué formas NO puede construir esta fixture?) es de treinta segundos."
 ---
 
