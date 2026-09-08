@@ -254,6 +254,58 @@ func TestRegister_NeverEchoesThePassword(t *testing.T) {
 	}
 }
 
+// TestRegister_DoesNotLeakTheDatabaseErrorToTheCaller closes an enumeration
+// oracle on the one route that is open to anybody.
+//
+// A duplicate `shelter_slug` is refused by a UNIQUE constraint, and PostgreSQL
+// says so in words: it names the constraint, the table and the conflicting
+// value. Registration is exactly the endpoint where handing that text back tells
+// an unauthenticated caller which shelters already exist — and the same shape
+// would tell them which email addresses do.
+//
+// The mutation run is why this test exists. Returning `err.Error()` instead of a
+// fixed message SURVIVED every other test in this file: they all assert what was
+// written, and none of them reads the body of a failure. The comment in the
+// handler already claimed this property; it took a mutant to show that nothing
+// checked it.
+func TestRegister_DoesNotLeakTheDatabaseErrorToTheCaller(t *testing.T) {
+	env := dbtest.Postgres(t)
+	handler := httpapi.RegisterHandler(env.AuthPool, env.TenantPool)
+
+	post := func(email, slug string) *httptest.ResponseRecorder {
+		t.Helper()
+		body := `{
+			"email": "` + email + `",
+			"password": "a-long-enough-password",
+			"full_name": "Clash Founder",
+			"shelter_name": "Refugio Choque",
+			"shelter_slug": "` + slug + `"
+		}`
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/api/v1/auth/register", strings.NewReader(body)))
+		return rec
+	}
+
+	if rec := post("first@refugio.test", "refugio-choque"); rec.Code != http.StatusCreated {
+		t.Fatalf("seeding: status = %d, want %d: %s", rec.Code, http.StatusCreated, rec.Body.String())
+	}
+
+	// A different person, the same slug. The constraint refuses it.
+	rec := post("second@refugio.test", "refugio-choque")
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want %d on a duplicate slug: %s", rec.Code, http.StatusInternalServerError, rec.Body.String())
+	}
+
+	// Each of these is something the driver's message carries and the caller
+	// must not receive: the constraint's name, the table, the SQLSTATE, and the
+	// value that collided.
+	for _, leak := range []string{"shelters", "slug", "duplicate", "SQLSTATE", "23505", "refugio-choque"} {
+		if strings.Contains(strings.ToLower(rec.Body.String()), strings.ToLower(leak)) {
+			t.Errorf("the response body leaks %q: %s", leak, rec.Body.String())
+		}
+	}
+}
+
 // TestRegister_StoresThePasswordHashedAndNotInTheClear reads the credential back
 // through the auth role. A handler that stored the password verbatim would pass
 // every other test in this file.
