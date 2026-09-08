@@ -530,17 +530,23 @@ handlers themselves, then the contract and its codegen.
       - pilot: blacklisted (§7.2)
       - engram: —
 
-- [~] **T-02-028** · Login handler — password path, token + cookie issuance
+- [x] **T-02-028** · Login handler — password path, token + cookie issuance
       - spec: identity-and-session / *Password-based registration and login use Argon2id* (both scenarios) · *JWT access tokens are short-lived and carry the tenant claim*
       - RED first: correct password → credential check passes, issuance proceeds · wrong password → no session issued · on success: `Set-Cookie: __Secure-mascotapp_refresh` with `HttpOnly; Secure; SameSite=None; Path=/api/v1/auth` (P2-D9) and a 15-minute access token in the body
       - build: `auth_handlers.go` — login handler's password-only path, wiring `password.go` + `token.go` + `session.go`
       - tests: all of the above green
       - dod: RED→GREEN · lint clean · coverage held
-      - est: 150
+      - est: 150 · **measured 215 implementation / 693 total**, inside both budgets
+      - **`Issue` refused the first GREEN and exposed a tension the contract did not resolve.** A `role` claim is required, but a role belongs to a MEMBERSHIP and a membership to one shelter — and this token deliberately names no shelter. The shortcut (read the founder's single membership, copy its role) mints a token asserting `owner` with nothing to scope it, which is the shape `POST /auth/session/shelter` exists to prevent. Resolved by NAMING the state: `httpapi.RoleUnscoped`, with a test that also names the four values a shortcut would produce.
+      - **TWO mutants survived the first pass, both the same defect**: an unauthenticated caller learning whether an address is registered.
+        - the indistinguishability test compared the two refusals TO EACH OTHER, and both go through one function — so a message changed to "no account with that email" changed both at once and stayed identical. **It asserted a relation and never a content.** Now it names nine words that would answer the question.
+        - returning early on an unknown address costs nothing while a known one costs a full Argon2id derivation. Byte-identical replies, and a stopwatch reads the difference. Closed with a real dummy hash, and asserted as a RATIO against the known-account path — a fixed millisecond floor would fail on a slower machine and get loosened until it meant nothing.
+      - **8 mutants, 8 killed**, zero residue verified by diff against a pristine copy
+      - **one `//nolint:gosec`**, G124 on `SameSite=None`: a genuine false positive, since `Secure` and `HttpOnly` are both set and `None` is P2-D9's decision rather than an omission. Follows `bootstrap.go`'s precedent — the suppression names the test that asserts the property instead of standing alone.
       - pilot: blacklisted (§7.2)
       - engram: —
 
-- [ ] **T-02-029** · Login handler — TOTP-mandatory and recovery-code fallback
+- [~] **T-02-029** · Login handler — TOTP-mandatory and recovery-code fallback
       - spec: identity-and-session / *TOTP is mandatory for owner and admin roles* (all three scenarios) · *A recovery code can complete login in place of TOTP* (both scenarios)
       - RED first: an owner with TOTP enrolled submitting only the correct password gets **no session** · the same owner with a valid current TOTP code gets a session · a non-privileged role (adopter, no role requiring TOTP) gets a session with no TOTP code at all · an owner with unused recovery codes logs in with one instead of TOTP and gets a session · an admin with TOTP enrolled and only the correct password (no TOTP, no recovery code) gets **no session** — this is the E2E success criterion: *"owner/admin cannot complete login without TOTP"*
       - build: `auth_handlers.go` — extends the login handler with the TOTP/recovery branch, wiring `totp.go` + `recovery.go`; sets `amr` claim to `["pwd","otp"]` when TOTP or recovery was used
