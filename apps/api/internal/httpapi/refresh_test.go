@@ -1,11 +1,16 @@
 package httpapi_test
 
 import (
+	"bytes"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
 
 	"github.com/gentleman/mascotapp/apps/api/internal/auth"
 	"github.com/gentleman/mascotapp/apps/api/internal/db/dbtest"
@@ -266,6 +271,99 @@ func TestRefresh_EveryRefusalLooksTheSame(t *testing.T) {
 	for _, leak := range []string{"reuse", "revoked", "expired", "already", "family", "malformed", "missing"} {
 		if strings.Contains(body, leak) {
 			t.Errorf("the refusal names %q, which tells the caller why: %s", leak, reference.Body.String())
+		}
+	}
+}
+
+// TestRefresh_AZeroUserPrefixIsRefusedLikeAnyOtherBadCookie covers a cookie
+// that PARSES. Sixteen zero bytes are a valid uuid encoding, so
+// ParseRefreshCookie hands back uuid.Nil without complaint, and WithAuthUser is
+// what refuses it -- with ErrNoAuthUser, an error rather than a refusal.
+//
+// Answered as a 500, that is a reply no other bad cookie produces, from a value
+// anyone can construct. The mutation run found the branch that prevents it
+// unasserted. Logout has the same branch and gets the same cookie.
+func TestRefresh_AZeroUserPrefixIsRefusedLikeAnyOtherBadCookie(t *testing.T) {
+	env := dbtest.Postgres(t)
+	refresh, logout := sessionHandlers(t, env)
+
+	zero := auth.FormatRefreshCookie(uuid.Nil, bytes.Repeat([]byte{0x01}, auth.RefreshSecretLength))
+
+	rec := postWithCookie(t, refresh, "/api/v1/auth/refresh", allowedWebOrigin, zero)
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("refresh with a zero-uuid prefix: status = %d, want %d: %s", rec.Code, http.StatusUnauthorized, rec.Body.String())
+	}
+	reference := postWithCookie(t, refresh, "/api/v1/auth/refresh", allowedWebOrigin, "garbage")
+	if rec.Body.String() != reference.Body.String() {
+		t.Errorf("the zero-uuid refusal %q differs from an ordinary bad cookie's %q", rec.Body.String(), reference.Body.String())
+	}
+
+	if out := postWithCookie(t, logout, "/api/v1/auth/logout", allowedWebOrigin, zero); out.Code != http.StatusNoContent {
+		t.Errorf("logout with a zero-uuid prefix: status = %d, want %d: %s", out.Code, http.StatusNoContent, out.Body.String())
+	}
+}
+
+// TestRefresh_ConcurrentUsesOfOneCookieNeverAnswer500 covers the other half of
+// the branch the zero-uuid test covers, and the half no single request reaches.
+//
+// Several requests presenting one cookie at once read it live before any of
+// them holds the family lock. One wins. A loser whose read was taken before the
+// winner committed finds the row already revoked by the time it tries to revoke
+// it, and RotateRefreshToken reports that as an ERROR wrapping
+// ErrRefreshTokenInvalid -- not as a refusal -- because nothing was written and
+// the caller's rollback has nothing to undo. Answered as a 500, a double-clicked
+// refresh would surface a server error to a user who did nothing wrong.
+//
+// The assertion is not which request wins. It is that every response is a 200
+// or a 401, and that exactly one is a 200. Trials repeat for the same reason the
+// auth package's concurrency test repeats: a single attempt at a timing-dependent
+// path proves nothing.
+func TestRefresh_ConcurrentUsesOfOneCookieNeverAnswer500(t *testing.T) {
+	env := dbtest.Postgres(t)
+	refresh, _ := sessionHandlers(t, env)
+
+	const trials = 10
+	const racers = 6
+
+	for trial := range trials {
+		cookie := loginForCookie(t, env, fmt.Sprintf("refresh-race-%d@refugio.test", trial))
+
+		codes := make([]int, racers)
+		var ready, done sync.WaitGroup
+		ready.Add(racers)
+		done.Add(racers)
+		start := make(chan struct{})
+
+		for i := range racers {
+			go func() {
+				defer done.Done()
+				ready.Done()
+				<-start
+				codes[i] = postWithCookie(t, refresh, "/api/v1/auth/refresh", allowedWebOrigin, cookie).Code
+			}()
+		}
+
+		// Every racer blocks on `start` until all of them have reached it, so
+		// closing the channel releases them as close to simultaneously as this
+		// process can arrange.
+		ready.Wait()
+		close(start)
+		done.Wait()
+
+		wins := 0
+		for racer, code := range codes {
+			switch code {
+			case http.StatusOK:
+				wins++
+			case http.StatusUnauthorized:
+			default:
+				t.Fatalf("trial %d, racer %d: status = %d, want %d or %d -- a lost concurrent rotation surfaced as a server error",
+					trial, racer, code, http.StatusOK, http.StatusUnauthorized)
+			}
+		}
+		if wins != 1 {
+			t.Fatalf("trial %d: %d of %d concurrent refreshes of one cookie succeeded, want exactly 1 (codes %v)",
+				trial, wins, racers, codes)
 		}
 	}
 }
