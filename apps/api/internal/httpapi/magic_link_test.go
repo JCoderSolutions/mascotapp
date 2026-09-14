@@ -9,6 +9,7 @@ import (
 	"sync"
 	"testing"
 	"time"
+	"unicode"
 
 	"github.com/gentleman/mascotapp/apps/api/internal/db/dbtest"
 	"github.com/gentleman/mascotapp/apps/api/internal/email"
@@ -32,7 +33,14 @@ type recordingSender struct {
 	sent []string
 }
 
-func (s *recordingSender) Send(_ context.Context, to string, msg email.Message) error {
+func (s *recordingSender) Send(ctx context.Context, to string, msg email.Message) error {
+	// The port refuses a cancelled context (email.checkSend), so a double that
+	// ignores it cannot see a handler that passes the request's own context to
+	// a goroutine running after the reply. A test double that is more permissive
+	// than the thing it stands in for makes a real bug untestable.
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if msg.Purpose != email.PurposeMagicLink {
@@ -212,6 +220,138 @@ func TestMagicLink_SpendsComparableWorkOnBothPaths(t *testing.T) {
 	}
 }
 
+// slowSender models the only sender that matters here: a real one. Delivery is
+// an HTTP call to a mail provider, and the in-memory doubles above return in
+// microseconds — which is exactly what hid this property until a mutant went
+// looking for it.
+type slowSender struct {
+	delay time.Duration
+	mu    sync.Mutex
+	sent  []string
+}
+
+func (s *slowSender) Send(ctx context.Context, to string, _ email.Message) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	time.Sleep(s.delay)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.sent = append(s.sent, to)
+	return nil
+}
+
+// TestMagicLink_TheReplyDoesNotWaitForTheSend is the test the fast doubles could
+// not be: with an in-memory sender, a SYNCHRONOUS send costs nothing and the
+// timing comparison above sees no difference at all. The mutation run found
+// exactly that gap — removing the goroutine survived every other test in this
+// file.
+//
+// In production the send is an HTTP call to a mail provider. If the reply waits
+// for it, the existing-account path costs a round trip the missing-account path
+// never pays, and that difference is readable through two identical bodies by
+// anyone holding a stopwatch. The property is not "the send is fast"; it is
+// "the reply does not depend on the send", and only a SLOW sender can tell them
+// apart.
+//
+// The sender delays rather than blocking on a channel on purpose: a channel a
+// synchronous handler never reaches would hang this test instead of failing it,
+// and a hang reports nothing.
+func TestMagicLink_TheReplyDoesNotWaitForTheSend(t *testing.T) {
+	env := dbtest.Postgres(t)
+
+	const delay = 500 * time.Millisecond
+	sender := &slowSender{delay: delay}
+	handler := httpapi.MagicLinkHandler(env.AuthPool, sender, time.Now, testMagicLinkBase)
+
+	const known = "magic-nowait@refugio.test"
+	seedAdopter(t, env, known, "a-long-enough-password")
+
+	start := time.Now()
+	rec := postMagicLink(t, handler, known)
+	elapsed := time.Since(start)
+
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("status = %d, want %d: %s", rec.Code, http.StatusAccepted, rec.Body.String())
+	}
+	if elapsed >= delay {
+		t.Errorf("the reply took %v against a %v send: it waited for the mail, so the existing-account path is observably slower than the missing-account one",
+			elapsed, delay)
+	}
+}
+
+// TestMagicLink_TheSendSurvivesTheHandlerReturning runs through a REAL server,
+// and that is the entire point of it.
+//
+// net/http cancels a request's context when ServeHTTP returns.
+// httptest.NewRecorder does not — it never had a server to do it — so a handler
+// that hands the request's own context to a goroutine outliving the reply looks
+// perfectly healthy under every other test in this file and mails nobody in
+// production. The mutation run found exactly that: swapping
+// context.WithoutCancel for the request context survived all of them.
+//
+// The failure it guards against is the worst shape available: no error, no log,
+// a 202 to the caller, and no email ever.
+func TestMagicLink_TheSendSurvivesTheHandlerReturning(t *testing.T) {
+	env := dbtest.Postgres(t)
+
+	sender := &recordingSender{}
+	server := httptest.NewServer(httpapi.MagicLinkHandler(env.AuthPool, sender, time.Now, testMagicLinkBase))
+	defer server.Close()
+
+	const known = "magic-realserver@refugio.test"
+	seedAdopter(t, env, known, "a-long-enough-password")
+
+	resp, err := http.Post(server.URL, "application/json", strings.NewReader(`{"email":"`+known+`"}`))
+	if err != nil {
+		t.Fatalf("posting to the test server: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusAccepted {
+		t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusAccepted)
+	}
+
+	got := sender.waitForRecipients(t, 1)
+	if len(got) != 1 || got[0] != known {
+		t.Errorf("recipients = %v, want exactly [%s]: the send did not survive the handler returning",
+			got, known)
+	}
+}
+
+// TestMagicLink_ASuspendedAccountGetsNoLink pins the half of the condition the
+// mutation run found unasserted. Every account in this file is active, so
+// loosening the check to "the row exists" changed nothing.
+//
+// A suspended account is suspended for a reason — and a magic link is a login.
+// Mailing one hands back the access the suspension removed, without a password
+// and without a second factor.
+//
+// The reply is still the ordinary one: a caller who learns their suspension from
+// a different response learns it from an endpoint that answers to anybody.
+func TestMagicLink_ASuspendedAccountGetsNoLink(t *testing.T) {
+	env := dbtest.Postgres(t)
+	handler, sender := magicLinkHandler(t, env)
+
+	const suspended = "magic-suspended@refugio.test"
+	userID := seedAdopter(t, env, suspended, "a-long-enough-password")
+	// Through the OWNER pool: app_auth holds UPDATE on the credential columns
+	// of `users` and deliberately not on `status` (00013).
+	dbtest.MustExec(t, env.OwnerPool, `UPDATE users SET status = 'suspended' WHERE id = $1`, userID)
+
+	rec := postMagicLink(t, handler, suspended)
+
+	if rec.Code != http.StatusAccepted {
+		t.Errorf("status = %d, want %d: a suspended account got a different reply, which tells the caller about the suspension",
+			rec.Code, http.StatusAccepted)
+	}
+
+	time.Sleep(250 * time.Millisecond)
+	if got := sender.recipients(); len(got) != 0 {
+		t.Errorf("a suspended account received a magic link: %v", got)
+	}
+}
+
 // TestMagicLink_RefusesMalformedInputWithoutRevealingAnything keeps the
 // validation path from becoming its own oracle. A 400 for a malformed address
 // is fine — that is a property of the INPUT, which the caller already knows. A
@@ -293,7 +433,10 @@ type capturingSender struct {
 	last email.Message
 }
 
-func (s *capturingSender) Send(_ context.Context, _ string, msg email.Message) error {
+func (s *capturingSender) Send(ctx context.Context, _ string, msg email.Message) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.last = msg
@@ -321,13 +464,24 @@ func (s *capturingSender) waitForBody(t *testing.T) string {
 }
 
 // token pulls the opaque part out of the link in the body.
+//
+// It anchors on the known base and stops at the first whitespace. The obvious
+// version — everything after the last "/" — swallows the prose that follows the
+// link, so ANY token measured long enough and a short one was unassertable. The
+// mutation run is what found that: an eight-character token survived.
 func (s *capturingSender) token(t *testing.T) string {
 	t.Helper()
 
 	body := s.lastBody()
-	index := strings.LastIndex(body, "/")
+	prefix := testMagicLinkBase + "/"
+	index := strings.Index(body, prefix)
 	if index < 0 {
-		t.Fatalf("no link in the magic-link body: %q", body)
+		t.Fatalf("no link starting with %q in the magic-link body: %q", prefix, body)
 	}
-	return strings.TrimSpace(body[index+1:])
+
+	rest := body[index+len(prefix):]
+	if cut := strings.IndexFunc(rest, unicode.IsSpace); cut >= 0 {
+		rest = rest[:cut]
+	}
+	return rest
 }
