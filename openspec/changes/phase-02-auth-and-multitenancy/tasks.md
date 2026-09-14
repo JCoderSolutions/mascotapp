@@ -561,17 +561,23 @@ handlers themselves, then the contract and its codegen.
       - pilot: blacklisted (§7.2)
       - engram: —
 
-- [~] **T-02-030** · Magic-link handler
+- [x] **T-02-030** · Magic-link handler
       - spec: identity-and-session / *Magic-link responses are indistinguishable by account existence*
       - RED first: a request for an address with an account and one for an address with none get the **same** HTTP status and body shape, response times within the same bounded tolerance · only the existing account's address receives an email (asserted through the `LogSender` stub from `T-02-022`)
       - build: `auth_handlers.go` — magic-link handler
       - tests: the indistinguishability scenario green, both the existence-oracle-over-status and existence-oracle-over-timing failure modes covered
       - dod: RED→GREEN · lint clean · coverage held
-      - est: 120
+      - est: 120 · **measured 164 implementation / 651 total**, inside both budgets
+      - **the send is ASYNCHRONOUS, and that is the design.** A synchronous one makes the existing-account path pay an SMTP round trip the missing-account path never pays — a timing oracle read straight through two identical bodies. That forces `context.WithoutCancel`: writing the reply cancels `r.Context()`, and `email.checkSend` refuses a cancelled context, so passing the request's own context would turn every send into a silent no-op.
+      - **SCOPE GAP, stated rather than left to be found**: this phase has no redemption endpoint and no table for these tokens (`T-02-031` is refresh, `T-02-032` is TOTP enrolment). The token is unguessable and currently **unredeemable**; single use is not enforced and neither is the lifetime the mail quotes. Storing a hash buys both and belongs with the endpoint that redeems it, so that decision is left to that task rather than guessed at here.
+      - **THREE of seven mutants survived the first pass, and two were defects in the TESTS**: the token extractor took everything after the last `/` and swallowed the prose after the link, so any token measured long enough; and the test doubles ignored the cancelled context the real port refuses, making a genuine bug invisible. The third was a missing suspended-account case.
+      - **the harness itself had a bug, and it is the more valuable finding.** `go test` on a build failure prints `FAIL <pkg> [build failed]`, which a `^FAIL` filter reads as a dead mutant. **Two of the seven were false kills.** This project already recorded the opposite reading (a non-compiling mutant mistaken for a survivor); a false kill is worse, because a survivor is noisy and a false kill silently claims coverage that does not exist. The build check now runs first and the fallback is `INDETERMINADO`.
+      - **`httptest.NewRecorder` never cancels a request context** — it has no server to do it — so the cancelled-context bug looked healthy under every test here and would mail nobody in production, with no error, no log, and a 202. The new test runs through a real `httptest.Server`.
+      - **7/7 killed**, zero residue verified by diff against a pristine copy
       - pilot: blacklisted (§7.2)
       - engram: —
 
-- [ ] **T-02-031** · Refresh + logout handler
+- [~] **T-02-031** · Refresh + logout handler
       - spec: identity-and-session / *Refresh tokens rotate on use and reuse revokes the whole family* (end-to-end through the handler, per the design's Testing Strategy integration row) · *The refresh cookie and cross-origin requests are protected for separate origins* (the CSRF-on-`/auth/refresh`-specifically scenario)
       - RED first: `Origin`/`Sec-Fetch-Site` is checked **before anything else** — a request failing that check never reaches the cookie parse · a valid rotation end-to-end through the HTTP layer, wiring `session.go` · logout revokes the presented token on demand
       - build: `auth_handlers.go` — refresh and logout handlers, wiring `session.go` + `csrf.go`

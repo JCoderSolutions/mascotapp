@@ -12,10 +12,20 @@ hace que el conocimiento viaje — regla IA-4: el repositorio es la verdad opera
 vault, con enlaces [[wiki]] que resuelven en el grafo. El `observation_id` nombra
 la misma nota dentro de Engram: es trazabilidad, no un requisito para leerla.
 
-- Candidatos totales: **100**
+- Candidatos totales: **102**
 - Aprobados y guardados en Engram: **98**
-- Pendientes de aprobación explícita del usuario: **0**
+- Pendientes de aprobación explícita del usuario: **2**
 - Descartados por el pase de curaduría: **2**
+
+## Pendientes de aprobación
+
+Nada de esto está en Engram todavía. Requiere el sí explícito del usuario
+antes de `mem_save` (§6.6 del plan maestro).
+
+| Tarea | Tipo | Score | Archivo | Qué dice |
+|---|---|---|---|---|
+| `T-02-030` | convention | 5 | [2026-09-14-un-doble-mas-permisivo-que-la-cosa-real-vuelve-intestable-el-bug.md](../../../.engram/queue/2026-09-14-un-doble-mas-permisivo-que-la-cosa-real-vuelve-intestable-el-bug.md) | (T-02-030, MascotApp Fase 02. Pariente de [[2026-09-08-la-fixture-es-el-limite-de-lo-que-un-test-puede-decir]].) |
+| `T-02-030` | convention | 5 | [2026-09-14-un-muerto-falso-es-peor-que-un-sobreviviente-falso.md](../../../.engram/queue/2026-09-14-un-muerto-falso-es-peor-que-un-sobreviviente-falso.md) | (T-02-030, MascotApp Fase 02. Extiende [[2026-09-06-un-mutante-que-no-compila-no-es-un-mutante-que-sobrevive]].) |
 
 ## Descartados — NO guardar
 
