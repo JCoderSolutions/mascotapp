@@ -48,11 +48,39 @@ func (s *recordingSender) recipients() []string {
 	return slices.Clone(s.sent)
 }
 
+// testMagicLinkBase is where the mailed link points. The redemption endpoint it
+// implies does not exist in this phase — see MagicLinkHandler's note — so this
+// is the shape of a URL, not a route anybody serves yet.
+const testMagicLinkBase = "https://mascotapp.pages.dev/auth/magic"
+
 func magicLinkHandler(t *testing.T, env *dbtest.Env) (http.Handler, *recordingSender) {
 	t.Helper()
 
 	sender := &recordingSender{}
-	return httpapi.MagicLinkHandler(env.AuthPool, sender, time.Now), sender
+	return httpapi.MagicLinkHandler(env.AuthPool, sender, time.Now, testMagicLinkBase), sender
+}
+
+// waitForRecipients blocks until want emails have been recorded, or the deadline
+// passes.
+//
+// The wait exists because the send is deliberately ASYNCHRONOUS: a synchronous
+// one would make the existing-account path pay an SMTP round trip the other path
+// does not, which is a timing oracle through two identical bodies. That design
+// choice moves the cost into the test, and this is where it is paid.
+//
+// It returns whatever was recorded when it stopped waiting, so a caller can
+// assert "exactly one" and also catch "two".
+func (s *recordingSender) waitForRecipients(t *testing.T, want int) []string {
+	t.Helper()
+
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		got := s.recipients()
+		if len(got) >= want || time.Now().After(deadline) {
+			return got
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
 }
 
 func postMagicLink(t *testing.T, handler http.Handler, address string) *httptest.ResponseRecorder {
@@ -117,7 +145,13 @@ func TestMagicLink_OnlyTheExistingAddressReceivesAnEmail(t *testing.T) {
 	postMagicLink(t, handler, known)
 	postMagicLink(t, handler, unknown)
 
+	// The WAIT is what this call is for; its value is deliberately discarded.
+	// Reading the recipients here would assert "at least one had not gone out
+	// yet", which a handler mailing BOTH addresses satisfies on its way past.
+	_ = sender.waitForRecipients(t, 1)
+	time.Sleep(250 * time.Millisecond)
 	got := sender.recipients()
+
 	if len(got) != 1 {
 		t.Fatalf("emails sent = %d (%v), want exactly 1", len(got), got)
 	}
@@ -206,6 +240,10 @@ func TestMagicLink_RefusesMalformedInputWithoutRevealingAnything(t *testing.T) {
 		})
 	}
 
+	// A pause before asserting the absence. The send is asynchronous, so
+	// checking immediately would pass for a handler that mails malformed
+	// addresses slowly.
+	time.Sleep(250 * time.Millisecond)
 	if got := sender.recipients(); len(got) != 0 {
 		t.Errorf("a malformed request sent mail to %v", got)
 	}
@@ -224,14 +262,14 @@ func TestMagicLink_TheEmailCarriesASingleUseCredentialAndTheResponseDoesNot(t *t
 	env := dbtest.Postgres(t)
 
 	captured := &capturingSender{}
-	handler := httpapi.MagicLinkHandler(env.AuthPool, captured, time.Now)
+	handler := httpapi.MagicLinkHandler(env.AuthPool, captured, time.Now, testMagicLinkBase)
 
 	const known = "magic-body@refugio.test"
 	seedAdopter(t, env, known, "a-long-enough-password")
 
 	rec := postMagicLink(t, handler, known)
 
-	body := captured.lastBody()
+	body := captured.waitForBody(t)
 	if body == "" {
 		t.Fatal("the magic-link email has an empty body")
 	}
@@ -266,6 +304,20 @@ func (s *capturingSender) lastBody() string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.last.Body
+}
+
+// waitForBody blocks until a message has been captured, for the same reason
+// waitForRecipients does.
+func (s *capturingSender) waitForBody(t *testing.T) string {
+	t.Helper()
+
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		if body := s.lastBody(); body != "" || time.Now().After(deadline) {
+			return body
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
 }
 
 // token pulls the opaque part out of the link in the body.
