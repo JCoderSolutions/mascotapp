@@ -577,17 +577,23 @@ handlers themselves, then the contract and its codegen.
       - pilot: blacklisted (§7.2)
       - engram: —
 
-- [~] **T-02-031** · Refresh + logout handler
+- [x] **T-02-031** · Refresh + logout handler
       - spec: identity-and-session / *Refresh tokens rotate on use and reuse revokes the whole family* (end-to-end through the handler, per the design's Testing Strategy integration row) · *The refresh cookie and cross-origin requests are protected for separate origins* (the CSRF-on-`/auth/refresh`-specifically scenario)
       - RED first: `Origin`/`Sec-Fetch-Site` is checked **before anything else** — a request failing that check never reaches the cookie parse · a valid rotation end-to-end through the HTTP layer, wiring `session.go` · logout revokes the presented token on demand
       - build: `auth_handlers.go` — refresh and logout handlers, wiring `session.go` + `csrf.go`
       - tests: all of the above green
       - dod: RED→GREEN · lint clean · coverage held
-      - est: 160
+      - est: 160 · **measured 226 implementation / 698 total**, inside both budgets
+      - **`amr` after a refresh is exactly `[pwd]` — user's decision, 2026-09-14.** `refresh_tokens` does not record how a session authenticated, and preserving `otp` would need a migration AND would make a stolen refresh cookie carry the second factor for the life of its family. With `[pwd]`, a refresh never asserts a factor it did not itself verify; a route demanding `otp` sends the holder back through login. Pinned by a test whose account is an owner who logged in WITH a valid code, the case where preserving it is tempting.
+      - **the origin check wraps each handler as a whole**, and the order is asserted without a spy: a refused origin with a malformed cookie answers 403 not 401, and with a valid cookie leaves it spendable afterwards.
+      - **logout revokes the FAMILY under the family lock**, pinned by a test before the code. A single-row revoke does nothing for a stale cookie while the successor that opens the session survives; the same gap opens with no old cookie when a refresh is in flight during logout. Infrastructure failure answers 500 WITHOUT clearing the cookie.
+      - **two corrections to earlier work**: `serverError` answered and logged "registration failed" for every caller, so login's 500s had said that since T-02-028 — now generic, with the path in the log. And the cookie's attributes lived in login alone; `setRefreshCookie` is now shared, so the two routes that set this cookie cannot drift.
+      - **a combined mutant hid an untested clause.** The branch refusing a zero-uuid prefix and a lost concurrent rotation was mutated as one; the zero-uuid case is deterministically reachable (sixteen zero bytes parse as a uuid) and a test for it alone would have killed the combined mutant while leaving the lost-race clause untested under a green report. Split per clause, each with its own test; the race test mirrors the auth package's trials-and-start-line shape, and its kill was run twice because a timing-dependent kill observed once proves little.
+      - **9 mutants, 9 killed**, zero residue verified by diff
       - pilot: blacklisted (§7.2)
       - engram: —
 
-- [ ] **T-02-032** · TOTP enrol/verify handler
+- [~] **T-02-032** · TOTP enrol/verify handler
       - spec: identity-and-session / *TOTP is mandatory for owner and admin roles* (enrolment is the precondition the login-time scenarios assume)
       - RED first: enrol generates a secret, an `otpauth://` URI, and ten recovery codes shown **exactly once** (design's Open Question: *"the API returns them exactly once and never again"* — asserted: a second read of the same enrolment never returns the plaintext codes again) · verify confirms a submitted TOTP code and activates the secret (moves from pending to enrolled)
       - build: `auth_handlers.go` — TOTP enrol/verify handlers, wiring `totp.go` + `envelope.go` + `recovery.go`
