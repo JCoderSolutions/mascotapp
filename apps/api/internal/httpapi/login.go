@@ -229,21 +229,7 @@ func LoginHandler(authPool db.Beginner, issuer *auth.TokenIssuer, now func() tim
 			return
 		}
 
-		//nolint:gosec // G124 false positive: Secure and HttpOnly are both set,
-		// and SameSite is None BY DECISION (P2-D9), not by omission. The origins
-		// are separate, so Lax or Strict would never send this cookie at all --
-		// the rule gosec applies assumes a same-origin deployment this project
-		// explicitly does not have. Every attribute is asserted one at a time by
-		// TestLogin_SetsTheRefreshCookieWithEveryAttributeP2D9Requires, and
-		// config.Load refuses to boot if the origins ever converge.
-		http.SetCookie(w, &http.Cookie{
-			Name:     refreshCookieName,
-			Value:    cookieValue,
-			Path:     refreshCookiePath,
-			HttpOnly: true,
-			Secure:   true,
-			SameSite: http.SameSiteNoneMode,
-		})
+		setRefreshCookie(w, cookieValue)
 
 		writeJSON(w, http.StatusOK, loginResponse{
 			AccessToken: accessToken,

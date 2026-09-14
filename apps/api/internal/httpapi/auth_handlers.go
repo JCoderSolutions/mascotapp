@@ -232,6 +232,6 @@ func badRequest(w http.ResponseWriter, message string) {
 // constraint, or the fact that an email is already registered, and registration
 // is exactly the endpoint where that last one is an enumeration oracle.
 func serverError(w http.ResponseWriter, r *http.Request, doing string, err error) {
-	slog.ErrorContext(r.Context(), "registration failed", "doing", doing, "error", err)
-	writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "registration failed"})
+	slog.ErrorContext(r.Context(), "auth handler failed", "doing", doing, "path", r.URL.Path, "error", err)
+	writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "request failed"})
 }
