@@ -138,3 +138,39 @@ jobs:
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  commit-lint:
+    name: Commit message convention
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Plain regex over `git log`, not commitlint: this repo has no root
+      # package.json (Node only lives under apps/web), so pulling in
+      # @commitlint/cli + config-conventional here means installing a whole
+      # Node toolchain at the repo root just to check a subject line. The
+      # convention (docs/vault/99-plantillas/plantilla-commit.md) is a
+      # single-line, regex-checkable shape, so grep keeps the dependency
+      # footprint at zero and matches how this repo already classifies text
+      # output elsewhere (scripts/doctor.go). Revisit with commitlint if the
+      # convention grows rules a regex cannot express.
+      - name: Validate commit message format
+        run: |
+          set -e
+          pattern='^(feat|fix|docs|test|refactor|perf|build|ci|chore|revert)(\([a-z-]+\))?!?: .{1,72}$'
+          failed=0
+          while IFS= read -r sha; do
+            subject="$(git log -1 --format=%s "$sha")"
+            case "$subject" in
+              "Merge "*) continue ;;
+            esac
+            if ! printf '%s' "$subject" | grep -Eq "$pattern"; then
+              echo "::error::commit $sha: \"$subject\" does not match <type>(<scope>): <summary> (see docs/vault/99-plantillas/plantilla-commit.md)"
+              failed=1
+            fi
+          done < <(git rev-list "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}")
+          exit "$failed"
