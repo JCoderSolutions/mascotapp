@@ -9,7 +9,57 @@ blocked_by: ".env.example: denegado a los agentes por regla global. Bloquea SOLO
 last_updated: 2026-09-14
 sdd_store: hybrid
 last_agent: claude-opus-5
-next_action: "T-02-031 CERRADA el 2026-09-14 (RED 452d73c, GREEN b04c74e, tests del mutante partido 960ef4f) en feat/pr-02-17-refresh sobre feat/pr-02-16b-magic-link. refresh.go nuevo + correcciones en login.go y auth_handlers.go; 12 tests de refresh/logout contra contenedor. DECISION DEL USUARIO 2026-09-14 -- AMR DE UN REFRESH ES [pwd]: refresh_tokens no guarda como se autentico la sesion; preservar otp pedia migracion Y hacia que una cookie de refresh robada portara el segundo factor toda la vida de la familia. Con [pwd] un refresh nunca afirma un factor que no verifico. Test pinneado con un OWNER que entro con codigo TOTP valido, el caso tentador. EL ORDEN DEL CHEQUEO DE ORIGEN SE PRUEBA SIN ESPIA: origen rechazado + cookie malformada da 403 no 401; origen rechazado + cookie valida la deja utilizable despues. LOGOUT REVOCA LA FAMILIA BAJO EL LOCK, pinneado por test antes del codigo: revocar solo la fila presentada no hace nada con una cookie vieja y el sucesor sobrevive; el mismo hueco aparece sin cookie vieja si un refresh esta en vuelo. Falla de infraestructura en logout responde 500 SIN limpiar la cookie. DOS CORRECCIONES A TRABAJO ANTERIOR: serverError respondia y logueaba registration failed para TODO llamador, asi que los 500 de login decian eso desde T-02-028 (verificado que ningun test dependia del texto; ahora generico con path en el log); y los atributos de la cookie vivian solo en login, ahora en setRefreshCookie compartido. UN MUTANTE COMBINADO ESCONDIA UNA CLAUSULA SIN PROBAR: la rama que convierte uuid-cero y carrera-perdida en 401 se muto como uno solo; el uuid cero es deterministicamente alcanzable (16 bytes en cero parsean como uuid) y un test solo para el habria matado al mutante combinado dejando la carrera sin probar bajo un reporte verde. Partido en M7a y M7b con un test cada uno; el de carrera espeja el test concurrente de auth (pruebas repetidas, largada comun) y su muerte se corrio DOS veces porque una muerte dependiente del tiempo observada una vez prueba poco. MUTACION: 9 mutantes, 9 muertos, cero residuo, clasificador con chequeo de build primero. PRESUPUESTO: 226 de 250 y 698 de 800, entra en los dos. VERIFICACION: suite completa en contenedor con exit=0 capturado, siete paquetes verdes, golangci-lint 0 issues, gofmt limpio en contenedor. PENDIENTE DEL USUARIO: tres candidatos de memoria en .engram/queue (muerto-falso, doble-permisivo, mutante-combinado). SIGUE T-02-032 (enrolamiento y verificacion de TOTP, PR-02-18): vuelve alcanzable desde HTTP el totp_secret_enc que hoy los tests escriben a mano. Rama a crear: feat/pr-02-18-totp-enrol sobre feat/pr-02-17-refresh. NADA PUSHEADO DE ESTA RAMA, CERO PRs ABIERTOS."
+next_action:
+  cerrado: >
+    T-02-031 CERRADA el 2026-09-14 (RED 452d73c, GREEN b04c74e, tests del
+    mutante partido 960ef4f) en feat/pr-02-17-refresh sobre
+    feat/pr-02-16b-magic-link. refresh.go nuevo + correcciones en login.go y
+    auth_handlers.go; 12 tests de refresh/logout contra contenedor.
+    MUTACION: 9 mutantes, 9 muertos, cero residuo, clasificador con chequeo
+    de build primero. PRESUPUESTO: 226 de 250 y 698 de 800, entra en los
+    dos. VERIFICACION: suite completa en contenedor con exit=0 capturado,
+    siete paquetes verdes, golangci-lint 0 issues, gofmt limpio en
+    contenedor. NADA PUSHEADO DE ESTA RAMA, CERO PRs ABIERTOS.
+  decision: >
+    DECISION DEL USUARIO 2026-09-14 -- AMR DE UN REFRESH ES [pwd]:
+    refresh_tokens no guarda como se autentico la sesion; preservar otp
+    pedia migracion Y hacia que una cookie de refresh robada portara el
+    segundo factor toda la vida de la familia. Con [pwd] un refresh nunca
+    afirma un factor que no verifico. Test pinneado con un OWNER que entro
+    con codigo TOTP valido, el caso tentador. EL ORDEN DEL CHEQUEO DE
+    ORIGEN SE PRUEBA SIN ESPIA: origen rechazado + cookie malformada da 403
+    no 401; origen rechazado + cookie valida la deja utilizable despues.
+    LOGOUT REVOCA LA FAMILIA BAJO EL LOCK, pinneado por test antes del
+    codigo: revocar solo la fila presentada no hace nada con una cookie
+    vieja y el sucesor sobrevive; el mismo hueco aparece sin cookie vieja si
+    un refresh esta en vuelo. Falla de infraestructura en logout responde
+    500 SIN limpiar la cookie. DOS CORRECCIONES A TRABAJO ANTERIOR:
+    serverError respondia y logueaba registration failed para TODO
+    llamador, asi que los 500 de login decian eso desde T-02-028 (verificado
+    que ningun test dependia del texto; ahora generico con path en el log);
+    y los atributos de la cookie vivian solo en login, ahora en
+    setRefreshCookie compartido. UN MUTANTE COMBINADO ESCONDIA UNA CLAUSULA
+    SIN PROBAR: la rama que convierte uuid-cero y carrera-perdida en 401 se
+    muto como uno solo; el uuid cero es deterministicamente alcanzable (16
+    bytes en cero parsean como uuid) y un test solo para el habria matado
+    al mutante combinado dejando la carrera sin probar bajo un reporte
+    verde. Partido en M7a y M7b con un test cada uno; el de carrera espeja
+    el test concurrente de auth (pruebas repetidas, largada comun) y su
+    muerte se corrio DOS veces porque una muerte dependiente del tiempo
+    observada una vez prueba poco.
+  sigue: >
+    T-02-032 (enrolamiento y verificacion de TOTP, PR-02-18): vuelve
+    alcanzable desde HTTP el totp_secret_enc que hoy los tests escriben a
+    mano. Rama a crear: feat/pr-02-18-totp-enrol sobre
+    feat/pr-02-17-refresh.
+  bloqueadores: >
+    Ninguno. Los tres candidatos de memoria que estaban pendientes en
+    .engram/queue (muerto-falso, doble-permisivo, mutante-combinado) fueron
+    aprobados por el usuario el 2026-09-24 y guardados en Engram
+    (obs-0210963cf0f98b48, obs-296d31be8cc336f7 -- este ultimo actualiza en
+    el mismo lugar la entrada previa que extendia --, obs-a13da1b17fdd6562);
+    movidos a docs/vault/70-conocimiento/ y referenciados de vuelta en
+    tasks.md y en el tablero de FASE-02.md.
 ---
 
 # Estado del proyecto
@@ -25,30 +75,15 @@ next_action: "T-02-031 CERRADA el 2026-09-14 (RED 452d73c, GREEN b04c74e, tests 
 3. **El avance vive acá, no en Engram.** Engram guarda *por qué*, nunca *qué se hizo*.
 4. **Los artefactos técnicos se escriben en inglés** (código, identificadores, columnas, endpoints, commits, tests). La documentación del vault va en español.
 
-## Ritual de inicio de sesión — obligatorio
+## Ritual de inicio de sesión
 
-0. **`make doctor`** — antes de leer nada. Ejecuta cada herramienta externa del
-   flujo (no solo la busca en el `PATH`) y dice qué se rompe sin cada una.
-   **Leé su salida entera; nunca la pases por un pipe.** Si es tu primera sesión
-   con este repositorio, leer también [AGENTS.md](AGENTS.md).
-1. Leer este archivo.
-2. `mem_context` + `mem_search` sobre `current_phase`. **Si tu herramienta no
-   tiene el MCP de Engram** (Kiro, OpenCode), reemplazar este paso por
-   [docs/vault/20-arquitectura/indice-engram.md](docs/vault/20-arquitectura/indice-engram.md):
-   el texto completo de cada decisión está versionado en `docs/vault/70-conocimiento/`.
-3. Abrir `docs/vault/30-fases/FASE-<current_phase>.md`. Buscar el primer `[~]`; si no hay, el primer `[ ]`.
-4. Leer el spec enlazado y la última entrada de `docs/vault/40-bitacora/`.
-5. Confirmar la tarea al usuario en una línea. **Entonces** empezar.
+Ver [AGENTS.md](AGENTS.md) §2 "Ritual de inicio de sesión — obligatorio" — no
+se repite acá (fuente única de reglas de proceso).
 
-## Ritual de cierre de tarea — obligatorio
+## Ritual de cierre de tarea
 
-1. Tests en verde, lint limpio.
-2. Marcar `[x]`; mover el `[~]` a la siguiente tarea.
-3. Actualizar este archivo, incluido `next_action`.
-4. Añadir entrada a `docs/vault/40-bitacora/<fecha>.md`.
-5. Evaluar candidatos contra `.engram/RUBRIC.md` → escribir a `.engram/queue/` → tras el sí del usuario y el `mem_save`, mover a `docs/vault/70-conocimiento/` → `make engram-index`.
-6. Commit convencional: `feat(<area>): T-00-005 <descripción en inglés>`.
-   Convención completa: [docs/vault/99-plantillas/plantilla-commit.md](docs/vault/99-plantillas/plantilla-commit.md).
+Ver [AGENTS.md](AGENTS.md) §6 "Ritual de cierre de tarea — obligatorio" — no
+se repite acá (fuente única de reglas de proceso).
 
 ## Enlaces
 

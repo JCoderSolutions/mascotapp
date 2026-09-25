@@ -3,7 +3,9 @@ type: convention
 score: 5
 topic_key: mascotapp/convention/doubles-must-not-be-weaker-than-production
 task: T-02-030
-status: pendiente-de-aprobacion
+status: guardado
+aprobado: 2026-09-24 por el usuario
+observation_id: obs-0210963cf0f98b48
 rationale: "Tres mutantes distintos de una sola tarea sobrevivieron por esta misma causa, y ninguno era un defecto del código: el doble era demasiado rápido, demasiado permisivo, y el arnés no cancelaba lo que un servidor real cancela. Los tres fallos que escondían son de la clase que en producción no deja rastro — sin error, sin log, con un 200 al llamador. Y la pregunta que los detecta se hace al escribir el doble, que es cuando todavía es gratis. Es pariente directo de la regla de fixtures y la completa: aquella acota QUÉ formas se pueden construir, ésta acota QUÉ fallas se pueden observar."
 ---
 

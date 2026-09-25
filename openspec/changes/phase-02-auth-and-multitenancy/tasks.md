@@ -575,7 +575,7 @@ handlers themselves, then the contract and its codegen.
       - **`httptest.NewRecorder` never cancels a request context** — it has no server to do it — so the cancelled-context bug looked healthy under every test here and would mail nobody in production, with no error, no log, and a 202. The new test runs through a real `httptest.Server`.
       - **7/7 killed**, zero residue verified by diff against a pristine copy
       - pilot: blacklisted (§7.2)
-      - engram: —
+      - engram: `obs-0210963cf0f98b48` — *un doble más permisivo que la cosa real vuelve intestable el bug* (approved 2026-09-24) · `obs-296d31be8cc336f7` — *un muerto falso es peor que un sobreviviente falso* (approved 2026-09-24, extends the 2026-09-06 entry on the same topic)
 
 - [x] **T-02-031** · Refresh + logout handler
       - spec: identity-and-session / *Refresh tokens rotate on use and reuse revokes the whole family* (end-to-end through the handler, per the design's Testing Strategy integration row) · *The refresh cookie and cross-origin requests are protected for separate origins* (the CSRF-on-`/auth/refresh`-specifically scenario)
@@ -591,7 +591,7 @@ handlers themselves, then the contract and its codegen.
       - **a combined mutant hid an untested clause.** The branch refusing a zero-uuid prefix and a lost concurrent rotation was mutated as one; the zero-uuid case is deterministically reachable (sixteen zero bytes parse as a uuid) and a test for it alone would have killed the combined mutant while leaving the lost-race clause untested under a green report. Split per clause, each with its own test; the race test mirrors the auth package's trials-and-start-line shape, and its kill was run twice because a timing-dependent kill observed once proves little.
       - **9 mutants, 9 killed**, zero residue verified by diff
       - pilot: blacklisted (§7.2)
-      - engram: —
+      - engram: `obs-a13da1b17fdd6562` — *un mutante que saca dos cláusulas a la vez esconde la que no está probada* (approved 2026-09-24)
 
 - [~] **T-02-032** · TOTP enrol/verify handler
       - spec: identity-and-session / *TOTP is mandatory for owner and admin roles* (enrolment is the precondition the login-time scenarios assume)

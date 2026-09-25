@@ -3,7 +3,9 @@ type: convention
 score: 4
 topic_key: mascotapp/convention/mutate-one-clause-at-a-time
 task: T-02-031
-status: pendiente-de-aprobacion
+status: guardado
+aprobado: 2026-09-24 por el usuario
+observation_id: obs-a13da1b17fdd6562
 rationale: "Es un modo en que un reporte de mutación verde miente sin que ningún mutante esté mal clasificado. El arnés funciona, el test es real, el mutante muere — y aun así una cláusula queda sin probar. Aparece cada vez que una condición tiene más de un término, que es casi siempre en los handlers de este proyecto (errores que se tratan como rechazos, roles privilegiados, estados activos). La regla es barata de aplicar al escribir el mutante y cara de descubrir después, porque el reporte no da ninguna pista."
 ---
 

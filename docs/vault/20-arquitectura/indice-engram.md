@@ -13,20 +13,9 @@ vault, con enlaces [[wiki]] que resuelven en el grafo. El `observation_id` nombr
 la misma nota dentro de Engram: es trazabilidad, no un requisito para leerla.
 
 - Candidatos totales: **103**
-- Aprobados y guardados en Engram: **98**
-- Pendientes de aprobación explícita del usuario: **3**
+- Aprobados y guardados en Engram: **101**
+- Pendientes de aprobación explícita del usuario: **0**
 - Descartados por el pase de curaduría: **2**
-
-## Pendientes de aprobación
-
-Nada de esto está en Engram todavía. Requiere el sí explícito del usuario
-antes de `mem_save` (§6.6 del plan maestro).
-
-| Tarea | Tipo | Score | Archivo | Qué dice |
-|---|---|---|---|---|
-| `T-02-030` | convention | 5 | [2026-09-14-un-doble-mas-permisivo-que-la-cosa-real-vuelve-intestable-el-bug.md](../../../.engram/queue/2026-09-14-un-doble-mas-permisivo-que-la-cosa-real-vuelve-intestable-el-bug.md) | (T-02-030, MascotApp Fase 02. Pariente de [[2026-09-08-la-fixture-es-el-limite-de-lo-que-un-test-puede-decir]].) |
-| `T-02-030` | convention | 5 | [2026-09-14-un-muerto-falso-es-peor-que-un-sobreviviente-falso.md](../../../.engram/queue/2026-09-14-un-muerto-falso-es-peor-que-un-sobreviviente-falso.md) | (T-02-030, MascotApp Fase 02. Extiende [[2026-09-06-un-mutante-que-no-compila-no-es-un-mutante-que-sobrevive]].) |
-| `T-02-031` | convention | 4 | [2026-09-14-un-mutante-que-saca-dos-clausulas-a-la-vez-esconde-la-que-no-esta-probada.md](../../../.engram/queue/2026-09-14-un-mutante-que-saca-dos-clausulas-a-la-vez-esconde-la-que-no-esta-probada.md) | (T-02-031, MascotApp Fase 02. Pariente de [[2026-09-14-un-muerto-falso-es-peor-que-un-sobreviviente-falso]].) |
 
 ## Descartados — NO guardar
 
@@ -57,7 +46,7 @@ exactamente lo que la columna de abajo explica que está mal.
 | `T-02-021` | `…/intra-vs-inter-transaction-invariants` | 5 | [2026-09-05-un-indice-unico-parcial-no-cierra-una-carrera-entre-transacciones.md](../70-conocimiento/2026-09-05-un-indice-unico-parcial-no-cierra-una-carrera-entre-transacciones.md) | `obs-877abd8e46e0924a` | (T-02-021, Judgment Day de MascotApp Fase 02. Relacionado con obs-a88eecda20bb1bc4.) |
 | `T-02-026` | `…/public-suffix-list-buys-false-positives` | 4 | [2026-09-07-que-compra-la-lista-de-sufijos-publicos-no-es-lo-que-parece.md](../70-conocimiento/2026-09-07-que-compra-la-lista-de-sufijos-publicos-no-es-lo-que-parece.md) | `obs-58bc47c9eff9156c` | (T-02-026, MascotApp Fase 02.) |
 
-### `mascotapp/convention/*` — 50
+### `mascotapp/convention/*` — 53
 
 | Tarea | `topic_key` | Score | Archivo | `observation_id` | Qué dice |
 |---|---|---|---|---|---|
@@ -107,6 +96,9 @@ exactamente lo que la columna de abajo explica que está mal.
 | `T-02-024` | `…/mutation-runs-need-a-positive-signal` | 4 | [2026-09-06-un-mutante-que-no-compila-no-es-un-mutante-que-sobrevive.md](../70-conocimiento/2026-09-06-un-mutante-que-no-compila-no-es-un-mutante-que-sobrevive.md) | `obs-296d31be8cc336f7` | (T-02-024, MascotApp Fase 02. Relacionado con obs-9e00e3a6413dc7d2.) |
 | `T-02-028` | `…/relational-assertions-need-a-content-assertion` | 5 | [2026-09-08-un-test-que-compara-dos-salidas-entre-si-no-fija-ninguna-de-las-dos.md](../70-conocimiento/2026-09-08-un-test-que-compara-dos-salidas-entre-si-no-fija-ninguna-de-las-dos.md) | `obs-fb6503b1977f61ad` | (T-02-028, MascotApp Fase 02.) |
 | `T-02-029` | `…/fixtures-bound-what-tests-can-assert` | 5 | [2026-09-08-la-fixture-es-el-limite-de-lo-que-un-test-puede-decir.md](../70-conocimiento/2026-09-08-la-fixture-es-el-limite-de-lo-que-un-test-puede-decir.md) | `obs-2e0880f4d065d81a` | (T-02-029, MascotApp Fase 02.) |
+| `T-02-030` | `…/doubles-must-not-be-weaker-than-production` | 5 | [2026-09-14-un-doble-mas-permisivo-que-la-cosa-real-vuelve-intestable-el-bug.md](../70-conocimiento/2026-09-14-un-doble-mas-permisivo-que-la-cosa-real-vuelve-intestable-el-bug.md) | `obs-0210963cf0f98b48` | (T-02-030, MascotApp Fase 02. Pariente de [[2026-09-08-la-fixture-es-el-limite-de-lo-que-un-test-puede-decir]].) |
+| `T-02-030` | `…/mutation-runs-need-a-positive-signal` | 5 | [2026-09-14-un-muerto-falso-es-peor-que-un-sobreviviente-falso.md](../70-conocimiento/2026-09-14-un-muerto-falso-es-peor-que-un-sobreviviente-falso.md) | `obs-296d31be8cc336f7` | (T-02-030, MascotApp Fase 02. Extiende [[2026-09-06-un-mutante-que-no-compila-no-es-un-mutante-que-sobrevive]].) |
+| `T-02-031` | `…/mutate-one-clause-at-a-time` | 4 | [2026-09-14-un-mutante-que-saca-dos-clausulas-a-la-vez-esconde-la-que-no-esta-probada.md](../70-conocimiento/2026-09-14-un-mutante-que-saca-dos-clausulas-a-la-vez-esconde-la-que-no-esta-probada.md) | `obs-a13da1b17fdd6562` | (T-02-031, MascotApp Fase 02. Pariente de [[2026-09-14-un-muerto-falso-es-peor-que-un-sobreviviente-falso]].) |
 | `fase-02 planning` | `…/recompute-announced-numbers` | 4 | [2026-09-02-un-numero-anunciado-se-recomputa.md](../70-conocimiento/2026-09-02-un-numero-anunciado-se-recomputa.md) | `obs-99a194c5559106b8` | Un agente cerro la cadena de entrega de la Fase 02 con 23 PRs, 4.875 lineas, ninguno sobre 400. Los tres numeros eran del mismo r… |
 | `fase-02 planning` | `…/spec-must-carry-the-property` | 5 | [2026-09-02-un-requisito-que-el-verificador-no-puede-leer.md](../70-conocimiento/2026-09-02-un-requisito-que-el-verificador-no-puede-leer.md) | `obs-51c9db2915bb5533` | El diseno de la Fase 02 prohibe que un tenant escriba shelters.storage_bytes_used — el contador contra el que se chequea la cuota… |
 | `handoff multi-agente` | `…/commit-messages` | 3 | [2026-09-02-convencion-de-commits.md](../70-conocimiento/2026-09-02-convencion-de-commits.md) | `obs-62d33d3023d8afae` | Los commits de MascotApp siguen Conventional Commits, y la convencion esta escrita en dos lugares ejecutables, no en la memoria d… |

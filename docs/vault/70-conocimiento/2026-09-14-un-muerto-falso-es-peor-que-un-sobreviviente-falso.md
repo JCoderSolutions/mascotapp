@@ -3,8 +3,10 @@ type: convention
 score: 5
 topic_key: mascotapp/convention/mutation-runs-need-a-positive-signal
 task: T-02-030
-status: pendiente-de-aprobacion
+status: guardado
 extends: obs-296d31be8cc336f7
+aprobado: 2026-09-24 por el usuario
+observation_id: obs-296d31be8cc336f7
 rationale: "Corrige y afila una regla que ya está en memoria. La entrada anterior avisaba que un mutante que no compila puede leerse como sobreviviente; esta corrida mostró la lectura opuesta y peor — el mismo mutante leído como MUERTO — y dio la cadena exacta que lo causa (`FAIL <pkg> [build failed]`). Dos de siete mutantes eran falsos muertos y ninguno hizo ruido. La asimetría entre los dos errores es lo que decide en qué orden chequear, y sin ella un harness escrito con la mejor intención sigue mintiendo."
 ---
 

@@ -161,8 +161,8 @@ de `T-01-005` —*versiones estrictamente ascendentes, sin huecos*, en `migrate_
 
 Columna **PR**: en qué PR de la cadena entra. Columna **est**: líneas autoradas estimadas.
 
-| Estado / ID | Tarea | PR | est |
-|---|---|---|---|
+| Estado / ID | Tarea | PR | est | Engram |
+|---|---|---|---|---|
 | `[x]` `T-02-001` | RED — `WithAuthUser` / `WithAuthLookup` unit tests against a recording `pgx.Tx` stub | PR 1 | 130 |
 | `[x]` `T-02-002` | GREEN — `internal/db/auth.go`: `WithAuthUser`, `WithAuthLookup`, `ErrNoAuthUser`, `NewAuthPool` | PR 1 | 120 |
 | `[x]` `T-02-003` | Migration `00013_auth_role.sql` + `dbtest` third-pool wiring + reachability/isolation proof | PR 2 | ~~260~~ **579** ⚠ |
@@ -192,8 +192,8 @@ Columna **PR**: en qué PR de la cadena entra. Columna **est**: líneas autorada
 | `[ ]` `T-02-027` | Registration handler | PR 14 | 140 |
 | `[ ]` `T-02-028` | Login handler — password path, token + cookie issuance | PR 15 | 150 |
 | `[ ]` `T-02-029` | Login handler — TOTP-mandatory and recovery-code fallback | PR 15 | 140 |
-| `[ ]` `T-02-030` | Magic-link handler | PR 16 | 120 |
-| `[ ]` `T-02-031` | Refresh + logout handler | PR 17 | 160 |
+| `[ ]` `T-02-030` | Magic-link handler | PR 16 | 120 | `obs-0210963cf0f98b48` · `obs-296d31be8cc336f7` |
+| `[ ]` `T-02-031` | Refresh + logout handler | PR 17 | 160 | `obs-a13da1b17fdd6562` |
 | `[ ]` `T-02-032` | TOTP enrol/verify handler | PR 18 | 140 |
 | `[ ]` `T-02-033` | Session/shelter-exchange handler — `POST /auth/session/shelter` | PR 19 | 100 |
 | `[ ]` `T-02-034` | `api/openapi.yaml` — auth surface + regenerate `openapi.gen.go` | PR 20 | 90 |
