@@ -4,7 +4,7 @@ current_phase: "02"
 current_task: "T-02-032"  # T-02-031 cerrada (226/698). Refresh emite amr [pwd] por decision del usuario; logout revoca la FAMILIA bajo el lock
 sdd_change: "phase-02-auth-and-multitenancy"
 rdd_enabled: false  # fase marcada RDD; el usuario decide, no se activa solo
-task_status: not_started  # T-02-032 (enrolamiento y verificacion de TOTP, PR-02-18) es la siguiente. Rama a crear: feat/pr-02-18-totp-enrol sobre feat/pr-02-17-refresh
+task_status: in_progress  # T-02-032 (enrolamiento y verificacion de TOTP, PR-02-18) tiene RED (ca88072, 2026-09-24) y GREEN (27b2032, 2026-09-25) ya commiteados en feat/pr-02-18-totp-enrol sobre feat/pr-02-17-refresh. Falta: mutation testing, verificacion de suite/lint en contenedor y el commit docs de cierre.
 blocked_by: ".env.example: denegado a los agentes por regla global. Bloquea SOLO T-02-035 (PR-02-24, ultimo de la cadena). El usuario tiene que confirmar si JWT_SECRET y RESEND_API_KEY ya existen y pegar DATABASE_URL_AUTH, AUTH_KEK, WEB_ORIGINS, API_PUBLIC_ORIGIN y el password de app_auth. La cadena funcional entera mergea sin eso."
 last_updated: 2026-09-14
 sdd_store: hybrid
@@ -48,10 +48,12 @@ next_action:
     muerte se corrio DOS veces porque una muerte dependiente del tiempo
     observada una vez prueba poco.
   sigue: >
-    T-02-032 (enrolamiento y verificacion de TOTP, PR-02-18): vuelve
+    T-02-032 (enrolamiento y verificacion de TOTP, PR-02-18) EN CURSO en
+    feat/pr-02-18-totp-enrol sobre feat/pr-02-17-refresh: RED (ca88072,
+    2026-09-24) y GREEN (27b2032, 2026-09-25) ya commiteados -- vuelve
     alcanzable desde HTTP el totp_secret_enc que hoy los tests escriben a
-    mano. Rama a crear: feat/pr-02-18-totp-enrol sobre
-    feat/pr-02-17-refresh.
+    mano. Falta antes de cerrarla: mutation testing, suite/lint en
+    contenedor, entrada de bitacora y el commit docs de cierre.
   bloqueadores: >
     Ninguno. Los tres candidatos de memoria que estaban pendientes en
     .engram/queue (muerto-falso, doble-permisivo, mutante-combinado) fueron

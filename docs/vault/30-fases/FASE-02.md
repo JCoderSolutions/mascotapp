@@ -184,17 +184,17 @@ Columna **PR**: en qué PR de la cadena entra. Columna **est**: líneas autorada
 | `[x]` `T-02-019` | RED — `session.go` (refresh rotation + reuse detection) tests | PR 11 | ~~170~~ **536** |
 | `[x]` `T-02-020` | GREEN — `session.go` | PR 11 | ~~150~~ **360** (PR 11: 381 impl / 930 total, `size:exception` aceptada 2026-09-04) |
 | `[x]` `T-02-021` | 🔴 **Judgment Day** — adversarial review before the refresh-token rotation logic merges | gate PR 11 | 0 |
-| `[~]` `T-02-022` | Email port + `LogSender` stub — sequenced here, see the Ordering note above | PR 16 | 70 |
-| `[ ]` `T-02-023` | RED — `middleware_auth.go` tests (the F02 success criterion) | PR 12 | 150 |
-| `[ ]` `T-02-024` | GREEN — `middleware_auth.go` | PR 12 | 140 |
-| `[ ]` `T-02-025` | `cors.go` + `csrf.go` — allowlist with credentials, `Origin`/`Sec-Fetch-Site` verification | PR 13 | 160 |
-| `[ ]` `T-02-026` | `config.go` additions — auth DSN, `JWT_SECRET`, `AUTH_KEK`, `WEB_ORIGINS`, `API_PUBLIC_ORIGIN`, same-site boot refusal | PR 13 | 130 |
-| `[ ]` `T-02-027` | Registration handler | PR 14 | 140 |
-| `[ ]` `T-02-028` | Login handler — password path, token + cookie issuance | PR 15 | 150 |
-| `[ ]` `T-02-029` | Login handler — TOTP-mandatory and recovery-code fallback | PR 15 | 140 |
-| `[ ]` `T-02-030` | Magic-link handler | PR 16 | 120 | `obs-0210963cf0f98b48` · `obs-296d31be8cc336f7` |
-| `[ ]` `T-02-031` | Refresh + logout handler | PR 17 | 160 | `obs-a13da1b17fdd6562` |
-| `[ ]` `T-02-032` | TOTP enrol/verify handler | PR 18 | 140 |
+| `[x]` `T-02-022` | Email port + `LogSender` stub — sequenced here, see the Ordering note above | PR 16 | 70 |
+| `[x]` `T-02-023` | RED — `middleware_auth.go` tests (the F02 success criterion) | PR 12 | 150 |
+| `[x]` `T-02-024` | GREEN — `middleware_auth.go` | PR 12 | 140 |
+| `[x]` `T-02-025` | `cors.go` + `csrf.go` — allowlist with credentials, `Origin`/`Sec-Fetch-Site` verification | PR 13 | 160 |
+| `[x]` `T-02-026` | `config.go` additions — auth DSN, `JWT_SECRET`, `AUTH_KEK`, `WEB_ORIGINS`, `API_PUBLIC_ORIGIN`, same-site boot refusal | PR 13 | 130 |
+| `[x]` `T-02-027` | Registration handler | PR 14 | 140 |
+| `[x]` `T-02-028` | Login handler — password path, token + cookie issuance | PR 15 | 150 |
+| `[x]` `T-02-029` | Login handler — TOTP-mandatory and recovery-code fallback | PR 15 | 140 |
+| `[x]` `T-02-030` | Magic-link handler | PR 16 | 120 | `obs-0210963cf0f98b48` · `obs-296d31be8cc336f7` |
+| `[x]` `T-02-031` | Refresh + logout handler | PR 17 | 160 | `obs-a13da1b17fdd6562` |
+| `[~]` `T-02-032` | TOTP enrol/verify handler | PR 18 | 140 |
 | `[ ]` `T-02-033` | Session/shelter-exchange handler — `POST /auth/session/shelter` | PR 19 | 100 |
 | `[ ]` `T-02-034` | `api/openapi.yaml` — auth surface + regenerate `openapi.gen.go` | PR 20 | 90 |
 | `[!]` `T-02-035` | `.env.example` — add `DATABASE_URL_AUTH`, `AUTH_KEK`, `JWT_SECRET`, `WEB_ORIGINS`, `API_PUBLIC_ORIGIN`, the `app_auth` bootstrap password variable | PR 24 | 10 |
