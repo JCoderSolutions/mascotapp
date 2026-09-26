@@ -104,6 +104,11 @@ En CI (Linux) `go test` funciona normal. El problema es solo este host.
    instrucción del hook no lo sabe.
    El 2026-09-07 se borraron 29 resúmenes acumulados. Eran el **30% del peso**
    de Engram y ninguno decía un *por qué*.
+
+   **Nota de alcance**: el default del framework de conocimiento (skill
+   `metodologia-conocimiento-ia`) es guardado autónomo sin cola. La cola +
+   aprobación explícita de este repo es la excepción opt-in de riesgo alto que
+   ese framework prevé — nació de este mismo incidente, no del default.
 5. **Idioma:** los artefactos técnicos van en **inglés** — código,
    identificadores, columnas, endpoints, tests, mensajes de commit. La
    documentación del vault va en **español**.
