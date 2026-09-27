@@ -7,6 +7,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -147,6 +148,14 @@ func TestTOTPEnrol_ReturnsASecretURIAndTenUniqueRecoveryCodes(t *testing.T) {
 // proof is not merely that the response differs: the FIRST set must stop
 // being a redeemable credential, or an attacker holding a leaked first
 // response could still spend it after the caller retried.
+//
+// The anti-vacuity half matters as much as the invalidation half: mutation
+// testing found that skipping persistence entirely still made the
+// invalidation assertion pass, because a code that was NEVER redeemable
+// trivially stays "not redeemable" after a second enrol. Redeeming a
+// DIFFERENT first-set code right after the FIRST enrol -- before the second
+// one ever runs -- is the positive control that proves the codes were real
+// credentials in the first place.
 func TestTOTPEnrol_ASecondEnrolInvalidatesTheFirstRecoveryCodes(t *testing.T) {
 	env := dbtest.Postgres(t)
 	now := time.Now()
@@ -154,6 +163,20 @@ func TestTOTPEnrol_ASecondEnrolInvalidatesTheFirstRecoveryCodes(t *testing.T) {
 	handler := totpEnrolFixture(t, env)
 
 	first := decodeEnrolResponse(t, authedTOTPRequest(t, handler, "/api/v1/auth/totp/enrol", "{}", userID, now))
+
+	// Positive control: a code from the FIRST set is a genuine, redeemable
+	// credential before any second enrol touches it. Without this, the
+	// invalidation check below would pass for a handler that never persisted
+	// anything at all.
+	controlErr := db.WithAuthUser(context.Background(), env.AuthPool, userID, func(ctx context.Context, tx pgx.Tx) error {
+		return auth.RedeemRecoveryCode(ctx, tx, first.RecoveryCodes[1])
+	})
+	if controlErr != nil {
+		t.Fatalf("redeeming a FRESH code from the first enrolment failed: %v -- "+
+			"the codes were never really persisted, which would make the "+
+			"invalidation assertion below vacuous", controlErr)
+	}
+
 	second := decodeEnrolResponse(t, authedTOTPRequest(t, handler, "/api/v1/auth/totp/enrol", "{}", userID, now))
 
 	firstCodes := make(map[string]bool, len(first.RecoveryCodes))
@@ -172,6 +195,31 @@ func TestTOTPEnrol_ASecondEnrolInvalidatesTheFirstRecoveryCodes(t *testing.T) {
 	if !errors.Is(err, auth.ErrRecoveryCodeInvalid) {
 		t.Errorf("redeeming a code from the FIRST enrolment after a second one succeeded: err=%v, want %v",
 			err, auth.ErrRecoveryCodeInvalid)
+	}
+}
+
+// TestTOTPEnrol_URIAccountLabelIsTheCallersOwnEmail closes a gap mutation
+// testing found: the otpauth:// URI's label is `issuer:account`, and nothing
+// checked that `account` is the CALLER's own email rather than some other
+// value -- an authenticator app shows this label to the user as the entry's
+// name, so a wrong one silently mislabels which account a code belongs to.
+func TestTOTPEnrol_URIAccountLabelIsTheCallersOwnEmail(t *testing.T) {
+	env := dbtest.Postgres(t)
+	now := time.Now()
+	email := "totp-uri-label@refugio.test"
+	userID := registerOwner(t, env, email, "a-long-enough-password", "totp-uri-label")
+
+	got := decodeEnrolResponse(t,
+		authedTOTPRequest(t, totpEnrolFixture(t, env), "/api/v1/auth/totp/enrol", "{}", userID, now))
+
+	parsed, err := url.Parse(got.OTPAuthURI)
+	if err != nil {
+		t.Fatalf("parsing the otpauth URI: %v: %s", err, got.OTPAuthURI)
+	}
+	wantLabel := "/" + "mascotapp" + ":" + email
+	if parsed.Path != wantLabel {
+		t.Errorf("otpauth label = %q, want %q -- the authenticator app must show "+
+			"THIS caller's own email, not a stand-in", parsed.Path, wantLabel)
 	}
 }
 
@@ -233,5 +281,55 @@ func TestTOTPVerify_WithNoPendingEnrolmentIsRefused(t *testing.T) {
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want %d -- nothing was enrolled to verify: %s",
 			rec.Code, http.StatusBadRequest, rec.Body.String())
+	}
+}
+
+// TestTOTPVerify_WithMalformedJSONBodyIsRefused closes a gap mutation testing
+// found open: nothing sent a body that fails to decode as JSON at all. The
+// user is enrolled precisely so this proves the decode failure is caught
+// BEFORE the pending-secret lookup, not merely that some later check happens
+// to also refuse a malformed body.
+func TestTOTPVerify_WithMalformedJSONBodyIsRefused(t *testing.T) {
+	env := dbtest.Postgres(t)
+	now := time.Now()
+	userID := registerOwner(t, env, "totp-verify-malformed@refugio.test", "a-long-enough-password", "totp-verify-malformed")
+
+	authedTOTPRequest(t, totpEnrolFixture(t, env), "/api/v1/auth/totp/enrol", "{}", userID, now)
+
+	rec := authedTOTPRequest(t, totpVerifyFixture(t, env, now), "/api/v1/auth/totp/verify", `{not valid json`, userID, now)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d -- a body that is not valid JSON must never reach the TOTP check: %s",
+			rec.Code, http.StatusBadRequest, rec.Body.String())
+	}
+}
+
+// TestTOTPVerify_ATamperedSecretIsRefusedNotCrashed closes a gap mutation
+// testing found open: nothing ever made envelope.Open actually fail through
+// this handler. A row with a corrupted `totp_secret_enc` is the realistic way
+// that happens -- a bit flip, a bad migration, a key rotation gone wrong --
+// and the handler's own comment promises this is "the same refusal as a wrong
+// code", not a 500 and not a panic.
+func TestTOTPVerify_ATamperedSecretIsRefusedNotCrashed(t *testing.T) {
+	env := dbtest.Postgres(t)
+	now := time.Now()
+	userID := registerOwner(t, env, "totp-verify-tampered@refugio.test", "a-long-enough-password", "totp-verify-tampered")
+
+	authedTOTPRequest(t, totpEnrolFixture(t, env), "/api/v1/auth/totp/enrol", "{}", userID, now)
+
+	tamperErr := db.WithAuthUser(context.Background(), env.AuthPool, userID, func(ctx context.Context, tx pgx.Tx) error {
+		_, err := tx.Exec(ctx,
+			`UPDATE users SET totp_secret_enc = $1 WHERE id = $2`,
+			[]byte("not-a-real-sealed-blob"), userID,
+		)
+		return err
+	})
+	if tamperErr != nil {
+		t.Fatalf("corrupting the sealed secret: %v", tamperErr)
+	}
+
+	rec := authedTOTPRequest(t, totpVerifyFixture(t, env, now), "/api/v1/auth/totp/verify", `{"code":"123456"}`, userID, now)
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want %d -- a blob that will not open must be refused like a wrong code, not crash: %s",
+			rec.Code, http.StatusUnauthorized, rec.Body.String())
 	}
 }
