@@ -606,7 +606,7 @@ handlers themselves, then the contract and its codegen.
       - **one mutant is a genuine EQUIVALENT, not a gap**: removing the `err != nil` check after `envelope.Open()` changes no observable response, because every return path in `Open()` sets the secret to `nil` on error and `VerifyTOTP` already refuses any secret whose length is not exactly `TOTPSecretLength`. Confirmed by reading every `return` in `envelope.go`, not just by the mutant surviving. The check stays for intent and defence in depth; a new tamper test pins the documented promise without claiming to kill this specific mutant.
       - **9 mutants generated, 8 killed, 1 equivalent**, zero residue (outside the documented equivalent) verified by diff against a pristine copy
       - pilot: blacklisted (§7.2)
-      - engram: —
+      - engram: `obs-c459886d42e6fd99` — *un test de invalidación sin control positivo no prueba nada* (approved 2026-09-26) · `obs-66a09bc2e7da40bb` — *un mutante sobreviviente no siempre es un hueco de cobertura* (approved 2026-09-26)
 
 - [ ] **T-02-033** · Session/shelter-exchange handler — `POST /auth/session/shelter`
       - spec: authorization-rbac / *Tenant scope derives only from the verified token claim* (this is the mint point for the claim the middleware later trusts)
