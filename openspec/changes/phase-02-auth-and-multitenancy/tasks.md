@@ -593,13 +593,18 @@ handlers themselves, then the contract and its codegen.
       - pilot: blacklisted (§7.2)
       - engram: `obs-a13da1b17fdd6562` — *un mutante que saca dos cláusulas a la vez esconde la que no está probada* (approved 2026-09-24)
 
-- [~] **T-02-032** · TOTP enrol/verify handler
+- [x] **T-02-032** · TOTP enrol/verify handler
       - spec: identity-and-session / *TOTP is mandatory for owner and admin roles* (enrolment is the precondition the login-time scenarios assume)
       - RED first: enrol generates a secret, an `otpauth://` URI, and ten recovery codes shown **exactly once** (design's Open Question: *"the API returns them exactly once and never again"* — asserted: a second read of the same enrolment never returns the plaintext codes again) · verify confirms a submitted TOTP code and activates the secret (moves from pending to enrolled)
-      - build: `auth_handlers.go` — TOTP enrol/verify handlers, wiring `totp.go` + `envelope.go` + `recovery.go`
-      - tests: all of the above green
+      - build: `totp_handlers.go` — TOTP enrol/verify handlers, wiring `totp.go` + `envelope.go` + `recovery.go`
+      - tests: all of the above green, plus three added closing untested clauses (below)
       - dod: RED→GREEN · lint clean · coverage held
-      - est: 140
+      - est: 140 · **measured 197 implementation / 532 total** (against `PR-02-17`'s base), inside both budgets
+      - **the anti-vacuity gap: invalidation was never proven against a working credential.** `TestTOTPEnrol_ASecondEnrolInvalidatesTheFirstRecoveryCodes` asserted the FIRST set stops working after a SECOND enrol, but a mutant that skipped persisting recovery codes entirely still passed it — a code never made redeemable trivially stays "not redeemable". Fixed with a positive control: redeem a different first-set code right after the FIRST enrol, before the second one runs.
+      - **the otpauth:// URI's account label was never checked against the caller's own email** — a mutant hardcoding a different, non-empty email survived, since the only prior assertion was the URI's scheme prefix. An authenticator app shows this label as the entry's name, so a wrong one silently mislabels whose account a code belongs to.
+      - **a malformed JSON body on verify was never sent by any test.** Closed with a test that first enrols, so the resulting 400 provably comes from the decode failure and not the pending-secret check that runs after it.
+      - **one mutant is a genuine EQUIVALENT, not a gap**: removing the `err != nil` check after `envelope.Open()` changes no observable response, because every return path in `Open()` sets the secret to `nil` on error and `VerifyTOTP` already refuses any secret whose length is not exactly `TOTPSecretLength`. Confirmed by reading every `return` in `envelope.go`, not just by the mutant surviving. The check stays for intent and defence in depth; a new tamper test pins the documented promise without claiming to kill this specific mutant.
+      - **9 mutants generated, 8 killed, 1 equivalent**, zero residue (outside the documented equivalent) verified by diff against a pristine copy
       - pilot: blacklisted (§7.2)
       - engram: —
 

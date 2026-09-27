@@ -1,67 +1,52 @@
 ---
 project: mascotapp
 current_phase: "02"
-current_task: "T-02-032"  # T-02-031 cerrada (226/698). Refresh emite amr [pwd] por decision del usuario; logout revoca la FAMILIA bajo el lock
+current_task: "T-02-033"  # T-02-032 cerrada (197/532 contra la base de PR-02-17). TOTP enrol/verify: la invalidacion de codigos de recuperacion nunca probo que hubiera algo que invalidar (control positivo agregado); la etiqueta de cuenta de la URI otpauth:// nunca se verifico contra el email real; un body JSON malformado en verify nunca se probo
 sdd_change: "phase-02-auth-and-multitenancy"
 rdd_enabled: false  # fase marcada RDD; el usuario decide, no se activa solo
-task_status: in_progress  # T-02-032 (enrolamiento y verificacion de TOTP, PR-02-18) tiene RED (ca88072, 2026-09-24) y GREEN (27b2032, 2026-09-25) ya commiteados en feat/pr-02-18-totp-enrol sobre feat/pr-02-17-refresh. Falta: mutation testing, verificacion de suite/lint en contenedor y el commit docs de cierre.
+task_status: not_started  # T-02-033 (Session/shelter-exchange handler, POST /auth/session/shelter, PR-02-19) depende de token.go de PR-02-09. Rama a crear: feat/pr-02-19-session-exchange sobre feat/pr-02-18-totp-enrol
 blocked_by: ".env.example: denegado a los agentes por regla global. Bloquea SOLO T-02-035 (PR-02-24, ultimo de la cadena). El usuario tiene que confirmar si JWT_SECRET y RESEND_API_KEY ya existen y pegar DATABASE_URL_AUTH, AUTH_KEK, WEB_ORIGINS, API_PUBLIC_ORIGIN y el password de app_auth. La cadena funcional entera mergea sin eso."
-last_updated: 2026-09-14
+last_updated: 2026-09-26
 sdd_store: hybrid
-last_agent: claude-opus-5
+last_agent: claude-sonnet-5
 next_action:
   cerrado: >
-    T-02-031 CERRADA el 2026-09-14 (RED 452d73c, GREEN b04c74e, tests del
-    mutante partido 960ef4f) en feat/pr-02-17-refresh sobre
-    feat/pr-02-16b-magic-link. refresh.go nuevo + correcciones en login.go y
-    auth_handlers.go; 12 tests de refresh/logout contra contenedor.
-    MUTACION: 9 mutantes, 9 muertos, cero residuo, clasificador con chequeo
-    de build primero. PRESUPUESTO: 226 de 250 y 698 de 800, entra en los
-    dos. VERIFICACION: suite completa en contenedor con exit=0 capturado,
-    siete paquetes verdes, golangci-lint 0 issues, gofmt limpio en
-    contenedor. NADA PUSHEADO DE ESTA RAMA, CERO PRs ABIERTOS.
+    T-02-032 CERRADA el 2026-09-26 (RED ca88072 y GREEN 27b2032, ambos de
+    una sesion anterior del 2026-09-24/25; tests del mutante partido
+    3bd370d, esta sesion) en feat/pr-02-18-totp-enrol sobre
+    feat/pr-02-17-refresh. Esta sesion RE-VERIFICO ambos commits contra
+    HEAD (no confio en el mensaje de GREEN) antes de correr la mutacion
+    pendiente. totp_handlers.go nuevo, sin cambios esta sesion; solo se
+    agregaron tests. MUTACION: 9 mutantes generados, 8 muertos (5 ya
+    cerrados por los tests existentes, 3 cerrados con tests nuevos), 1
+    EQUIVALENTE documentado (el chequeo de error de envelope.Open: todo
+    return de Open() en error da secret=nil y VerifyTOTP ya rechaza
+    longitud distinta de TOTPSecretLength, confirmado leyendo cada return
+    de envelope.go, no solo por la supervivencia del mutante). Cero
+    residuo (fuera del equivalente), verificado con diff contra copia
+    pristina. PRESUPUESTO: 197 de 250 implementacion (sin cambios, GREEN
+    de sesion anterior) y 532 de 800 total contra la base de PR-02-17,
+    entra en los dos. VERIFICACION: suite completa en contenedor con
+    exit=0 capturado, siete paquetes verdes, los ocho tests de TOTP (cinco
+    originales + tres nuevos) nombrados en -v con cero fallos,
+    golangci-lint run ./internal/httpapi/... con 0 issues, gofmt limpio.
+    NOTA APARTE (fuera de alcance): golangci-lint run ./... sobre todo
+    apps/api reporta un gosec G101 preexistente en
+    internal/db/dbtest/container.go, de cb31c18/7392bd6, muy anterior a
+    esta tarea; no se toco. NADA PUSHEADO DE ESTA RAMA, CERO PRs ABIERTOS.
   decision: >
-    DECISION DEL USUARIO 2026-09-14 -- AMR DE UN REFRESH ES [pwd]:
-    refresh_tokens no guarda como se autentico la sesion; preservar otp
-    pedia migracion Y hacia que una cookie de refresh robada portara el
-    segundo factor toda la vida de la familia. Con [pwd] un refresh nunca
-    afirma un factor que no verifico. Test pinneado con un OWNER que entro
-    con codigo TOTP valido, el caso tentador. EL ORDEN DEL CHEQUEO DE
-    ORIGEN SE PRUEBA SIN ESPIA: origen rechazado + cookie malformada da 403
-    no 401; origen rechazado + cookie valida la deja utilizable despues.
-    LOGOUT REVOCA LA FAMILIA BAJO EL LOCK, pinneado por test antes del
-    codigo: revocar solo la fila presentada no hace nada con una cookie
-    vieja y el sucesor sobrevive; el mismo hueco aparece sin cookie vieja si
-    un refresh esta en vuelo. Falla de infraestructura en logout responde
-    500 SIN limpiar la cookie. DOS CORRECCIONES A TRABAJO ANTERIOR:
-    serverError respondia y logueaba registration failed para TODO
-    llamador, asi que los 500 de login decian eso desde T-02-028 (verificado
-    que ningun test dependia del texto; ahora generico con path en el log);
-    y los atributos de la cookie vivian solo en login, ahora en
-    setRefreshCookie compartido. UN MUTANTE COMBINADO ESCONDIA UNA CLAUSULA
-    SIN PROBAR: la rama que convierte uuid-cero y carrera-perdida en 401 se
-    muto como uno solo; el uuid cero es deterministicamente alcanzable (16
-    bytes en cero parsean como uuid) y un test solo para el habria matado
-    al mutante combinado dejando la carrera sin probar bajo un reporte
-    verde. Partido en M7a y M7b con un test cada uno; el de carrera espeja
-    el test concurrente de auth (pruebas repetidas, largada comun) y su
-    muerte se corrio DOS veces porque una muerte dependiente del tiempo
-    observada una vez prueba poco.
+    Sin decision nueva del usuario en esta sesion de cierre. La decision
+    vigente de T-02-031 (amr de un refresh es [pwd]) sigue aplicando sin
+    cambios; ver la entrada de esa tarea para el detalle completo.
   sigue: >
-    T-02-032 (enrolamiento y verificacion de TOTP, PR-02-18) EN CURSO en
-    feat/pr-02-18-totp-enrol sobre feat/pr-02-17-refresh: RED (ca88072,
-    2026-09-24) y GREEN (27b2032, 2026-09-25) ya commiteados -- vuelve
-    alcanzable desde HTTP el totp_secret_enc que hoy los tests escriben a
-    mano. Falta antes de cerrarla: mutation testing, suite/lint en
-    contenedor, entrada de bitacora y el commit docs de cierre.
+    T-02-033 (Session/shelter-exchange handler, POST /auth/session/shelter,
+    PR-02-19) NO INICIADA. Depende de token.go de PR-02-09. Rama a crear:
+    feat/pr-02-19-session-exchange sobre feat/pr-02-18-totp-enrol, segun la
+    tabla de dependencias de PRs de tasks.md.
   bloqueadores: >
-    Ninguno. Los tres candidatos de memoria que estaban pendientes en
-    .engram/queue (muerto-falso, doble-permisivo, mutante-combinado) fueron
-    aprobados por el usuario el 2026-09-24 y guardados en Engram
-    (obs-0210963cf0f98b48, obs-296d31be8cc336f7 -- este ultimo actualiza en
-    el mismo lugar la entrada previa que extendia --, obs-a13da1b17fdd6562);
-    movidos a docs/vault/70-conocimiento/ y referenciados de vuelta en
-    tasks.md y en el tablero de FASE-02.md.
+    Ninguno para T-02-033. .env.example (T-02-035, PR-02-24, ultimo de la
+    cadena) sigue bloqueado por confirmacion del usuario, sin cambios esta
+    sesion -- no afecta a T-02-033.
 ---
 
 # Estado del proyecto

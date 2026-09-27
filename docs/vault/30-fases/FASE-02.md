@@ -194,7 +194,7 @@ Columna **PR**: en qué PR de la cadena entra. Columna **est**: líneas autorada
 | `[x]` `T-02-029` | Login handler — TOTP-mandatory and recovery-code fallback | PR 15 | 140 |
 | `[x]` `T-02-030` | Magic-link handler | PR 16 | 120 | `obs-0210963cf0f98b48` · `obs-296d31be8cc336f7` |
 | `[x]` `T-02-031` | Refresh + logout handler | PR 17 | 160 | `obs-a13da1b17fdd6562` |
-| `[~]` `T-02-032` | TOTP enrol/verify handler | PR 18 | 140 |
+| `[x]` `T-02-032` | TOTP enrol/verify handler | PR 18 | 140 |
 | `[ ]` `T-02-033` | Session/shelter-exchange handler — `POST /auth/session/shelter` | PR 19 | 100 |
 | `[ ]` `T-02-034` | `api/openapi.yaml` — auth surface + regenerate `openapi.gen.go` | PR 20 | 90 |
 | `[!]` `T-02-035` | `.env.example` — add `DATABASE_URL_AUTH`, `AUTH_KEK`, `JWT_SECRET`, `WEB_ORIGINS`, `API_PUBLIC_ORIGIN`, the `app_auth` bootstrap password variable | PR 24 | 10 |
