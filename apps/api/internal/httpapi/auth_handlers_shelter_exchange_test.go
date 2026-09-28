@@ -170,6 +170,34 @@ func TestShelterExchange_NoMembershipAtAllIsRefused(t *testing.T) {
 	}
 }
 
+// TestShelterExchange_AnActiveMembershipInADifferentShelterIsRefused closes
+// the gap a combined "no membership" case would hide: a caller who holds an
+// active membership somewhere still has no membership in the shelter they
+// asked for. The mutation run for this task proved it -- dropping the
+// shelter_id comparison in activeMembershipRole (leaving only the status
+// check) survived every other test in this file, because
+// TestShelterExchange_NoMembershipAtAllIsRefused seeds a caller with ZERO
+// memberships anywhere, which the status-only check refuses for a different
+// reason (role never gets set at all).
+func TestShelterExchange_AnActiveMembershipInADifferentShelterIsRefused(t *testing.T) {
+	env := dbtest.Postgres(t)
+	issuer := newTestIssuer(t)
+	handler := shelterExchangeHandler(t, env, issuer)
+
+	userID, _ := seedActiveMembership(t, env, "exchange-wrong-shelter@refugio.test", "refugio-exchange-wrong-shelter-a")
+	_, otherShelterID := seedActiveMembership(t, env, "exchange-wrong-shelter-owner@refugio.test", "refugio-exchange-wrong-shelter-b")
+	token := sessionTokenFor(t, issuer, userID, time.Now())
+
+	rec := postShelterExchange(t, handler, token, otherShelterID.String())
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want %d for an active membership in a DIFFERENT shelter than the one requested: %s",
+			rec.Code, http.StatusForbidden, rec.Body.String())
+	}
+	if strings.Contains(rec.Body.String(), "access_token") {
+		t.Error("a refused exchange returned a token")
+	}
+}
+
 func TestShelterExchange_AnInvitedMembershipIsRefused(t *testing.T) {
 	env := dbtest.Postgres(t)
 	issuer := newTestIssuer(t)
