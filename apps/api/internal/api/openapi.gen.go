@@ -13,6 +13,21 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
+// Defines values for AccessTokenResponseTokenType.
+const (
+	Bearer AccessTokenResponseTokenType = "Bearer"
+)
+
+// Valid indicates whether the value is a known member of the AccessTokenResponseTokenType enum.
+func (e AccessTokenResponseTokenType) Valid() bool {
+	switch e {
+	case Bearer:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for LivenessStatusStatus.
 const (
 	Ok LivenessStatusStatus = "ok"
@@ -22,6 +37,21 @@ const (
 func (e LivenessStatusStatus) Valid() bool {
 	switch e {
 	case Ok:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MagicLinkAcceptedStatus.
+const (
+	Accepted MagicLinkAcceptedStatus = "accepted"
+)
+
+// Valid indicates whether the value is a known member of the MagicLinkAcceptedStatus enum.
+func (e MagicLinkAcceptedStatus) Valid() bool {
+	switch e {
+	case Accepted:
 		return true
 	default:
 		return false
@@ -58,6 +88,53 @@ func (e ReadinessStatusStatus) Valid() bool {
 	}
 }
 
+// Defines values for TOTPEnrolResponseStatus.
+const (
+	Pending TOTPEnrolResponseStatus = "pending"
+)
+
+// Valid indicates whether the value is a known member of the TOTPEnrolResponseStatus enum.
+func (e TOTPEnrolResponseStatus) Valid() bool {
+	switch e {
+	case Pending:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TOTPVerifyResponseStatus.
+const (
+	Enrolled TOTPVerifyResponseStatus = "enrolled"
+)
+
+// Valid indicates whether the value is a known member of the TOTPVerifyResponseStatus enum.
+func (e TOTPVerifyResponseStatus) Valid() bool {
+	switch e {
+	case Enrolled:
+		return true
+	default:
+		return false
+	}
+}
+
+// AccessTokenResponse Examples: {"access_token":"eyJhbGciOiJIUzI1NiJ9...","expires_in":900,"token_type":"Bearer"}
+type AccessTokenResponse struct {
+	AccessToken string `json:"access_token"`
+
+	// ExpiresIn Seconds until the access token expires.
+	ExpiresIn int                          `json:"expires_in"`
+	TokenType AccessTokenResponseTokenType `json:"token_type"`
+}
+
+// AccessTokenResponseTokenType defines model for AccessTokenResponse.TokenType.
+type AccessTokenResponseTokenType string
+
+// ErrorResponse Examples: {"error":"request failed"}
+type ErrorResponse struct {
+	Error string `json:"error"`
+}
+
 // LivenessStatus Examples: {"status":"ok"}
 type LivenessStatus struct {
 	Status LivenessStatusStatus `json:"status"`
@@ -65,6 +142,31 @@ type LivenessStatus struct {
 
 // LivenessStatusStatus defines model for LivenessStatus.Status.
 type LivenessStatusStatus string
+
+// LoginRequest defines model for LoginRequest.
+type LoginRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+
+	// RecoveryCode Mutually exclusive with totp_code.
+	RecoveryCode *string `json:"recovery_code,omitempty"`
+
+	// TotpCode Mutually exclusive with recovery_code.
+	TotpCode *string `json:"totp_code,omitempty"`
+}
+
+// MagicLinkAccepted Examples: {"status":"accepted"}
+type MagicLinkAccepted struct {
+	Status MagicLinkAcceptedStatus `json:"status"`
+}
+
+// MagicLinkAcceptedStatus defines model for MagicLinkAccepted.Status.
+type MagicLinkAcceptedStatus string
+
+// MagicLinkRequest defines model for MagicLinkRequest.
+type MagicLinkRequest struct {
+	Email string `json:"email"`
+}
 
 // ReadinessFailure Examples: {"failed":["postgres"],"status":"not ready"}
 type ReadinessFailure struct {
@@ -84,8 +186,107 @@ type ReadinessStatus struct {
 // ReadinessStatusStatus defines model for ReadinessStatus.Status.
 type ReadinessStatusStatus string
 
+// RegisterRequest defines model for RegisterRequest.
+type RegisterRequest struct {
+	City        *string `json:"city,omitempty"`
+	Country     *string `json:"country,omitempty"`
+	Email       string  `json:"email"`
+	FullName    *string `json:"full_name,omitempty"`
+	LegalName   *string `json:"legal_name,omitempty"`
+	Password    string  `json:"password"`
+	Phone       *string `json:"phone,omitempty"`
+	ShelterName string  `json:"shelter_name"`
+	ShelterSlug string  `json:"shelter_slug"`
+	State       *string `json:"state,omitempty"`
+}
+
+// RegisterResponse defines model for RegisterResponse.
+type RegisterResponse struct {
+	ShelterId string `json:"shelter_id"`
+	UserId    string `json:"user_id"`
+}
+
+// ShelterExchangeRequest defines model for ShelterExchangeRequest.
+type ShelterExchangeRequest struct {
+	ShelterId string `json:"shelter_id"`
+}
+
+// TOTPEnrolResponse defines model for TOTPEnrolResponse.
+type TOTPEnrolResponse struct {
+	// OtpauthUri An otpauth:// URI, typically rendered as a QR code.
+	OtpauthUri string `json:"otpauth_uri"`
+
+	// RecoveryCodes Shown exactly once. A repeated call replaces this set.
+	RecoveryCodes []string `json:"recovery_codes"`
+
+	// Secret Unpadded base32, for an authenticator app's manual-entry field.
+	Secret string                  `json:"secret"`
+	Status TOTPEnrolResponseStatus `json:"status"`
+}
+
+// TOTPEnrolResponseStatus defines model for TOTPEnrolResponse.Status.
+type TOTPEnrolResponseStatus string
+
+// TOTPVerifyRequest defines model for TOTPVerifyRequest.
+type TOTPVerifyRequest struct {
+	Code string `json:"code"`
+}
+
+// TOTPVerifyResponse Examples: {"status":"enrolled"}
+type TOTPVerifyResponse struct {
+	Status TOTPVerifyResponseStatus `json:"status"`
+}
+
+// TOTPVerifyResponseStatus defines model for TOTPVerifyResponse.Status.
+type TOTPVerifyResponseStatus string
+
+// BadRequest Examples: {"error":"request failed"}
+type BadRequest = ErrorResponse
+
+// ServerError Examples: {"error":"request failed"}
+type ServerError = ErrorResponse
+
+// LoginJSONRequestBody defines body for Login for application/json ContentType.
+type LoginJSONRequestBody = LoginRequest
+
+// RequestMagicLinkJSONRequestBody defines body for RequestMagicLink for application/json ContentType.
+type RequestMagicLinkJSONRequestBody = MagicLinkRequest
+
+// RegisterShelterJSONRequestBody defines body for RegisterShelter for application/json ContentType.
+type RegisterShelterJSONRequestBody = RegisterRequest
+
+// ExchangeShelterSessionJSONRequestBody defines body for ExchangeShelterSession for application/json ContentType.
+type ExchangeShelterSessionJSONRequestBody = ShelterExchangeRequest
+
+// VerifyTOTPJSONRequestBody defines body for VerifyTOTP for application/json ContentType.
+type VerifyTOTPJSONRequestBody = TOTPVerifyRequest
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// Login Verify a password (and second factor, if required) and issue a session
+	// (POST /api/v1/auth/login)
+	Login(w http.ResponseWriter, r *http.Request)
+	// Logout End the session the refresh cookie belongs to
+	// (POST /api/v1/auth/logout)
+	Logout(w http.ResponseWriter, r *http.Request)
+	// RequestMagicLink Request a passwordless sign-in link
+	// (POST /api/v1/auth/magic-link)
+	RequestMagicLink(w http.ResponseWriter, r *http.Request)
+	// RefreshSession Rotate the refresh cookie and issue a fresh access token
+	// (POST /api/v1/auth/refresh)
+	RefreshSession(w http.ResponseWriter, r *http.Request)
+	// RegisterShelter Register a shelter and its founding owner
+	// (POST /api/v1/auth/register)
+	RegisterShelter(w http.ResponseWriter, r *http.Request)
+	// ExchangeShelterSession Exchange the current session for a shelter-scoped access token
+	// (POST /api/v1/auth/session/shelter)
+	ExchangeShelterSession(w http.ResponseWriter, r *http.Request)
+	// EnrolTOTP Start (or restart) TOTP enrolment for the authenticated caller
+	// (POST /api/v1/auth/totp/enrol)
+	EnrolTOTP(w http.ResponseWriter, r *http.Request)
+	// VerifyTOTP Confirm the caller holds a working authenticator for the pending secret
+	// (POST /api/v1/auth/totp/verify)
+	VerifyTOTP(w http.ResponseWriter, r *http.Request)
 	// GetLiveness Liveness probe
 	// (GET /healthz)
 	GetLiveness(w http.ResponseWriter, r *http.Request)
@@ -97,6 +298,54 @@ type ServerInterface interface {
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
 
 type Unimplemented struct{}
+
+// Login Verify a password (and second factor, if required) and issue a session
+// (POST /api/v1/auth/login)
+func (_ Unimplemented) Login(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Logout End the session the refresh cookie belongs to
+// (POST /api/v1/auth/logout)
+func (_ Unimplemented) Logout(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// RequestMagicLink Request a passwordless sign-in link
+// (POST /api/v1/auth/magic-link)
+func (_ Unimplemented) RequestMagicLink(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// RefreshSession Rotate the refresh cookie and issue a fresh access token
+// (POST /api/v1/auth/refresh)
+func (_ Unimplemented) RefreshSession(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// RegisterShelter Register a shelter and its founding owner
+// (POST /api/v1/auth/register)
+func (_ Unimplemented) RegisterShelter(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ExchangeShelterSession Exchange the current session for a shelter-scoped access token
+// (POST /api/v1/auth/session/shelter)
+func (_ Unimplemented) ExchangeShelterSession(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// EnrolTOTP Start (or restart) TOTP enrolment for the authenticated caller
+// (POST /api/v1/auth/totp/enrol)
+func (_ Unimplemented) EnrolTOTP(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// VerifyTOTP Confirm the caller holds a working authenticator for the pending secret
+// (POST /api/v1/auth/totp/verify)
+func (_ Unimplemented) VerifyTOTP(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
 
 // GetLiveness Liveness probe
 // (GET /healthz)
@@ -118,6 +367,118 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// Login operation middleware
+func (siw *ServerInterfaceWrapper) Login(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.Login(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// Logout operation middleware
+func (siw *ServerInterfaceWrapper) Logout(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.Logout(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RequestMagicLink operation middleware
+func (siw *ServerInterfaceWrapper) RequestMagicLink(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RequestMagicLink(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RefreshSession operation middleware
+func (siw *ServerInterfaceWrapper) RefreshSession(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RefreshSession(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RegisterShelter operation middleware
+func (siw *ServerInterfaceWrapper) RegisterShelter(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RegisterShelter(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ExchangeShelterSession operation middleware
+func (siw *ServerInterfaceWrapper) ExchangeShelterSession(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ExchangeShelterSession(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// EnrolTOTP operation middleware
+func (siw *ServerInterfaceWrapper) EnrolTOTP(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.EnrolTOTP(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// VerifyTOTP operation middleware
+func (siw *ServerInterfaceWrapper) VerifyTOTP(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.VerifyTOTP(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // GetLiveness operation middleware
 func (siw *ServerInterfaceWrapper) GetLiveness(w http.ResponseWriter, r *http.Request) {
@@ -266,8 +627,485 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/readyz", wrapper.GetReadiness)
 	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/v1/auth/register", wrapper.RegisterShelter)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/v1/auth/login", wrapper.Login)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/v1/auth/magic-link", wrapper.RequestMagicLink)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/v1/auth/refresh", wrapper.RefreshSession)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/v1/auth/logout", wrapper.Logout)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/v1/auth/totp/enrol", wrapper.EnrolTOTP)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/v1/auth/totp/verify", wrapper.VerifyTOTP)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/v1/auth/session/shelter", wrapper.ExchangeShelterSession)
+	})
 
 	return r
+}
+
+type BadRequestJSONResponse ErrorResponse
+
+type ForbiddenTextResponse string
+
+type ServerErrorJSONResponse ErrorResponse
+
+type UnauthorizedResponseHeaders struct {
+	WWWAuthenticate *string
+}
+type UnauthorizedTextResponse struct {
+	Body string
+
+	Headers UnauthorizedResponseHeaders
+}
+
+type LoginRequestObject struct {
+	Body *LoginJSONRequestBody
+}
+
+type LoginResponseObject interface {
+	VisitLoginResponse(w http.ResponseWriter) error
+}
+
+type Login200JSONResponse AccessTokenResponse
+
+func (response Login200JSONResponse) VisitLoginResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type Login400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response Login400JSONResponse) VisitLoginResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type Login401JSONResponse ErrorResponse
+
+func (response Login401JSONResponse) VisitLoginResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type Login500JSONResponse struct{ ServerErrorJSONResponse }
+
+func (response Login500JSONResponse) VisitLoginResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type LogoutRequestObject struct {
+}
+
+type LogoutResponseObject interface {
+	VisitLogoutResponse(w http.ResponseWriter) error
+}
+
+type Logout204Response struct {
+}
+
+func (response Logout204Response) VisitLogoutResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type Logout403TextResponse ForbiddenTextResponse
+
+func (response Logout403TextResponse) VisitLogoutResponse(w http.ResponseWriter) error {
+
+	w.Header().Set("Content-Type", "text/plain")
+	w.WriteHeader(403)
+
+	_, err := w.Write([]byte(fmt.Sprint(response)))
+	return err
+}
+
+type Logout500JSONResponse struct{ ServerErrorJSONResponse }
+
+func (response Logout500JSONResponse) VisitLogoutResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RequestMagicLinkRequestObject struct {
+	Body *RequestMagicLinkJSONRequestBody
+}
+
+type RequestMagicLinkResponseObject interface {
+	VisitRequestMagicLinkResponse(w http.ResponseWriter) error
+}
+
+type RequestMagicLink202JSONResponse MagicLinkAccepted
+
+func (response RequestMagicLink202JSONResponse) VisitRequestMagicLinkResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(202)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RequestMagicLink400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response RequestMagicLink400JSONResponse) VisitRequestMagicLinkResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RefreshSessionRequestObject struct {
+}
+
+type RefreshSessionResponseObject interface {
+	VisitRefreshSessionResponse(w http.ResponseWriter) error
+}
+
+type RefreshSession200JSONResponse AccessTokenResponse
+
+func (response RefreshSession200JSONResponse) VisitRefreshSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RefreshSession401JSONResponse ErrorResponse
+
+func (response RefreshSession401JSONResponse) VisitRefreshSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RefreshSession403TextResponse ForbiddenTextResponse
+
+func (response RefreshSession403TextResponse) VisitRefreshSessionResponse(w http.ResponseWriter) error {
+
+	w.Header().Set("Content-Type", "text/plain")
+	w.WriteHeader(403)
+
+	_, err := w.Write([]byte(fmt.Sprint(response)))
+	return err
+}
+
+type RefreshSession500JSONResponse struct{ ServerErrorJSONResponse }
+
+func (response RefreshSession500JSONResponse) VisitRefreshSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RegisterShelterRequestObject struct {
+	Body *RegisterShelterJSONRequestBody
+}
+
+type RegisterShelterResponseObject interface {
+	VisitRegisterShelterResponse(w http.ResponseWriter) error
+}
+
+type RegisterShelter201JSONResponse RegisterResponse
+
+func (response RegisterShelter201JSONResponse) VisitRegisterShelterResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RegisterShelter400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response RegisterShelter400JSONResponse) VisitRegisterShelterResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RegisterShelter500JSONResponse struct{ ServerErrorJSONResponse }
+
+func (response RegisterShelter500JSONResponse) VisitRegisterShelterResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ExchangeShelterSessionRequestObject struct {
+	Body *ExchangeShelterSessionJSONRequestBody
+}
+
+type ExchangeShelterSessionResponseObject interface {
+	VisitExchangeShelterSessionResponse(w http.ResponseWriter) error
+}
+
+type ExchangeShelterSession200JSONResponse AccessTokenResponse
+
+func (response ExchangeShelterSession200JSONResponse) VisitExchangeShelterSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ExchangeShelterSession400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ExchangeShelterSession400JSONResponse) VisitExchangeShelterSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ExchangeShelterSession401TextResponse struct{ UnauthorizedTextResponse }
+
+func (response ExchangeShelterSession401TextResponse) VisitExchangeShelterSessionResponse(w http.ResponseWriter) error {
+
+	w.Header().Set("Content-Type", "text/plain")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(401)
+
+	_, err := w.Write([]byte(fmt.Sprint(response.Body)))
+	return err
+}
+
+type ExchangeShelterSession403TextResponse string
+
+func (response ExchangeShelterSession403TextResponse) VisitExchangeShelterSessionResponse(w http.ResponseWriter) error {
+
+	w.Header().Set("Content-Type", "text/plain")
+	w.WriteHeader(403)
+
+	_, err := w.Write([]byte(fmt.Sprint(response)))
+	return err
+}
+
+type ExchangeShelterSession500JSONResponse struct{ ServerErrorJSONResponse }
+
+func (response ExchangeShelterSession500JSONResponse) VisitExchangeShelterSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type EnrolTOTPRequestObject struct {
+}
+
+type EnrolTOTPResponseObject interface {
+	VisitEnrolTOTPResponse(w http.ResponseWriter) error
+}
+
+type EnrolTOTP200JSONResponse TOTPEnrolResponse
+
+func (response EnrolTOTP200JSONResponse) VisitEnrolTOTPResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type EnrolTOTP401TextResponse struct{ UnauthorizedTextResponse }
+
+func (response EnrolTOTP401TextResponse) VisitEnrolTOTPResponse(w http.ResponseWriter) error {
+
+	w.Header().Set("Content-Type", "text/plain")
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(401)
+
+	_, err := w.Write([]byte(fmt.Sprint(response.Body)))
+	return err
+}
+
+type EnrolTOTP500JSONResponse struct{ ServerErrorJSONResponse }
+
+func (response EnrolTOTP500JSONResponse) VisitEnrolTOTPResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VerifyTOTPRequestObject struct {
+	Body *VerifyTOTPJSONRequestBody
+}
+
+type VerifyTOTPResponseObject interface {
+	VisitVerifyTOTPResponse(w http.ResponseWriter) error
+}
+
+type VerifyTOTP200JSONResponse TOTPVerifyResponse
+
+func (response VerifyTOTP200JSONResponse) VisitVerifyTOTPResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VerifyTOTP400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response VerifyTOTP400JSONResponse) VisitVerifyTOTPResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VerifyTOTP401JSONResponse ErrorResponse
+
+func (response VerifyTOTP401JSONResponse) VisitVerifyTOTPResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VerifyTOTP500JSONResponse struct{ ServerErrorJSONResponse }
+
+func (response VerifyTOTP500JSONResponse) VisitVerifyTOTPResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
 }
 
 type GetLivenessRequestObject struct {
@@ -328,6 +1166,30 @@ func (response GetReadiness503JSONResponse) VisitGetReadinessResponse(w http.Res
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// Login Verify a password (and second factor, if required) and issue a session
+	// (POST /api/v1/auth/login)
+	Login(ctx context.Context, request LoginRequestObject) (LoginResponseObject, error)
+	// Logout End the session the refresh cookie belongs to
+	// (POST /api/v1/auth/logout)
+	Logout(ctx context.Context, request LogoutRequestObject) (LogoutResponseObject, error)
+	// RequestMagicLink Request a passwordless sign-in link
+	// (POST /api/v1/auth/magic-link)
+	RequestMagicLink(ctx context.Context, request RequestMagicLinkRequestObject) (RequestMagicLinkResponseObject, error)
+	// RefreshSession Rotate the refresh cookie and issue a fresh access token
+	// (POST /api/v1/auth/refresh)
+	RefreshSession(ctx context.Context, request RefreshSessionRequestObject) (RefreshSessionResponseObject, error)
+	// RegisterShelter Register a shelter and its founding owner
+	// (POST /api/v1/auth/register)
+	RegisterShelter(ctx context.Context, request RegisterShelterRequestObject) (RegisterShelterResponseObject, error)
+	// ExchangeShelterSession Exchange the current session for a shelter-scoped access token
+	// (POST /api/v1/auth/session/shelter)
+	ExchangeShelterSession(ctx context.Context, request ExchangeShelterSessionRequestObject) (ExchangeShelterSessionResponseObject, error)
+	// EnrolTOTP Start (or restart) TOTP enrolment for the authenticated caller
+	// (POST /api/v1/auth/totp/enrol)
+	EnrolTOTP(ctx context.Context, request EnrolTOTPRequestObject) (EnrolTOTPResponseObject, error)
+	// VerifyTOTP Confirm the caller holds a working authenticator for the pending secret
+	// (POST /api/v1/auth/totp/verify)
+	VerifyTOTP(ctx context.Context, request VerifyTOTPRequestObject) (VerifyTOTPResponseObject, error)
 	// GetLiveness Liveness probe
 	// (GET /healthz)
 	GetLiveness(ctx context.Context, request GetLivenessRequestObject) (GetLivenessResponseObject, error)
@@ -373,6 +1235,233 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// Login operation middleware
+func (sh *strictHandler) Login(w http.ResponseWriter, r *http.Request) {
+	var request LoginRequestObject
+
+	var body LoginJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.Login(ctx, request.(LoginRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "Login")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(LoginResponseObject); ok {
+		if err := validResponse.VisitLoginResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// Logout operation middleware
+func (sh *strictHandler) Logout(w http.ResponseWriter, r *http.Request) {
+	var request LogoutRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.Logout(ctx, request.(LogoutRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "Logout")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(LogoutResponseObject); ok {
+		if err := validResponse.VisitLogoutResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RequestMagicLink operation middleware
+func (sh *strictHandler) RequestMagicLink(w http.ResponseWriter, r *http.Request) {
+	var request RequestMagicLinkRequestObject
+
+	var body RequestMagicLinkJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RequestMagicLink(ctx, request.(RequestMagicLinkRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RequestMagicLink")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RequestMagicLinkResponseObject); ok {
+		if err := validResponse.VisitRequestMagicLinkResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RefreshSession operation middleware
+func (sh *strictHandler) RefreshSession(w http.ResponseWriter, r *http.Request) {
+	var request RefreshSessionRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RefreshSession(ctx, request.(RefreshSessionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RefreshSession")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RefreshSessionResponseObject); ok {
+		if err := validResponse.VisitRefreshSessionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RegisterShelter operation middleware
+func (sh *strictHandler) RegisterShelter(w http.ResponseWriter, r *http.Request) {
+	var request RegisterShelterRequestObject
+
+	var body RegisterShelterJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RegisterShelter(ctx, request.(RegisterShelterRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RegisterShelter")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RegisterShelterResponseObject); ok {
+		if err := validResponse.VisitRegisterShelterResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ExchangeShelterSession operation middleware
+func (sh *strictHandler) ExchangeShelterSession(w http.ResponseWriter, r *http.Request) {
+	var request ExchangeShelterSessionRequestObject
+
+	var body ExchangeShelterSessionJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ExchangeShelterSession(ctx, request.(ExchangeShelterSessionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ExchangeShelterSession")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ExchangeShelterSessionResponseObject); ok {
+		if err := validResponse.VisitExchangeShelterSessionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// EnrolTOTP operation middleware
+func (sh *strictHandler) EnrolTOTP(w http.ResponseWriter, r *http.Request) {
+	var request EnrolTOTPRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.EnrolTOTP(ctx, request.(EnrolTOTPRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "EnrolTOTP")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(EnrolTOTPResponseObject); ok {
+		if err := validResponse.VisitEnrolTOTPResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// VerifyTOTP operation middleware
+func (sh *strictHandler) VerifyTOTP(w http.ResponseWriter, r *http.Request) {
+	var request VerifyTOTPRequestObject
+
+	var body VerifyTOTPJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.VerifyTOTP(ctx, request.(VerifyTOTPRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "VerifyTOTP")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(VerifyTOTPResponseObject); ok {
+		if err := validResponse.VisitVerifyTOTPResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // GetLiveness operation middleware

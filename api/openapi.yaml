@@ -22,6 +22,12 @@ servers:
 tags:
   - name: health
     description: Liveness and readiness probes
+  - name: auth
+    description: |
+      Registration, password/TOTP login, magic links, refresh-cookie session
+      rotation, TOTP enrolment, and the shelter-exchange that mints a
+      tenant-scoped access token (authorization-rbac / *Tenant scope derives
+      only from the verified token claim*).
 
 paths:
   /healthz:
@@ -68,8 +74,446 @@ paths:
               schema:
                 $ref: "#/components/schemas/ReadinessFailure"
 
+  /api/v1/auth/register:
+    post:
+      tags: [auth]
+      summary: Register a shelter and its founding owner
+      description: |
+        Creates the user and, atomically, the shelter plus the founder's
+        `owner` membership. Carries no `status` field: a new shelter always
+        lands `pending_verification`, regardless of what the caller submits.
+        Issues no session — registration and login are separate steps.
+      operationId: registerShelter
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: The user and shelter were created (or the user already existed).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegisterResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /api/v1/auth/login:
+    post:
+      tags: [auth]
+      summary: Verify a password (and second factor, if required) and issue a session
+      description: |
+        `owner`/`admin` callers must also present `totp_code` or
+        `recovery_code`; any other role logs in with a password alone. Every
+        refusal — unknown address, wrong password, missing second factor,
+        suspended account — answers identically, to close the login
+        enumeration oracle. Sets the rotating refresh cookie on success. The
+        issued access token carries no `shelter_id`; exchange it at
+        `/api/v1/auth/session/shelter` for a tenant-scoped one.
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: |
+            Authenticated. Sets the `__Secure-mascotapp_refresh` cookie
+            (HttpOnly, Secure, SameSite=None, path-scoped to `/api/v1/auth`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccessTokenResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Invalid credentials, or a required second factor was not presented.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /api/v1/auth/magic-link:
+    post:
+      tags: [auth]
+      summary: Request a passwordless sign-in link
+      description: |
+        Answers `202 {"status":"accepted"}` unconditionally, whether or not
+        the address has an account — the reply, its timing, and its content
+        must never reveal that. The link is mailed only when the address is
+        active; nothing in this response depends on it.
+      operationId: requestMagicLink
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MagicLinkRequest"
+      responses:
+        "202":
+          description: The request was accepted. This says nothing about whether mail was sent.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MagicLinkAccepted"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /api/v1/auth/refresh:
+    post:
+      tags: [auth]
+      summary: Rotate the refresh cookie and issue a fresh access token
+      description: |
+        Reads the `__Secure-mascotapp_refresh` cookie; takes no request body.
+        Requires a trusted `Origin` (or `Sec-Fetch-Site: same-origin`) —
+        this and `/logout` are the only routes the cookie is sent to. A
+        cookie already spent revokes its whole family and refuses. The
+        issued access token's `amr` is always `["pwd"]`.
+      operationId: refreshSession
+      security:
+        - refreshCookie: []
+      responses:
+        "200":
+          description: Rotated. Sets a new `__Secure-mascotapp_refresh` cookie.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccessTokenResponse"
+        "401":
+          description: |
+            No cookie, a malformed one, an expired one, or a reused one
+            (which also revokes the family). Clears the cookie.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /api/v1/auth/logout:
+    post:
+      tags: [auth]
+      summary: End the session the refresh cookie belongs to
+      description: |
+        Revokes the whole refresh-token family, not only the presented row.
+        Answers `204` whether or not there was a live session to end — no
+        cookie, a malformed one, and an already-ended session all end the
+        same way. Requires a trusted `Origin`, like `/refresh`.
+      operationId: logout
+      security:
+        - refreshCookie: []
+      responses:
+        "204":
+          description: The session (if any) is ended. Clears the refresh cookie.
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /api/v1/auth/totp/enrol:
+    post:
+      tags: [auth]
+      summary: Start (or restart) TOTP enrolment for the authenticated caller
+      description: |
+        Persists a new pending secret and a fresh set of recovery codes
+        immediately, replacing any earlier pending or confirmed enrolment.
+        The recovery codes are shown exactly once in this response — only
+        their hash is stored. Confirm with `/api/v1/auth/totp/verify`.
+      operationId: enrolTOTP
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: A new pending TOTP secret and recovery codes were issued.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TOTPEnrolResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /api/v1/auth/totp/verify:
+    post:
+      tags: [auth]
+      summary: Confirm the caller holds a working authenticator for the pending secret
+      description: |
+        Verifies `code` against the most recently enrolled (still pending)
+        secret. `400` when no enrolment is pending, or the body is not valid
+        JSON; `401` for any code that does not validate.
+      operationId: verifyTOTP
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TOTPVerifyRequest"
+      responses:
+        "200":
+          description: The pending enrolment is confirmed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TOTPVerifyResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: The code did not validate, or the pending secret could not be opened.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /api/v1/auth/session/shelter:
+    post:
+      tags: [auth]
+      summary: Exchange the current session for a shelter-scoped access token
+      description: |
+        THE mint point for the `shelter_id` claim `RequireTenant` later
+        trusts (authorization-rbac / *Tenant scope derives only from the
+        verified token claim*). Issues a token scoped to `shelter_id` only
+        when the caller holds an ACTIVE membership there; no membership, an
+        invited one, and a revoked one all refuse identically.
+      operationId: exchangeShelterSession
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShelterExchangeRequest"
+      responses:
+        "200":
+          description: A shelter-scoped access token was issued.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccessTokenResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: No active membership in the requested shelter.
+          content:
+            text/plain:
+              schema:
+                type: string
+        "500":
+          $ref: "#/components/responses/ServerError"
+
 components:
+  responses:
+    BadRequest:
+      description: The request body is not valid JSON, or a required field is missing/invalid.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Unauthorized:
+      description: The bearer token is missing, malformed, expired, or fails verification.
+      headers:
+        WWW-Authenticate:
+          schema:
+            type: string
+      content:
+        text/plain:
+          schema:
+            type: string
+    Forbidden:
+      description: |
+        The caller is authenticated but the request's `Origin` is not
+        allowlisted, or (for `RequireTenant` routes) the request disagrees
+        with the token's `shelter_id` claim.
+      content:
+        text/plain:
+          schema:
+            type: string
+    ServerError:
+      description: An infrastructure failure. The body never repeats what failed.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    refreshCookie:
+      type: apiKey
+      in: cookie
+      name: __Secure-mascotapp_refresh
+
   schemas:
+    ErrorResponse:
+      type: object
+      required: [error]
+      additionalProperties: false
+      properties:
+        error:
+          type: string
+      examples:
+        - error: request failed
+
+    RegisterRequest:
+      type: object
+      required: [email, password, shelter_name, shelter_slug]
+      additionalProperties: false
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+          minLength: 12
+        full_name:
+          type: string
+        phone:
+          type: string
+        shelter_name:
+          type: string
+        shelter_slug:
+          type: string
+        legal_name:
+          type: string
+        country:
+          type: string
+        state:
+          type: string
+        city:
+          type: string
+
+    RegisterResponse:
+      type: object
+      required: [user_id, shelter_id]
+      additionalProperties: false
+      properties:
+        user_id:
+          type: string
+        shelter_id:
+          type: string
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      additionalProperties: false
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+        totp_code:
+          type: string
+          description: Mutually exclusive with recovery_code.
+        recovery_code:
+          type: string
+          description: Mutually exclusive with totp_code.
+
+    AccessTokenResponse:
+      type: object
+      required: [access_token, token_type, expires_in]
+      additionalProperties: false
+      properties:
+        access_token:
+          type: string
+        token_type:
+          type: string
+          enum: [Bearer]
+        expires_in:
+          type: integer
+          description: Seconds until the access token expires.
+      examples:
+        - access_token: eyJhbGciOiJIUzI1NiJ9...
+          token_type: Bearer
+          expires_in: 900
+
+    MagicLinkRequest:
+      type: object
+      required: [email]
+      additionalProperties: false
+      properties:
+        email:
+          type: string
+
+    MagicLinkAccepted:
+      type: object
+      required: [status]
+      additionalProperties: false
+      properties:
+        status:
+          type: string
+          enum: [accepted]
+      examples:
+        - status: accepted
+
+    ShelterExchangeRequest:
+      type: object
+      required: [shelter_id]
+      additionalProperties: false
+      properties:
+        shelter_id:
+          type: string
+
+    TOTPEnrolResponse:
+      type: object
+      required: [status, secret, otpauth_uri, recovery_codes]
+      additionalProperties: false
+      properties:
+        status:
+          type: string
+          enum: [pending]
+        secret:
+          type: string
+          description: Unpadded base32, for an authenticator app's manual-entry field.
+        otpauth_uri:
+          type: string
+          description: An otpauth:// URI, typically rendered as a QR code.
+        recovery_codes:
+          type: array
+          description: Shown exactly once. A repeated call replaces this set.
+          items:
+            type: string
+          minItems: 1
+
+    TOTPVerifyRequest:
+      type: object
+      required: [code]
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+
+    TOTPVerifyResponse:
+      type: object
+      required: [status]
+      additionalProperties: false
+      properties:
+        status:
+          type: string
+          enum: [enrolled]
+      examples:
+        - status: enrolled
+
     LivenessStatus:
       type: object
       required: [status]

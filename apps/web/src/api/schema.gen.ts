@@ -50,10 +50,281 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/register": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Register a shelter and its founding owner
+         * @description Creates the user and, atomically, the shelter plus the founder's
+         *     `owner` membership. Carries no `status` field: a new shelter always
+         *     lands `pending_verification`, regardless of what the caller submits.
+         *     Issues no session — registration and login are separate steps.
+         */
+        post: operations["registerShelter"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verify a password (and second factor, if required) and issue a session
+         * @description `owner`/`admin` callers must also present `totp_code` or
+         *     `recovery_code`; any other role logs in with a password alone. Every
+         *     refusal — unknown address, wrong password, missing second factor,
+         *     suspended account — answers identically, to close the login
+         *     enumeration oracle. Sets the rotating refresh cookie on success. The
+         *     issued access token carries no `shelter_id`; exchange it at
+         *     `/api/v1/auth/session/shelter` for a tenant-scoped one.
+         */
+        post: operations["login"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/magic-link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Request a passwordless sign-in link
+         * @description Answers `202 {"status":"accepted"}` unconditionally, whether or not
+         *     the address has an account — the reply, its timing, and its content
+         *     must never reveal that. The link is mailed only when the address is
+         *     active; nothing in this response depends on it.
+         */
+        post: operations["requestMagicLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rotate the refresh cookie and issue a fresh access token
+         * @description Reads the `__Secure-mascotapp_refresh` cookie; takes no request body.
+         *     Requires a trusted `Origin` (or `Sec-Fetch-Site: same-origin`) —
+         *     this and `/logout` are the only routes the cookie is sent to. A
+         *     cookie already spent revokes its whole family and refuses. The
+         *     issued access token's `amr` is always `["pwd"]`.
+         */
+        post: operations["refreshSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * End the session the refresh cookie belongs to
+         * @description Revokes the whole refresh-token family, not only the presented row.
+         *     Answers `204` whether or not there was a live session to end — no
+         *     cookie, a malformed one, and an already-ended session all end the
+         *     same way. Requires a trusted `Origin`, like `/refresh`.
+         */
+        post: operations["logout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/totp/enrol": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start (or restart) TOTP enrolment for the authenticated caller
+         * @description Persists a new pending secret and a fresh set of recovery codes
+         *     immediately, replacing any earlier pending or confirmed enrolment.
+         *     The recovery codes are shown exactly once in this response — only
+         *     their hash is stored. Confirm with `/api/v1/auth/totp/verify`.
+         */
+        post: operations["enrolTOTP"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/totp/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm the caller holds a working authenticator for the pending secret
+         * @description Verifies `code` against the most recently enrolled (still pending)
+         *     secret. `400` when no enrolment is pending, or the body is not valid
+         *     JSON; `401` for any code that does not validate.
+         */
+        post: operations["verifyTOTP"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/session/shelter": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Exchange the current session for a shelter-scoped access token
+         * @description THE mint point for the `shelter_id` claim `RequireTenant` later
+         *     trusts (authorization-rbac / *Tenant scope derives only from the
+         *     verified token claim*). Issues a token scoped to `shelter_id` only
+         *     when the caller holds an ACTIVE membership there; no membership, an
+         *     invited one, and a revoked one all refuse identically.
+         */
+        post: operations["exchangeShelterSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * @example {
+         *       "error": "request failed"
+         *     }
+         */
+        ErrorResponse: {
+            error: string;
+        };
+        RegisterRequest: {
+            email: string;
+            password: string;
+            full_name?: string;
+            phone?: string;
+            shelter_name: string;
+            shelter_slug: string;
+            legal_name?: string;
+            country?: string;
+            state?: string;
+            city?: string;
+        };
+        RegisterResponse: {
+            user_id: string;
+            shelter_id: string;
+        };
+        LoginRequest: {
+            email: string;
+            password: string;
+            /** @description Mutually exclusive with recovery_code. */
+            totp_code?: string;
+            /** @description Mutually exclusive with totp_code. */
+            recovery_code?: string;
+        };
+        /**
+         * @example {
+         *       "access_token": "eyJhbGciOiJIUzI1NiJ9...",
+         *       "token_type": "Bearer",
+         *       "expires_in": 900
+         *     }
+         */
+        AccessTokenResponse: {
+            access_token: string;
+            /** @enum {string} */
+            token_type: "Bearer";
+            /** @description Seconds until the access token expires. */
+            expires_in: number;
+        };
+        MagicLinkRequest: {
+            email: string;
+        };
+        /**
+         * @example {
+         *       "status": "accepted"
+         *     }
+         */
+        MagicLinkAccepted: {
+            /** @enum {string} */
+            status: "accepted";
+        };
+        ShelterExchangeRequest: {
+            shelter_id: string;
+        };
+        TOTPEnrolResponse: {
+            /** @enum {string} */
+            status: "pending";
+            /** @description Unpadded base32, for an authenticator app's manual-entry field. */
+            secret: string;
+            /** @description An otpauth:// URI, typically rendered as a QR code. */
+            otpauth_uri: string;
+            /** @description Shown exactly once. A repeated call replaces this set. */
+            recovery_codes: string[];
+        };
+        TOTPVerifyRequest: {
+            code: string;
+        };
+        /**
+         * @example {
+         *       "status": "enrolled"
+         *     }
+         */
+        TOTPVerifyResponse: {
+            /** @enum {string} */
+            status: "enrolled";
+        };
         /**
          * @example {
          *       "status": "ok"
@@ -87,7 +358,49 @@ export interface components {
             failed: string[];
         };
     };
-    responses: never;
+    responses: {
+        /** @description The request body is not valid JSON, or a required field is missing/invalid. */
+        BadRequest: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description The bearer token is missing, malformed, expired, or fails verification. */
+        Unauthorized: {
+            headers: {
+                "WWW-Authenticate"?: string;
+                [name: string]: unknown;
+            };
+            content: {
+                "text/plain": string;
+            };
+        };
+        /**
+         * @description The caller is authenticated but the request's `Origin` is not
+         *     allowlisted, or (for `RequireTenant` routes) the request disagrees
+         *     with the token's `shelter_id` claim.
+         */
+        Forbidden: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "text/plain": string;
+            };
+        };
+        /** @description An infrastructure failure. The body never repeats what failed. */
+        ServerError: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+    };
     parameters: never;
     requestBodies: never;
     headers: never;
@@ -142,6 +455,242 @@ export interface operations {
                     "application/json": components["schemas"]["ReadinessFailure"];
                 };
             };
+        };
+    };
+    registerShelter: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterRequest"];
+            };
+        };
+        responses: {
+            /** @description The user and shelter were created (or the user already existed). */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegisterResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            500: components["responses"]["ServerError"];
+        };
+    };
+    login: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginRequest"];
+            };
+        };
+        responses: {
+            /**
+             * @description Authenticated. Sets the `__Secure-mascotapp_refresh` cookie
+             *     (HttpOnly, Secure, SameSite=None, path-scoped to `/api/v1/auth`).
+             */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessTokenResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Invalid credentials, or a required second factor was not presented. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            500: components["responses"]["ServerError"];
+        };
+    };
+    requestMagicLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MagicLinkRequest"];
+            };
+        };
+        responses: {
+            /** @description The request was accepted. This says nothing about whether mail was sent. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MagicLinkAccepted"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+        };
+    };
+    refreshSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Rotated. Sets a new `__Secure-mascotapp_refresh` cookie. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessTokenResponse"];
+                };
+            };
+            /**
+             * @description No cookie, a malformed one, an expired one, or a reused one
+             *     (which also revokes the family). Clears the cookie.
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["ServerError"];
+        };
+    };
+    logout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The session (if any) is ended. Clears the refresh cookie. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["ServerError"];
+        };
+    };
+    enrolTOTP: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A new pending TOTP secret and recovery codes were issued. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TOTPEnrolResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            500: components["responses"]["ServerError"];
+        };
+    };
+    verifyTOTP: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TOTPVerifyRequest"];
+            };
+        };
+        responses: {
+            /** @description The pending enrolment is confirmed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TOTPVerifyResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description The code did not validate, or the pending secret could not be opened. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            500: components["responses"]["ServerError"];
+        };
+    };
+    exchangeShelterSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShelterExchangeRequest"];
+            };
+        };
+        responses: {
+            /** @description A shelter-scoped access token was issued. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessTokenResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /** @description No active membership in the requested shelter. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": string;
+                };
+            };
+            500: components["responses"]["ServerError"];
         };
     };
 }

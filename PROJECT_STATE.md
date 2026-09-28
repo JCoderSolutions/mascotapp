@@ -1,56 +1,84 @@
 ---
 project: mascotapp
 current_phase: "02"
-current_task: "T-02-034"  # T-02-033 cerrada (95/332 contra el diff de PR-02-19). Shelter-exchange handler: activeMembershipRole reusa ListOwnMemberships (la misma query de requiresSecondFactor) en vez de una segunda consulta paralela. Mutacion manual encontro un hueco real -- el mutante que saca la comparacion de shelter_id sobrevivio porque el test de "sin membresia" usa un caller sin NINGUNA fila; tercera instancia de obs-a13da1b17fdd6562 en esta fase
+current_task: "T-02-036"  # T-02-034 cerrada (444 lineas hand-written de api/openapi.yaml contra una estimacion de 90 -- FLAGGEADO, no absorbido en silencio; ver next_action.cerrado). T-02-035 sigue bloqueada por el usuario y NO gatea nada mas: PR-02-21 (T-02-036/037, matriz RBAC) es pura e independiente, sin dependencia de PR-02-20 ni de T-02-035.
 sdd_change: "phase-02-auth-and-multitenancy"
 rdd_enabled: false  # fase marcada RDD; el usuario decide, no se activa solo
-task_status: not_started  # T-02-034 (api/openapi.yaml + regenerar openapi.gen.go, PR-02-20) depende de todos los handlers T-02-027...T-02-033. Rama a crear: feat/pr-02-20-openapi sobre feat/pr-02-19-session-exchange
-blocked_by: ".env.example: denegado a los agentes por regla global. Bloquea SOLO T-02-035 (PR-02-24, ultimo de la cadena). El usuario tiene que confirmar si JWT_SECRET y RESEND_API_KEY ya existen y pegar DATABASE_URL_AUTH, AUTH_KEK, WEB_ORIGINS, API_PUBLIC_ORIGIN y el password de app_auth. La cadena funcional entera mergea sin eso."
+task_status: not_started  # T-02-036 (RED -- authz/matrix.go tests exhaustivos table-driven, PR-02-21) es pura e independiente; no depende de T-02-034 ni de T-02-035. Rama a crear: feat/pr-02-21-rbac-matrix sobre feat/pr-02-20-openapi
+blocked_by: ".env.example: denegado a los agentes por regla global. Bloquea SOLO T-02-035 (PR-02-24, ultimo de la cadena). El usuario tiene que confirmar si JWT_SECRET y RESEND_API_KEY ya existen y pegar DATABASE_URL_AUTH, AUTH_KEK, WEB_ORIGINS, API_PUBLIC_ORIGIN y el password de app_auth. La cadena funcional entera mergea sin eso -- T-02-036 y todo lo que sigue NO esta bloqueado por esto."
 last_updated: 2026-09-28
 sdd_store: hybrid
 last_agent: claude-sonnet-5
 next_action:
   cerrado: >
-    T-02-033 CERRADA el 2026-09-28 en feat/pr-02-19-session-exchange sobre
-    feat/pr-02-18-totp-enrol. TRES commits de esta sesion: RED (94d8f77,
-    cuatro tests -- membresia activa emite token con ese shelter_id; sin
-    membresia, invitada y revocada, cada una en su propio test, sin
-    combinarlas), GREEN (6a9c3d7, ShelterExchangeHandler +
-    activeMembershipRole en auth_handlers.go), y un tercer commit
-    (b14b9df) con el test que cerro el hueco de mutacion. MUTACION
-    MANUAL: 2 mutantes, 1 muerto en la primera pasada (sacar el chequeo
-    de status), 1 sobrevivio (sacar el chequeo de shelter_id) porque el
-    test de "sin membresia" usa un caller sin NINGUNA fila y por lo tanto
-    refleja por una razon distinta (role nunca se asigna). Cerrado con
-    TestShelterExchange_AnActiveMembershipInADifferentShelterIsRefused,
-    confirmado contra el mutante (falla) y contra el codigo real (pasa)
-    antes de commitear. Tercera instancia de obs-a13da1b17fdd6562 en esta
-    fase, sin observacion nueva. PRESUPUESTO: 95 de 250 implementacion,
-    332 de 800 total, entra en los dos sin excepcion. VERIFICACION: suite
-    completa en contenedor con los siete paquetes verdes (httpapi
-    16.9s), los cinco tests de shelter-exchange nombrados en -v con cero
-    fallos, golangci-lint run ./internal/httpapi/... con 0 issues, go vet
-    limpio. NOTA: al arrancar esta sesion, con Docker Desktop recien
-    reiniciado, la baseline mostro TestLogin_AnOwnerWithAValidTOTPCodeGetsASession
-    y TestNewRouter_RecoversFromPanicAs500 fallando una vez; ambas
-    corrieron verdes en todas las corridas posteriores de esta sesion --
-    se documentan como posible flakiness preexistente, no se tocaron ni
-    se investigaron a fondo. NADA PUSHEADO DE ESTA RAMA, CERO PRs
-    ABIERTOS.
+    T-02-034 CERRADA el 2026-09-28 en feat/pr-02-20-openapi sobre
+    feat/pr-02-19-session-exchange. GREEN-only (sin RED de dominio; el RED
+    de esta tarea es el diff-check de codigo generado, no un test). Se
+    documentaron los 8 endpoints de T-02-027...T-02-033 (register, login,
+    magic-link, refresh, logout, totp/enrol, totp/verify,
+    session/shelter) en api/openapi.yaml, leyendo cada forma de
+    request/response directamente del codigo Go de cada handler, no
+    adivinada. Se confirmo contra el codigo que NINGUNA ruta /auth/* esta
+    wireada en router.go todavia -- eso es T-02-040, al final de la fase,
+    exactamente donde lo pone el diseno; esta tarea no toca router.go.
+    oapi-codegen regenero internal/api/openapi.gen.go, openapi-typescript
+    regenero apps/web/src/api/schema.gen.ts. PRESUPUESTO: 444 lineas
+    hand-written de api/openapi.yaml contra una estimacion de 90 -- 4.9x,
+    y por encima del presupuesto de 250 hand-written. FLAGGEADO
+    explicitamente en tasks.md (no absorbido en silencio); la decision de
+    entrega (aceptar tal cual o partir con size:exception) queda para el
+    usuario, segun ask-on-risk. Los ~1.7k de lineas generadas no cuentan
+    para ese presupuesto por convencion. DECISION TECNICA: se probo
+    format: uuid / format: email en los campos shelter_id/user_id/email y
+    se revirtio -- tira github.com/oapi-codegen/runtime/types como
+    dependencia nueva, contra el minimalismo que internal/api/config.yaml
+    ya explica (embedded-spec apagado, ADR-0003, cold start de Cloud
+    Run). Quedaron como type: string simple, igual que lo que los
+    handlers ya validan a mano con uuid.Parse. VERIFICACION: make
+    generate corrido dos veces seguidas contra una base stageada, diff
+    identico byte a byte (idempotente); go build ./... verde; make
+    test-api-container verde (los 7 paquetes); tsc -b --noEmit de
+    apps/web verde; golangci-lint run ./... con un solo hallazgo gosec
+    preexistente en internal/db/dbtest/container.go (confirmado con git
+    log que viene de T-02-003, no tocado en esta tarea). NOTA DE
+    ENTORNO: oapi-codegen no estaba instalado en go/bin (no era que
+    estuviera stale, faltaba del todo) -- se instalo v2.8.0 igual que
+    .devcontainer/postCreate.sh. Windows Smart App Control borro el
+    binario recien linkeado entre la instalacion y una corrida posterior
+    de make generate -- la misma clase de problema que ya esta
+    documentada para binarios de test de Go, confirmada aca tambien para
+    un binario de herramienta instalado con go install. Se resolvio
+    reinstalando inmediatamente antes de cada make generate, en el mismo
+    comando. NADA PUSHEADO DE ESTA RAMA, CERO PRs ABIERTOS, CERO COMMITS
+    CREADOS TODAVIA (la sesion dejo los cambios en el working tree +
+    staged, sin commitear, precisamente porque el presupuesto esta
+    flaggeado y no hay una decision ask-on-risk del usuario todavia).
   decision: >
     Sin decision nueva del usuario en esta sesion. Las decisiones
     vigentes de T-02-031 (amr de un refresh es [pwd]) y T-02-032 siguen
     aplicando sin cambios; ver las entradas de esas tareas para el
-    detalle completo.
+    detalle completo. PENDIENTE: el usuario todavia tiene que decidir
+    sobre el presupuesto de T-02-034 (aceptar 444/444 tal cual como
+    size:exception, o pedir que se parta -- ver la nota de "cerrado"
+    arriba y el detalle en tasks.md linea ~622).
   sigue: >
-    T-02-034 (api/openapi.yaml + regenerar openapi.gen.go, PR-02-20) NO
-    INICIADA. Depende de todos los handlers T-02-027...T-02-033. Rama a
-    crear: feat/pr-02-20-openapi sobre feat/pr-02-19-session-exchange,
-    segun la tabla de dependencias de PRs de tasks.md.
+    T-02-036 (RED -- authz/matrix.go, tests exhaustivos table-driven,
+    PR-02-21) NO INICIADA. Es pura e independiente: no depende de
+    T-02-034 (PR-02-20) ni de T-02-035 (PR-02-24, bloqueada). tasks.md
+    linea 1081 lo confirma: la dependencia de PR-02-21 es "-- (pure,
+    independent; placed here per the design's slice order)". Rama a
+    crear: feat/pr-02-21-rbac-matrix sobre feat/pr-02-20-openapi (una vez
+    que T-02-034 este commiteada), segun la tabla de dependencias de PRs
+    de tasks.md.
   bloqueadores: >
-    Ninguno para T-02-034. .env.example (T-02-035, PR-02-24, ultimo de la
-    cadena) sigue bloqueado por confirmacion del usuario, sin cambios
-    esta sesion -- no afecta a T-02-034.
+    Ninguno funcional para T-02-036 ni para nada de la cadena PR-02-21
+    en adelante. .env.example (T-02-035, PR-02-24, ultimo de la cadena)
+    sigue bloqueado por confirmacion del usuario, sin cambios esta
+    sesion -- NO afecta a T-02-036 ni a ninguna tarea posterior; la
+    cadena funcional entera mergea sin eso, T-02-035 solo bloquea su
+    propio PR final. Ademas: la decision ask-on-risk del presupuesto de
+    T-02-034 (ver "decision" arriba) esta pendiente antes de commitear
+    esta tarea.
 ---
 
 # Estado del proyecto
