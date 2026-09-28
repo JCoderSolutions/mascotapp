@@ -1,52 +1,56 @@
 ---
 project: mascotapp
 current_phase: "02"
-current_task: "T-02-033"  # T-02-032 cerrada (197/532 contra la base de PR-02-17). TOTP enrol/verify: la invalidacion de codigos de recuperacion nunca probo que hubiera algo que invalidar (control positivo agregado); la etiqueta de cuenta de la URI otpauth:// nunca se verifico contra el email real; un body JSON malformado en verify nunca se probo
+current_task: "T-02-034"  # T-02-033 cerrada (95/332 contra el diff de PR-02-19). Shelter-exchange handler: activeMembershipRole reusa ListOwnMemberships (la misma query de requiresSecondFactor) en vez de una segunda consulta paralela. Mutacion manual encontro un hueco real -- el mutante que saca la comparacion de shelter_id sobrevivio porque el test de "sin membresia" usa un caller sin NINGUNA fila; tercera instancia de obs-a13da1b17fdd6562 en esta fase
 sdd_change: "phase-02-auth-and-multitenancy"
 rdd_enabled: false  # fase marcada RDD; el usuario decide, no se activa solo
-task_status: not_started  # T-02-033 (Session/shelter-exchange handler, POST /auth/session/shelter, PR-02-19) depende de token.go de PR-02-09. Rama a crear: feat/pr-02-19-session-exchange sobre feat/pr-02-18-totp-enrol
+task_status: not_started  # T-02-034 (api/openapi.yaml + regenerar openapi.gen.go, PR-02-20) depende de todos los handlers T-02-027...T-02-033. Rama a crear: feat/pr-02-20-openapi sobre feat/pr-02-19-session-exchange
 blocked_by: ".env.example: denegado a los agentes por regla global. Bloquea SOLO T-02-035 (PR-02-24, ultimo de la cadena). El usuario tiene que confirmar si JWT_SECRET y RESEND_API_KEY ya existen y pegar DATABASE_URL_AUTH, AUTH_KEK, WEB_ORIGINS, API_PUBLIC_ORIGIN y el password de app_auth. La cadena funcional entera mergea sin eso."
-last_updated: 2026-09-26
+last_updated: 2026-09-28
 sdd_store: hybrid
 last_agent: claude-sonnet-5
 next_action:
   cerrado: >
-    T-02-032 CERRADA el 2026-09-26 (RED ca88072 y GREEN 27b2032, ambos de
-    una sesion anterior del 2026-09-24/25; tests del mutante partido
-    3bd370d, esta sesion) en feat/pr-02-18-totp-enrol sobre
-    feat/pr-02-17-refresh. Esta sesion RE-VERIFICO ambos commits contra
-    HEAD (no confio en el mensaje de GREEN) antes de correr la mutacion
-    pendiente. totp_handlers.go nuevo, sin cambios esta sesion; solo se
-    agregaron tests. MUTACION: 9 mutantes generados, 8 muertos (5 ya
-    cerrados por los tests existentes, 3 cerrados con tests nuevos), 1
-    EQUIVALENTE documentado (el chequeo de error de envelope.Open: todo
-    return de Open() en error da secret=nil y VerifyTOTP ya rechaza
-    longitud distinta de TOTPSecretLength, confirmado leyendo cada return
-    de envelope.go, no solo por la supervivencia del mutante). Cero
-    residuo (fuera del equivalente), verificado con diff contra copia
-    pristina. PRESUPUESTO: 197 de 250 implementacion (sin cambios, GREEN
-    de sesion anterior) y 532 de 800 total contra la base de PR-02-17,
-    entra en los dos. VERIFICACION: suite completa en contenedor con
-    exit=0 capturado, siete paquetes verdes, los ocho tests de TOTP (cinco
-    originales + tres nuevos) nombrados en -v con cero fallos,
-    golangci-lint run ./internal/httpapi/... con 0 issues, gofmt limpio.
-    NOTA APARTE (fuera de alcance): golangci-lint run ./... sobre todo
-    apps/api reporta un gosec G101 preexistente en
-    internal/db/dbtest/container.go, de cb31c18/7392bd6, muy anterior a
-    esta tarea; no se toco. NADA PUSHEADO DE ESTA RAMA, CERO PRs ABIERTOS.
+    T-02-033 CERRADA el 2026-09-28 en feat/pr-02-19-session-exchange sobre
+    feat/pr-02-18-totp-enrol. TRES commits de esta sesion: RED (94d8f77,
+    cuatro tests -- membresia activa emite token con ese shelter_id; sin
+    membresia, invitada y revocada, cada una en su propio test, sin
+    combinarlas), GREEN (6a9c3d7, ShelterExchangeHandler +
+    activeMembershipRole en auth_handlers.go), y un tercer commit
+    (b14b9df) con el test que cerro el hueco de mutacion. MUTACION
+    MANUAL: 2 mutantes, 1 muerto en la primera pasada (sacar el chequeo
+    de status), 1 sobrevivio (sacar el chequeo de shelter_id) porque el
+    test de "sin membresia" usa un caller sin NINGUNA fila y por lo tanto
+    refleja por una razon distinta (role nunca se asigna). Cerrado con
+    TestShelterExchange_AnActiveMembershipInADifferentShelterIsRefused,
+    confirmado contra el mutante (falla) y contra el codigo real (pasa)
+    antes de commitear. Tercera instancia de obs-a13da1b17fdd6562 en esta
+    fase, sin observacion nueva. PRESUPUESTO: 95 de 250 implementacion,
+    332 de 800 total, entra en los dos sin excepcion. VERIFICACION: suite
+    completa en contenedor con los siete paquetes verdes (httpapi
+    16.9s), los cinco tests de shelter-exchange nombrados en -v con cero
+    fallos, golangci-lint run ./internal/httpapi/... con 0 issues, go vet
+    limpio. NOTA: al arrancar esta sesion, con Docker Desktop recien
+    reiniciado, la baseline mostro TestLogin_AnOwnerWithAValidTOTPCodeGetsASession
+    y TestNewRouter_RecoversFromPanicAs500 fallando una vez; ambas
+    corrieron verdes en todas las corridas posteriores de esta sesion --
+    se documentan como posible flakiness preexistente, no se tocaron ni
+    se investigaron a fondo. NADA PUSHEADO DE ESTA RAMA, CERO PRs
+    ABIERTOS.
   decision: >
-    Sin decision nueva del usuario en esta sesion de cierre. La decision
-    vigente de T-02-031 (amr de un refresh es [pwd]) sigue aplicando sin
-    cambios; ver la entrada de esa tarea para el detalle completo.
+    Sin decision nueva del usuario en esta sesion. Las decisiones
+    vigentes de T-02-031 (amr de un refresh es [pwd]) y T-02-032 siguen
+    aplicando sin cambios; ver las entradas de esas tareas para el
+    detalle completo.
   sigue: >
-    T-02-033 (Session/shelter-exchange handler, POST /auth/session/shelter,
-    PR-02-19) NO INICIADA. Depende de token.go de PR-02-09. Rama a crear:
-    feat/pr-02-19-session-exchange sobre feat/pr-02-18-totp-enrol, segun la
-    tabla de dependencias de PRs de tasks.md.
+    T-02-034 (api/openapi.yaml + regenerar openapi.gen.go, PR-02-20) NO
+    INICIADA. Depende de todos los handlers T-02-027...T-02-033. Rama a
+    crear: feat/pr-02-20-openapi sobre feat/pr-02-19-session-exchange,
+    segun la tabla de dependencias de PRs de tasks.md.
   bloqueadores: >
-    Ninguno para T-02-033. .env.example (T-02-035, PR-02-24, ultimo de la
-    cadena) sigue bloqueado por confirmacion del usuario, sin cambios esta
-    sesion -- no afecta a T-02-033.
+    Ninguno para T-02-034. .env.example (T-02-035, PR-02-24, ultimo de la
+    cadena) sigue bloqueado por confirmacion del usuario, sin cambios
+    esta sesion -- no afecta a T-02-034.
 ---
 
 # Estado del proyecto

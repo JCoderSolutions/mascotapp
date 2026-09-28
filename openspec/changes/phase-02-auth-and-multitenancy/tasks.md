@@ -608,15 +608,16 @@ handlers themselves, then the contract and its codegen.
       - pilot: blacklisted (§7.2)
       - engram: `obs-c459886d42e6fd99` — *un test de invalidación sin control positivo no prueba nada* (approved 2026-09-26) · `obs-66a09bc2e7da40bb` — *un mutante sobreviviente no siempre es un hueco de cobertura* (approved 2026-09-26)
 
-- [ ] **T-02-033** · Session/shelter-exchange handler — `POST /auth/session/shelter`
+- [x] **T-02-033** · Session/shelter-exchange handler — `POST /auth/session/shelter`
       - spec: authorization-rbac / *Tenant scope derives only from the verified token claim* (this is the mint point for the claim the middleware later trusts)
-      - RED first: exchanging a valid session for a shelter the caller has an **active** membership in issues a token scoped to that `shelter_id` · exchanging for a shelter with no membership, or a non-active one (`invited`/`revoked`), is refused
-      - build: `auth_handlers.go` — the shelter-exchange handler
-      - tests: both cases green
+      - RED first: exchanging a valid session for a shelter the caller has an **active** membership in issues a token scoped to that `shelter_id` · exchanging for a shelter with no membership, an invited one, or a revoked one — three separate tests, not one combined "not active" case, per T-02-031 (`obs-a13da1b17fdd6562`) — is refused
+      - build: `auth_handlers.go` — `ShelterExchangeHandler` + `activeMembershipRole`, reusing `ListOwnMemberships` (the same query `requiresSecondFactor` already uses) rather than a second, parallel membership check
+      - tests: all four RED cases green, plus one added closing an untested clause (below)
       - dod: RED→GREEN · lint clean · coverage held
-      - est: 100
+      - est: 100 · **measured 95 implementation / 332 total**, inside both budgets
+      - **manual mutation testing, 2 mutants, 1 killed on the first pass, 1 survived and was closed**: dropping `membership.Status == "active"` (leaving only the shelter-id match) was caught immediately by the invited/revoked tests. Dropping `membership.ShelterID == shelterID` (leaving only the status check) SURVIVED every committed test — `NoMembershipAtAllIsRefused` seeds a caller with ZERO memberships anywhere, so it refuses for an unrelated reason (`role` never gets set) and cannot see a mutant that only breaks the shelter match. Closed with `TestShelterExchange_AnActiveMembershipInADifferentShelterIsRefused`: an active membership in shelter A must not authorize an exchange for shelter B. Confirmed the new test fails against the mutant and passes against the real code before committing (verified against a pristine diff of `auth_handlers.go`, zero residue).
       - pilot: blacklisted (§7.2)
-      - engram: —
+      - engram: recurrence of `obs-a13da1b17fdd6562` (no new observation — same lesson, third instance in this phase)
 
 - [ ] **T-02-034** · `api/openapi.yaml` — auth surface + regenerate `openapi.gen.go`
       - spec: n/a — contract/build wiring, mirrors T-01-033/T-01-012's build-wiring pattern (GREEN-only; the RED here is the generated-code diff check, not a domain test)
