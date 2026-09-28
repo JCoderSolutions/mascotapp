@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -171,6 +172,100 @@ func RegisterHandler(authPool db.Beginner, tenantPool db.Beginner) http.Handler 
 			ShelterID: shelterID.String(),
 		})
 	})
+}
+
+// shelterExchangeRequest names which shelter the caller wants to act as.
+type shelterExchangeRequest struct {
+	ShelterID string `json:"shelter_id"`
+}
+
+// ShelterExchangeHandler mints a shelter-scoped access token for an
+// already-authenticated caller.
+//
+// This is the MINT POINT for the `shelter_id` claim RequireTenant later
+// trusts (authorization-rbac / *Tenant scope derives only from the verified
+// token claim*): the caller has already authenticated through RequireAuth,
+// and this handler is the ONE place that decides which shelter their next
+// token may name. It runs the exact membership check requiresSecondFactor
+// already established -- status = 'active' -- rather than a second, parallel
+// one, because the design's whole point is that tenant scope traces back to a
+// single verified source.
+//
+// No membership at all, an invited one, and a revoked one all refuse
+// identically: distinguishing them in the response would tell a caller which
+// of the three applies to their account in this shelter.
+func ShelterExchangeHandler(authPool db.Beginner, issuer *auth.TokenIssuer, now func() time.Time) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		claims, ok := ClaimsFromContext(r.Context())
+		if !ok {
+			// ShelterExchangeHandler mounted without RequireAuth above it --
+			// the same wiring-bug distinction RequireTenant draws.
+			http.Error(w, "server misconfigured", http.StatusInternalServerError)
+			return
+		}
+
+		var req shelterExchangeRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			badRequest(w, "the request body is not valid JSON")
+			return
+		}
+		shelterID, err := uuid.Parse(req.ShelterID)
+		if err != nil {
+			badRequest(w, "shelter_id must be a uuid")
+			return
+		}
+
+		role, err := activeMembershipRole(r.Context(), authPool, claims.Subject, shelterID)
+		if err != nil {
+			serverError(w, r, "reading the caller's memberships", err)
+			return
+		}
+		if role == "" {
+			forbidden(w)
+			return
+		}
+
+		accessToken, err := issuer.Issue(auth.AccessClaims{
+			Subject:   claims.Subject,
+			ShelterID: &shelterID,
+			Role:      role,
+			AMR:       claims.AMR,
+		}, now())
+		if err != nil {
+			serverError(w, r, "issuing the scoped access token", err)
+			return
+		}
+
+		writeJSON(w, http.StatusOK, loginResponse{
+			AccessToken: accessToken,
+			TokenType:   "Bearer",
+			ExpiresIn:   int(auth.AccessTokenLifetime.Seconds()),
+		})
+	})
+}
+
+// activeMembershipRole answers which role the caller holds in shelterID,
+// through an ACTIVE membership only, and "" for anything else -- no row at
+// all, 'invited', or 'revoked'. It reads through ListOwnMemberships, the same
+// query requiresSecondFactor uses, scoped to the caller by
+// auth_own_memberships (P2-D3): app_auth cannot read another user's row even
+// if this forgot to filter by user_id, and it does filter, on purpose.
+func activeMembershipRole(ctx context.Context, authPool db.Beginner, userID, shelterID uuid.UUID) (string, error) {
+	var role string
+	err := db.WithAuthUser(ctx, authPool, userID, func(ctx context.Context, tx pgx.Tx) error {
+		memberships, err := sqlcgen.New(tx).ListOwnMemberships(ctx, userID)
+		if err != nil {
+			return err
+		}
+		for _, membership := range memberships {
+			if membership.ShelterID == shelterID && membership.Status == "active" {
+				role = membership.Role
+				return nil
+			}
+		}
+		return nil
+	})
+	return role, err
 }
 
 // missingField returns the name of the first required field that is empty. It
