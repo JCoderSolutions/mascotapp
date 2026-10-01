@@ -762,7 +762,7 @@ the pure-Go rows behave differently from the database rows.
 | `PR-02-08` | 390 | **920** | **YES — split** |
 | `PR-02-11` | 320 | 755 | **measured 930 — OVER both budgets (impl 381/250), `size:exception` ACCEPTED 2026-09-04** |
 | `PR-02-22` | 300 | 708 | no |
-| `PR-02-15` | 290 | 684 | no |
+| `PR-02-15` | 290 | 684 | **measured 335 impl / 1340 total — OVER both budgets, `size:exception` accepted 2026-10-01** (flagged late, while opening the PR chain retroactively) |
 | `PR-02-13a` | 160 | 378 | **measured 277 impl / 639 total** — fits both. The projection missed by 69%: `est:` counts surface, and this package exports four names |
 | `PR-02-13b` | 130 | 307 | no |
 | `PR-02-12` | 290 | 684 | no — **measured 227 impl / 675 total, fits both.** The projection was accurate to 1.3% even though the test/implementation split was nothing like predicted |
@@ -1073,7 +1073,7 @@ labels move, no task's content or dependency changed.
 | `PR-02-13a` | `cors.go` + `csrf.go` — origin allowlist and Origin-based CSRF | T-02-025 ✅ | ~~290~~ **277 impl / 639 total** — fits both, no exception | — (independent) · branch `feat/pr-02-13a-cors-csrf` on `feat/pr-02-12-middleware` |
 | `PR-02-13b` | `config.go` — auth DSN, secrets, origins, same-site boot refusal | T-02-026 | 130 | `PR-02-13a` (calls `NewOriginAllowlist`) |
 | `PR-02-14` | Registration handler | T-02-027 | 140 | `PR-02-02` (`WithAuthUser`), `PR-02-07` (`password.go`) |
-| `PR-02-15` | Login handler — core + TOTP/recovery paths (one handler, two tasks) | T-02-028, T-02-029 | 290 | `PR-02-07`, `PR-02-08`, `PR-02-09`, `PR-02-10`, `PR-02-11` |
+| `PR-02-15` | Login handler — core + TOTP/recovery paths (one handler, two tasks) | T-02-028, T-02-029 | ~~290~~ **335 impl / 1340 total** `size:exception` (two tasks on one handler, treated as one PR since T-02-028) | `PR-02-07`, `PR-02-08`, `PR-02-09`, `PR-02-10`, `PR-02-11` |
 | `PR-02-16a` | Email port + `LogSender` stub | T-02-022 ✅ | ~~190~~ **158 impl / 469 total** — fits both, no exception | `PR-02-11` · branch `feat/pr-02-16-email`; **merges at position 12**, right after `PR-02-11` |
 | `PR-02-16b` | The magic-link handler that consumes the port | T-02-030 | 120 (proj. 283) | `PR-02-15` (needs `auth_handlers.go`) · `PR-02-16a` |
 | `PR-02-17` | Refresh + logout handler | T-02-031 | 160 | `PR-02-11`, `PR-02-13` (CSRF check) |
